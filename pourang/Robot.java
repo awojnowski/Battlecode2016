@@ -1,9 +1,9 @@
 package pourang;
 
-import battlecode.common.RobotController;
+import battlecode.common.*;
 
 public interface Robot {
 
-    public void run(final RobotController robotController);
+    public void run(final RobotController robotController) throws GameActionException;
 
 }
