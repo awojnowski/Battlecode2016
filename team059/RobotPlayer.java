@@ -1,8 +1,6 @@
-package pourang;
+package team059;
 
 import battlecode.common.*;
-
-import java.util.Random;
 
 public class RobotPlayer {
 
@@ -40,10 +38,6 @@ public class RobotPlayer {
         } else if (type == RobotType.SOLDIER) {
 
             return new RobotSoldier();
-
-        } else if (type == RobotType.TTM) {
-
-            return new RobotTTM();
 
         } else if (type == RobotType.TURRET) {
 

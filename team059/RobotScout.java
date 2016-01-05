@@ -1,8 +1,8 @@
-package pourang;
+package team059;
 
 import battlecode.common.*;
 
-public class RobotViper implements Robot {
+public class RobotScout implements Robot {
 
     public void run(final RobotController robotController) throws GameActionException {
 
