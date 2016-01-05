@@ -13,8 +13,6 @@ public class RobotSoldier implements Robot {
         final Team team = robotController.getTeam();
 
         while (true) {
-            
-            // Test
 
             String status = "";
 

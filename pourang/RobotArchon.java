@@ -12,7 +12,7 @@ public class RobotArchon implements Robot {
 
             if (robotController.isCoreReady()) {
 
-                boolean tryClearRubble = true;
+                boolean builtRobot = false;
 
                 final int soldierCost = RobotType.SOLDIER.partCost;
                 if (robotController.getTeamParts() >= soldierCost) {
@@ -22,7 +22,7 @@ public class RobotArchon implements Robot {
                         if (robotController.canBuild(directions[i], RobotType.SOLDIER)) {
 
                             robotController.build(directions[i], RobotType.SOLDIER);
-                            tryClearRubble = false;
+                            builtRobot = true;
                             break;
 
                         }
@@ -31,7 +31,7 @@ public class RobotArchon implements Robot {
 
                 }
 
-                if (tryClearRubble) {
+                if (!builtRobot) {
                     double bestRubbleDifference = Integer.MAX_VALUE;
                     Direction bestRubbleDirection = null;
 
