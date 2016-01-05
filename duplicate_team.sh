@@ -26,8 +26,6 @@ if [ -d "$NEWNAME" ]; then
     fi
 fi
 
-exit
-
 cp -rf "$OLDNAME" "$NEWNAME"
 find "$NEWNAME" -type f -name '*.java' -exec sed -i '' "s/$OLDNAME/$NEWNAME/" {} +
 echo "A bot named \"$NEWNAME\" has been generated from \"$OLDNAME\"."
