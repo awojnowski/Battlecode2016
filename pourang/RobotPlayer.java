@@ -11,14 +11,7 @@ public class RobotPlayer {
         final Robot robot = RobotPlayer.getRobotForType(robotController.getType());
     	try {
 
-            robot.initialize(robotController);
-
-        	while (true) {
-
-                robot.run(robotController);
-                Clock.yield();
-                
-            }
+            robot.run(robotController);
 
     	}
     	catch (Exception e) {

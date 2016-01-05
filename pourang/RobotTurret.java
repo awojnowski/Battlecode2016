@@ -1,18 +1,16 @@
 package pourang;
 
-import battlecode.common.RobotController;
+import battlecode.common.*;
 
 public class RobotTurret implements Robot {
 
-    public void initialize(final RobotController robotController) {
-
-        ;
-
-    }
-
     public void run(final RobotController robotController) {
 
-        ;
+        while (true) {
+
+            Clock.yield();
+
+        }
 
     }
 
