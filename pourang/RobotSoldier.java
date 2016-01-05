@@ -117,7 +117,7 @@ public class RobotSoldier implements Robot {
 
                             robotController.move(moveDirection);
 
-                            status += "movede ";
+                            status += "moved ";
 
                         }
 
