@@ -24,7 +24,7 @@ A shell script is included which will build the bot named `team059`. This is the
 1. Open `Terminal`
 2. `cd` to the `battlecode-scaffold-master` directory
 3. `cd` to the `src` directory
-4. Type `./build_team.sh'
+4. Type `./build_team.sh`
 
 Duplicating Bots
 ----------------
