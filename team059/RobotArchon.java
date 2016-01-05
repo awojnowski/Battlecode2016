@@ -2,6 +2,7 @@ package team059;
 
 import battlecode.common.*;
 import java.util.ArrayList;
+import java.util.Collection;
 
 public class RobotArchon implements Robot {
 
@@ -86,8 +87,14 @@ public class RobotArchon implements Robot {
 
                     }
 
+                    if (!didMove) {
+
+                        this.attemptToClearRubble(robotController, new Direction[]{ directionTowardsArchonSignal, directionTowardsArchonSignal.rotateLeft(), directionTowardsArchonSignal.rotateRight() }, false);
+
+                    }
+
                     final int distance = location.distanceSquaredTo(goalArchonSignal.location);
-                    if (!didMove || distance < 35) {
+                    if (distance < 35) {
 
                         goalArchonSignal = null;
 
@@ -120,28 +127,7 @@ public class RobotArchon implements Robot {
 
                         // try to clear rubble
 
-                        final double rubbleThreshold = 49;
-                        double bestRubbleDifference = Integer.MAX_VALUE;
-                        Direction bestRubbleDirection = null;
-                        for (int i = 0; i < directions.length; i ++) {
-
-                            final Direction direction = directions[i];
-                            final MapLocation rubbleLocation = robotController.getLocation().add(direction);
-                            final double rubbleTotal = robotController.senseRubble(rubbleLocation);
-                            final double rubbleDifference = rubbleTotal - rubbleThreshold;
-                            if (rubbleDifference > 0 && rubbleDifference < bestRubbleDifference) {
-
-                                bestRubbleDifference = rubbleDifference;
-                                bestRubbleDirection = direction;
-
-                            }
-
-                        }
-                        if (bestRubbleDirection != null) {
-
-                            robotController.clearRubble(bestRubbleDirection);
-
-                        }
+                        this.attemptToClearRubble(robotController, directions, false);
 
                     }
 
@@ -156,6 +142,11 @@ public class RobotArchon implements Robot {
             for (int i = 0; i < friendlyRobots.length; i++) {
 
                 final RobotInfo robot = friendlyRobots[i];
+                if (robot.type == RobotType.ARCHON) {
+
+                    continue;
+
+                }
                 if (robot.health < robot.maxHealth) {
 
                     if (injuredRobot == null || robot.health < injuredRobot.health) {
@@ -227,6 +218,63 @@ public class RobotArchon implements Robot {
     private void sendArchonSignal(final RobotController robotController) throws GameActionException {
 
         robotController.broadcastMessageSignal(69, 69, 3000);
+
+    }
+
+    /**
+     * Rubble
+     */
+
+    private boolean attemptToClearRubble(final RobotController robotController, final Direction[] directions, boolean preferFirstDirection) throws GameActionException {
+
+        final double rubbleThreshold = 49;
+
+        double bestRubbleDifference = Integer.MAX_VALUE;
+        Direction bestRubbleDirection = null;
+
+        double mostRubble = 0;
+        Direction mostRubbleDirection = null;
+
+        for (int i = 0; i < directions.length; i ++) {
+
+            final Direction direction = directions[i];
+            final MapLocation rubbleLocation = robotController.getLocation().add(direction);
+            final double rubbleTotal = robotController.senseRubble(rubbleLocation);
+
+            if (rubbleTotal > mostRubble) {
+
+                mostRubble = rubbleTotal;
+                mostRubbleDirection = direction;
+
+            }
+
+            final double rubbleDifference = rubbleTotal - rubbleThreshold;
+            if (rubbleDifference > 0 && rubbleDifference < bestRubbleDifference) {
+
+                bestRubbleDifference = rubbleDifference;
+                bestRubbleDirection = direction;
+
+                if (i == 0 && preferFirstDirection) {
+
+                    break;
+
+                }
+
+            }
+
+        }
+        if (bestRubbleDirection == null) {
+
+            bestRubbleDirection = mostRubbleDirection;
+
+        }
+        if (bestRubbleDirection != null) {
+
+            robotController.clearRubble(bestRubbleDirection);
+            return true;
+
+        }
+        return false;
 
     }
 
