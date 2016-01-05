@@ -28,4 +28,5 @@ fi
 
 cp -rf "$OLDNAME" "$NEWNAME"
 find "$NEWNAME" -type f -name '*.java' -exec sed -i '' "s/$OLDNAME/$NEWNAME/" {} +
+git add "$NEWNAME"
 echo "A bot named \"$NEWNAME\" has been generated from \"$OLDNAME\"."
