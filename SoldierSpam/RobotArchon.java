@@ -23,7 +23,7 @@ public class RobotArchon implements Robot {
 
                 for (int i = 0; i < nearbyRobots.length; i++) {
 
-                    if (nearbyRobots[i].team == Team.ZOMBIE || nearbyRobots[i].team == team.opponent()) {
+                    if ((nearbyRobots[i].team == Team.ZOMBIE && nearbyRobots[i].type != RobotType.ZOMBIEDEN) || nearbyRobots[i].team == team.opponent()) {
 
                         Direction directionToEnemy = robotController.getLocation().directionTo(nearbyRobots[i].location);
                         bestLocation = robotController.getLocation().subtract(directionToEnemy);
@@ -33,14 +33,19 @@ public class RobotArchon implements Robot {
 
                 }
 
-                final int soldierCost = RobotType.SOLDIER.partCost;
-                if (bestLocation == null && robotController.getTeamParts() >= soldierCost) {
+                RobotType typeToBuild = RobotType.SOLDIER;
+
+                if (robotController.getRoundNum() == 0) { // Might not build if somehow near enemies at start
+                    typeToBuild = RobotType.SCOUT;
+                }
+
+                if (bestLocation == null && robotController.getTeamParts() >= typeToBuild.partCost) {
 
                     for (int i = 0; i < directions.length; i++) {
 
-                        if (robotController.canBuild(directions[i], RobotType.SOLDIER)) {
+                        if (robotController.canBuild(directions[i], typeToBuild)) {
 
-                            robotController.build(directions[i], RobotType.SOLDIER);
+                            robotController.build(directions[i], typeToBuild);
                             builtRobot = true;
                             break;
 

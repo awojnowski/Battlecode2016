@@ -85,6 +85,9 @@ public class RobotSoldier implements Robot {
                 }
 
             }
+
+            // MOVEMENT
+
             if (robotController.isCoreReady() && attackedEnemy == null) {
 
                 if (lastAttackedEnemy != null || signals.length > 0) { // move towards the last attacked enemy or closest signal
