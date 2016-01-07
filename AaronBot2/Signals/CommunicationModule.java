@@ -1,10 +1,8 @@
 package AaronBot2.Signals;
 
 import battlecode.common.*;
-import battlecode.world.signal.BroadcastSignal;
 
-import java.util.ArrayList;
-import java.util.Hashtable;
+import java.util.*;
 
 public class CommunicationModule {
 
@@ -24,10 +22,11 @@ public class CommunicationModule {
     BROADCASTING
      */
 
-    public void broadcastSignal(final CommunicationModuleSignal signal, final RobotController robotController, final int broadcastRange) throws GameActionException {
+    public void broadcastSignal(final CommunicationModuleSignal communicationModuleSignal, final RobotController robotController, final int broadcastRange) throws GameActionException {
 
-        final int[] message = signal.serialize();
+        final int[] message = communicationModuleSignal.serialize();
         robotController.broadcastMessageSignal(message[0], message[1], broadcastRange);
+        this.writeSignal(communicationModuleSignal);
 
     }
 
@@ -37,11 +36,32 @@ public class CommunicationModule {
 
     }
 
+    public void broadcastCommunicationsDump(final RobotController robotController, final int broadcastRange) throws GameActionException {
+
+        final Enumeration<CommunicationModuleSignal> communicationModuleSignals = this.communications.elements();
+        while (communicationModuleSignals.hasMoreElements()) {
+
+            this.broadcastSignal(communicationModuleSignals.nextElement(), robotController, broadcastRange);
+
+        }
+
+    }
+
+    /*
+    COMMUNICATIONS INDEXING
+     */
+
+    public static int communicationsIndexFromLocation(final MapLocation mapLocation) {
+
+        return CommunicationModuleSignal.serializeMapLocation(mapLocation);
+
+    }
+
     /*
     RANGES
      */
 
-    public static int maximumFreeBroadcastRangeForRobotType(RobotType type) {
+    public static int maximumFreeBroadcastRangeForRobotType(final RobotType type) {
 
         return type.sensorRadiusSquared * 2;
 
@@ -54,6 +74,13 @@ public class CommunicationModule {
     public void processIncomingSignals(final RobotController robotController) {
 
         final Signal[] signals = robotController.emptySignalQueue();
+        if (signals.length == 0) {
+
+            return;
+
+        }
+
+
         final Team currentTeam = robotController.getTeam();
 
         for (int i = 0; i < signals.length; i++) {
@@ -64,16 +91,38 @@ public class CommunicationModule {
                 continue;
 
             }
+
             final int[] message = signal.getMessage();
             if (message.length < 2) {
 
                 continue;
 
             }
+
             final CommunicationModuleSignal communicationModuleSignal = new CommunicationModuleSignal(message);
-            this.communications.put(communicationModuleSignal.serializedLocation(), communicationModuleSignal);
+            if (communicationModuleSignal.action == CommunicationModuleSignal.ACTION_DELETE) {
+
+                this.clearSignal(communicationModuleSignal);
+
+            } else {
+
+                this.writeSignal(communicationModuleSignal);
+
+            }
 
         }
+
+    }
+
+    public void writeSignal(final CommunicationModuleSignal communicationModuleSignal) {
+
+        this.communications.put(communicationModuleSignal.serializedLocation(), communicationModuleSignal);
+
+    }
+
+    public void clearSignal(final CommunicationModuleSignal communicationModuleSignal) {
+
+        this.communications.remove(communicationModuleSignal.serializedLocation());
 
     }
 
