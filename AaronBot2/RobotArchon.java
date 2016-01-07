@@ -11,7 +11,6 @@ public class RobotArchon implements Robot {
         final CommunicationModule communicationModule = new CommunicationModule();
         final Direction[] directions = { Direction.EAST, Direction.NORTH_EAST, Direction.NORTH, Direction.NORTH_WEST, Direction.WEST, Direction.SOUTH_WEST, Direction.SOUTH, Direction.SOUTH_EAST };
 
-        int soldiersBuilt = 0;
         int scoutsBuilt = 0;
         boolean isBuildingUnit = false;
 
@@ -30,30 +29,21 @@ public class RobotArchon implements Robot {
 
                 if (robotController.isCoreReady()) {
 
-                    RobotType typeToBuild = RobotType.SOLDIER;
-                    if (scoutsBuilt * 25 < soldiersBuilt || scoutsBuilt == 0) {
+                    if (scoutsBuilt < 2) {
 
-                        typeToBuild = RobotType.SCOUT;
+                        RobotType typeToBuild = RobotType.SCOUT;
+                        if (robotController.getTeamParts() >= typeToBuild.partCost) {
 
-                    }
-                    if (robotController.getTeamParts() >= typeToBuild.partCost) {
+                            for (int i = 0; i < directions.length; i++) {
 
-                        for (int i = 0; i < directions.length; i++) {
+                                if (robotController.canBuild(directions[i], typeToBuild)) {
 
-                            if (robotController.canBuild(directions[i], typeToBuild)) {
-
-                                isBuildingUnit = true;
-                                if (typeToBuild == RobotType.SOLDIER) {
-
-                                    soldiersBuilt ++;
-
-                                } else if (typeToBuild == RobotType.SCOUT) {
-
+                                    isBuildingUnit = true;
                                     scoutsBuilt ++;
+                                    robotController.build(directions[i], typeToBuild);
+                                    break;
 
                                 }
-                                robotController.build(directions[i], typeToBuild);
-                                break;
 
                             }
 
