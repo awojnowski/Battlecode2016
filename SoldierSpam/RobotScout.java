@@ -23,7 +23,7 @@ public class RobotScout implements Robot {
 
                 for (int i = 0; i < nearbyRobots.length; i++) {
 
-                    if (nearbyRobots[i].team == Team.ZOMBIE) {
+                    if (nearbyRobots[i].team == Team.ZOMBIE || nearbyRobots[i].team == team.opponent()) {
 
                         if (nearbyRobots[i].type == RobotType.ZOMBIEDEN) { // Found a den
 
@@ -41,6 +41,7 @@ public class RobotScout implements Robot {
                             if (robotController.getLocation().distanceSquaredTo(nearbyRobots[i].location) < nearbyRobots[i].type.attackRadiusSquared) {
 
                                 moveLocation = robotController.getLocation().subtract(robotController.getLocation().directionTo(nearbyRobots[i].location));
+                                facingDirection = robotController.getLocation().directionTo(moveLocation);
                                 break;
 
                             }

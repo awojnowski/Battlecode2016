@@ -124,24 +124,35 @@ public class RobotSoldier implements Robot {
                     if (lastAttackedEnemy == null) { // For some reason this works way better???
 
                         final int robotID = robotController.getID();
-                        for (int i = 0; i < 3; i++) {
+                        for (int i = 0; i < 5; i++) {
 
                             Direction moveDirection = direction;
                             if (i == 1) {
-
                                 moveDirection = robotID % 2 == 0 ? moveDirection.rotateLeft() : moveDirection.rotateRight();
-
                             } else if (i == 2) {
-
                                 moveDirection = robotID % 2 == 0 ? moveDirection.rotateRight() : moveDirection.rotateLeft();
-
+                            } else if (i == 3) {
+                                moveDirection = robotID % 2 == 0 ? moveDirection.rotateRight().rotateRight() : moveDirection.rotateLeft().rotateLeft();
+                            } else if (i == 4) {
+                                moveDirection = robotID % 2 == 0 ? moveDirection.rotateLeft().rotateLeft() : moveDirection.rotateRight().rotateRight();
                             }
                             if (robotController.canMove(moveDirection)) {
 
                                 robotController.move(moveDirection);
-
                                 status += "moved ";
                                 break;
+
+                            } else {
+
+                                double rubble = robotController.senseRubble(robotController.getLocation().add(moveDirection));
+
+                                if (rubble > 50 && rubble < 1000) {
+
+                                    robotController.clearRubble(moveDirection);
+                                    status += "cleared rubble ";
+                                    break;
+
+                                }
 
                             }
 
