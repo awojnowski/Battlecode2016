@@ -1,162 +1,121 @@
 package team059;
 
 import battlecode.common.*;
-import java.util.Random;
+import java.util.ArrayList;
+import java.util.Collection;
 
 public class RobotArchon implements Robot {
 
     public void run(final RobotController robotController) throws GameActionException {
 
-        Direction[] directions = { Direction.EAST, Direction.NORTH_EAST, Direction.NORTH, Direction.NORTH_WEST, Direction.WEST, Direction.SOUTH_WEST, Direction.SOUTH, Direction.SOUTH_EAST };
-        final Random random = new Random(robotController.getID());
-        final Team team = robotController.getTeam();
+        // variables
+
+        final Direction[] directions = { Direction.EAST, Direction.NORTH, Direction.SOUTH, Direction.WEST, Direction.NORTH_EAST, Direction.SOUTH_WEST, Direction.NORTH_WEST, Direction.SOUTH_EAST };
+        ArchonSignal goalArchonSignal = null;
+        final int robotID = robotController.getID();
+
+        // make contact with other archons
+
+        this.sendArchonSignal(robotController);
+
+        // run the main loop
 
         while (true) {
 
-            if (robotController.isCoreReady()) {
+            final int roundNumber = robotController.getRoundNum();
+            if (roundNumber == 1) {
 
-                boolean builtRobot = false;
-                boolean activated = false;
+                // on the first round, we want to rally with other archons
 
-                MapLocation bestLocation = null;
-                RobotInfo[] nearbyRobots = robotController.senseNearbyRobots(35);
+                final ArchonSignal localArchonSignal = new ArchonSignal();
+                localArchonSignal.robotID = robotID;
 
-                for (int i = 0; i < nearbyRobots.length; i++) {
+                final ArchonSignal[] archons = this.collectArchonsFromSignals(robotController.emptySignalQueue(), robotController.getTeam());
+                ArchonSignal bestArchonSignal = localArchonSignal;
+                for (int i = 0; i < archons.length; i++) {
 
-                    if (nearbyRobots[i].team == Team.ZOMBIE || nearbyRobots[i].team == team.opponent()) {
+                    final ArchonSignal archonSignal = archons[i];
+                    if (archonSignal.robotID < bestArchonSignal.robotID) {
 
-                        Direction directionToEnemy = robotController.getLocation().directionTo(nearbyRobots[i].location);
-                        bestLocation = robotController.getLocation().subtract(directionToEnemy);
-                        robotController.broadcastSignal(100);
+                        bestArchonSignal = archonSignal;
 
                     }
 
                 }
+                if (bestArchonSignal.robotID != robotController.getID()) {
 
-                final int soldierCost = RobotType.SOLDIER.partCost;
-                if (bestLocation == null && robotController.getTeamParts() >= soldierCost) {
+                    goalArchonSignal = bestArchonSignal;
 
-                    for (int i = 0; i < directions.length; i++) {
+                } else {
 
-                        if (robotController.canBuild(directions[i], RobotType.SOLDIER)) {
+                    goalArchonSignal = null;
 
-                            robotController.build(directions[i], RobotType.SOLDIER);
-                            builtRobot = true;
+                }
+
+            }
+
+            // handle movement
+
+            if (robotController.isCoreReady()) {
+
+                if (goalArchonSignal != null) {
+
+                    // try to rally with other archons
+
+                    boolean didMove = false;
+                    final MapLocation location = robotController.getLocation();
+                    final Direction directionTowardsArchonSignal = location.directionTo(goalArchonSignal.location);
+                    for (int i = 0; i < 3; i++) {
+
+                        Direction movementDirection = directionTowardsArchonSignal;
+                        if (i == 1) {
+
+                            movementDirection = robotID % 2 == 0 ? movementDirection.rotateLeft() : movementDirection.rotateRight();
+
+                        } else if (i == 2) {
+
+                            movementDirection = robotID % 2 == 0 ? movementDirection.rotateRight() : movementDirection.rotateLeft();
+
+                        }
+                        if (robotController.canMove(movementDirection)) {
+
+                            robotController.move(movementDirection);
+                            didMove = true;
                             break;
 
                         }
 
                     }
 
-                }
+                    if (!didMove) {
 
-                if (!builtRobot) {
+                        this.attemptToClearRubble(robotController, new Direction[]{ directionTowardsArchonSignal, directionTowardsArchonSignal.rotateLeft(), directionTowardsArchonSignal.rotateRight() }, false);
 
-                    if (robotController.isCoreReady()) {
+                    }
 
-                        RobotInfo[] nearbyNeutrals = robotController.senseNearbyRobots(35, Team.NEUTRAL);
+                    final int distance = location.distanceSquaredTo(goalArchonSignal.location);
+                    if (distance < 35) {
 
-                        if (bestLocation == null && nearbyNeutrals.length > 0) { // Look for neutrals
+                        goalArchonSignal = null;
 
-                            final MapLocation currentLocation = robotController.getLocation();
-                            RobotInfo closestNeutral = nearbyNeutrals[0];
-                            int closestNeutralDistance = currentLocation.distanceSquaredTo(closestNeutral.location);
+                    }
 
-                            for (int i = 0; i < nearbyNeutrals.length; i++) {
+                } else {
 
-                                final int distance = currentLocation.distanceSquaredTo(nearbyNeutrals[i].location);
+                    // let's just chill out and build units
 
-                                if (distance < closestNeutralDistance) {
+                    boolean builtUnit = false;
 
-                                    closestNeutral = nearbyNeutrals[i];
-                                    closestNeutralDistance = distance;
+                    if (robotController.getTeamParts() >= RobotType.TURRET.partCost) {
 
-                                }
+                        for (int i = 0; i < directions.length; i ++) {
 
-                            }
+                            final Direction direction = directions[i];
+                            if (robotController.canBuild(direction, RobotType.TURRET)) {
 
-                            if (currentLocation.isAdjacentTo(closestNeutral.location)) {
-
-                                robotController.activate(closestNeutral.location);
-
-                            } else {
-
-                                bestLocation = closestNeutral.location;
-                                activated = true;
-
-                            }
-
-                        } else if (bestLocation == null) { // Look for parts
-
-                            // TODO: Super inefficient, should avoid checking squares multiple times (costs ~2500 bytecodes)
-                            MapLocation[] surroundingLocations = MapLocation.getAllMapLocationsWithinRadiusSq(robotController.getLocation(), 35);
-                            MapLocation mostPartsLocation = null;
-                            double maxParts = 0;
-
-                            for (int i = 0; i < surroundingLocations.length; i++) {
-
-                                double parts = robotController.senseParts(surroundingLocations[i]);
-
-                                if (parts > maxParts) {
-
-                                    mostPartsLocation = surroundingLocations[i];
-                                    maxParts = parts;
-
-                                }
-
-                            }
-
-                            if (mostPartsLocation != null) {
-
-                                bestLocation = mostPartsLocation;
-
-                            }
-
-                        }
-
-                        if (bestLocation != null && !activated) {
-
-                            // move towards the best location
-
-                            final int robotID = robotController.getID();
-                            final Direction direction = robotController.getLocation().directionTo(bestLocation);
-                            for (int i = 0; i < 3; i++) {
-
-                                Direction moveDirection = direction;
-                                if (i == 1) {
-
-                                    moveDirection = robotID % 2 == 0 ? moveDirection.rotateLeft() : moveDirection.rotateRight();
-
-                                } else if (i == 2) {
-
-                                    moveDirection = robotID % 2 == 0 ? moveDirection.rotateRight() : moveDirection.rotateLeft();
-
-                                }
-                                if (robotController.canMove(moveDirection)) {
-
-                                    robotController.move(moveDirection);
-                                    break;
-
-                                }
-
-                            }
-
-                        } else { // Move randomly near teammates
-
-                            Direction direction = directions[random.nextInt(directions.length)]; // Initialize to random dir
-                            RobotInfo[] closeTeammates = robotController.senseNearbyRobots(15, team);
-                            RobotInfo[] nearbyTeammates = robotController.senseNearbyRobots(35, team);
-
-                            if (closeTeammates.length == 0 && nearbyTeammates.length > 0) { // Move towards team if far away
-
-                                // TODO: Make this average location between teammates (instead of first one)
-                                direction = robotController.getLocation().directionTo(nearbyTeammates[0].location);
-
-                            }
-
-                            if (robotController.canMove(direction)) {
-
-                                robotController.move(direction);
+                                robotController.build(direction, RobotType.TURRET);
+                                builtUnit = true;
+                                break;
 
                             }
 
@@ -164,38 +123,158 @@ public class RobotArchon implements Robot {
 
                     }
 
-                    if (robotController.isCoreReady()) {
+                    if (!builtUnit) {
 
-                        double bestRubbleDifference = Integer.MAX_VALUE;
-                        Direction bestRubbleDirection = null;
+                        // try to clear rubble
 
-                        final MapLocation location = robotController.getLocation();
-                        for (int i = 0; i < directions.length; i++) {
-
-                            final MapLocation senseLocation = location.add(directions[i]);
-                            final double rubble = robotController.senseRubble(senseLocation);
-                            if (rubble > 0 && rubble < bestRubbleDifference) {
-
-                                bestRubbleDifference = rubble;
-                                bestRubbleDirection = directions[i];
-
-                            }
-
-                        }
-                        if (bestRubbleDirection != null) {
-
-                            robotController.clearRubble(bestRubbleDirection);
-
-                        }
+                        this.attemptToClearRubble(robotController, directions, false);
 
                     }
 
                 }
 
             }
+
+            // handle healing
+
+            RobotInfo injuredRobot = null;
+            final RobotInfo[] friendlyRobots = robotController.senseNearbyRobots(robotController.getType().attackRadiusSquared, robotController.getTeam());
+            for (int i = 0; i < friendlyRobots.length; i++) {
+
+                final RobotInfo robot = friendlyRobots[i];
+                if (robot.type == RobotType.ARCHON) {
+
+                    continue;
+
+                }
+                if (robot.health < robot.maxHealth) {
+
+                    if (injuredRobot == null || robot.health < injuredRobot.health) {
+
+                        injuredRobot = robot;
+
+                    }
+
+                }
+
+            }
+            if (injuredRobot != null) {
+
+                robotController.repair(injuredRobot.location);
+
+            }
+
             Clock.yield();
 
         }
+
+    }
+
+    /**
+     * Archon Connection
+     */
+
+    private class ArchonSignal {
+
+        public MapLocation location;
+        public int robotID;
+
+    }
+
+    private ArchonSignal[] collectArchonsFromSignals(final Signal[] signals, final Team team) {
+
+        final ArrayList<ArchonSignal> list = new ArrayList<ArchonSignal>();
+        for (int i = 0; i < signals.length; i++) {
+
+            final Signal signal = signals[i];
+            if (signal.getTeam() != team) {
+
+                continue;
+
+            }
+
+            final int[] message = signal.getMessage();
+            if (message != null && message.length == 2 && message[0] == 69 && message[1] == 69) {
+
+                final ArchonSignal archonSignal = new ArchonSignal();
+                archonSignal.location = signal.getLocation();
+                archonSignal.robotID = signal.getRobotID();
+                list.add(archonSignal);
+
+            }
+
+        }
+
+        final ArchonSignal[] archons = new ArchonSignal[list.size()];
+        for (int i = 0; i < archons.length; i++) {
+
+            archons[i] = list.get(i);
+
+        }
+        return archons;
+
+    }
+
+    private void sendArchonSignal(final RobotController robotController) throws GameActionException {
+
+        robotController.broadcastMessageSignal(69, 69, 3000);
+
+    }
+
+    /**
+     * Rubble
+     */
+
+    private boolean attemptToClearRubble(final RobotController robotController, final Direction[] directions, boolean preferFirstDirection) throws GameActionException {
+
+        final double rubbleThreshold = 49;
+
+        double bestRubbleDifference = Integer.MAX_VALUE;
+        Direction bestRubbleDirection = null;
+
+        double mostRubble = 0;
+        Direction mostRubbleDirection = null;
+
+        for (int i = 0; i < directions.length; i ++) {
+
+            final Direction direction = directions[i];
+            final MapLocation rubbleLocation = robotController.getLocation().add(direction);
+            final double rubbleTotal = robotController.senseRubble(rubbleLocation);
+
+            if (rubbleTotal > mostRubble) {
+
+                mostRubble = rubbleTotal;
+                mostRubbleDirection = direction;
+
+            }
+
+            final double rubbleDifference = rubbleTotal - rubbleThreshold;
+            if (rubbleDifference > 0 && rubbleDifference < bestRubbleDifference) {
+
+                bestRubbleDifference = rubbleDifference;
+                bestRubbleDirection = direction;
+
+                if (i == 0 && preferFirstDirection) {
+
+                    break;
+
+                }
+
+            }
+
+        }
+        if (bestRubbleDirection == null) {
+
+            bestRubbleDirection = mostRubbleDirection;
+
+        }
+        if (bestRubbleDirection != null) {
+
+            robotController.clearRubble(bestRubbleDirection);
+            return true;
+
+        }
+        return false;
 
     }
 

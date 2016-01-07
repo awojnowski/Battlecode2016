@@ -12,6 +12,9 @@ public class CommunicationModule {
     // the hashtable is indexed by an Integer which represents the location
     public final Hashtable<Integer, CommunicationModuleSignal> communications = new Hashtable<Integer, CommunicationModuleSignal>();
 
+    // contains signals without a message associated with them, received last time the queue was cleared
+    public final ArrayList<Signal> notifications = new ArrayList<Signal>();
+
     public CommunicationModule() {
 
         ;
@@ -73,13 +76,14 @@ public class CommunicationModule {
 
     public void processIncomingSignals(final RobotController robotController) {
 
+        this.notifications.clear();
+
         final Signal[] signals = robotController.emptySignalQueue();
         if (signals.length == 0) {
 
             return;
 
         }
-
 
         final Team currentTeam = robotController.getTeam();
 
@@ -95,6 +99,7 @@ public class CommunicationModule {
             final int[] message = signal.getMessage();
             if (message.length < 2) {
 
+                this.notifications.add(signal);
                 continue;
 
             }
