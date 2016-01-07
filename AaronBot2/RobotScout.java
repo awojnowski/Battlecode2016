@@ -70,6 +70,8 @@ public class RobotScout implements Robot {
 
             }
 
+            robotController.setIndicatorString(0, "I know of " + communicationModule.communications.size() + " communications.");
+
             Clock.yield();
 
         }

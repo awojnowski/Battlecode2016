@@ -47,17 +47,6 @@ public class CommunicationModule {
 
     }
 
-    public void broadcastCommunicationsDump(final RobotController robotController, final int broadcastRange) throws GameActionException {
-
-        final Enumeration<CommunicationModuleSignal> communicationModuleSignals = this.communications.elements();
-        while (communicationModuleSignals.hasMoreElements()) {
-
-            this.broadcastSignal(communicationModuleSignals.nextElement(), robotController, broadcastRange);
-
-        }
-
-    }
-
     /*
     COMMUNICATIONS INDEXING
      */

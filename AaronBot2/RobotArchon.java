@@ -12,38 +12,53 @@ public class RobotArchon implements Robot {
         final Direction[] directions = { Direction.EAST, Direction.NORTH_EAST, Direction.NORTH, Direction.NORTH_WEST, Direction.WEST, Direction.SOUTH_WEST, Direction.SOUTH, Direction.SOUTH_EAST };
 
         int scoutsBuilt = 0;
-        boolean isBuildingUnit = false;
+        RobotType buildingUnitType = null;
 
         while (true) {
 
             communicationModule.processIncomingSignals(robotController);
 
+            // check if we are done building a unit
+            // if so, we should broadcast relevant information to that unit
+
             if (robotController.isCoreReady()) {
 
-                if (isBuildingUnit == true) {
+                if (buildingUnitType != null) {
 
-                    communicationModule.broadcastCommunicationsDump(robotController, CommunicationModule.maximumFreeBroadcastRangeForRobotType(RobotType.ARCHON));
+                    final Enumeration<CommunicationModuleSignal> communicationModuleSignals = communicationModule.communications.elements();
+                    while (communicationModuleSignals.hasMoreElements()) {
+
+                        final CommunicationModuleSignal communicationModuleSignal = communicationModuleSignals.nextElement();
+                        if (this.shouldBroadcastCommunicationModuleSignalToRobotType(communicationModuleSignal.type, buildingUnitType)) {
+
+                            communicationModule.broadcastSignal(communicationModuleSignal, robotController, 3);
+
+                        }
+
+                    }
 
                 }
-                isBuildingUnit = false;
+                buildingUnitType = null;
 
-                if (robotController.isCoreReady()) {
+            }
 
-                    if (scoutsBuilt < 2) {
+            // attempt to build new units
 
-                        RobotType typeToBuild = RobotType.SCOUT;
-                        if (robotController.getTeamParts() >= typeToBuild.partCost) {
+            if (robotController.isCoreReady()) {
 
-                            for (int i = 0; i < directions.length; i++) {
+                if (scoutsBuilt < 2) {
 
-                                if (robotController.canBuild(directions[i], typeToBuild)) {
+                    RobotType typeToBuild = RobotType.SCOUT;
+                    if (robotController.getTeamParts() >= typeToBuild.partCost) {
 
-                                    isBuildingUnit = true;
-                                    scoutsBuilt ++;
-                                    robotController.build(directions[i], typeToBuild);
-                                    break;
+                        for (int i = 0; i < directions.length; i++) {
 
-                                }
+                            if (robotController.canBuild(directions[i], typeToBuild)) {
+
+                                buildingUnitType = typeToBuild;
+                                scoutsBuilt ++;
+                                robotController.build(directions[i], typeToBuild);
+                                break;
 
                             }
 
@@ -55,9 +70,47 @@ public class RobotArchon implements Robot {
 
             }
 
+            final Enumeration<CommunicationModuleSignal> communicationModuleSignals = communicationModule.communications.elements();
+            final MapLocation location = robotController.getLocation();
+            while (communicationModuleSignals.hasMoreElements()) {
+
+                final CommunicationModuleSignal communicationModuleSignal = communicationModuleSignals.nextElement();
+                int[] color = new int[]{255, 255, 255};
+                if (communicationModuleSignal.type == CommunicationModuleSignal.TYPE_ZOMBIEDEN) {
+
+                    color = new int[]{50, 255, 50};
+
+                } else if (communicationModuleSignal.type == CommunicationModuleSignal.TYPE_ENEMY_ARCHON) {
+
+                    color = new int[]{255, 0, 0};
+
+                } else if (communicationModuleSignal.type == CommunicationModuleSignal.TYPE_MAP_CORNER) {
+
+                    color = new int[]{0, 0, 0};
+
+                } else if (communicationModuleSignal.type == CommunicationModuleSignal.TYPE_MAP_CORNER) {
+
+                    color = new int[]{0, 255, 0};
+
+                }
+                robotController.setIndicatorLine(location, communicationModuleSignal.location, color[0], color[1], color[2]);
+
+            }
+            robotController.setIndicatorString(0, "I know of " + communicationModule.communications.size() + " communications.");
+
             Clock.yield();
 
         }
+
+    }
+
+    /*
+    SIGNALS
+     */
+
+    public boolean shouldBroadcastCommunicationModuleSignalToRobotType(final int broadcastType, final RobotType robotType) {
+
+        return true;
 
     }
 
