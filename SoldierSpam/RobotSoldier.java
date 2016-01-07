@@ -14,6 +14,7 @@ public class RobotSoldier implements Robot {
 
         while (true) {
 
+            MapLocation currentLocation = robotController.getLocation();
             String status = "";
             Signal[] signals = robotController.emptySignalQueue();
 
@@ -27,7 +28,7 @@ public class RobotSoldier implements Robot {
             if (robotController.isWeaponReady()) {
 
                 RobotInfo bestEnemy = null;
-                final MapLocation location = robotController.getLocation();
+                final MapLocation location = currentLocation;
 
                 for (int i = 0; i < robots.length; i++) {
 
@@ -62,10 +63,36 @@ public class RobotSoldier implements Robot {
 
                 }
 
-                if (bestEnemy != null && robotController.canAttackLocation(bestEnemy.location)) {
+                // Move in if they're attacking den, have space in front, and soldier behind
+                boolean movedIn = false;
 
-                    //if (lastAttackedEnemy == null) {
-                    //}
+                if (lastAttackedEnemy != null && lastAttackedEnemy.type == RobotType.ZOMBIEDEN) {
+
+                    Direction directionToEnemy = currentLocation.directionTo(lastAttackedEnemy.location);
+
+                    // If there is no robot in front
+                    if (robotController.senseRobotAtLocation(currentLocation.add(directionToEnemy)) == null) {
+
+                        if (currentLocation.distanceSquaredTo(lastAttackedEnemy.location) > 8) {
+
+                            RobotInfo[] adjacentTeammates = robotController.senseNearbyRobots(3, team);
+
+                            if (adjacentTeammates.length > 3 && robotController.isCoreReady() && robotController.canMove(directionToEnemy)) {
+
+                                robotController.move(directionToEnemy);
+                                movedIn = true;
+
+                            }
+
+                        }
+
+                    }
+
+                }
+
+                // Attack if they have a target
+
+                if (!movedIn && bestEnemy != null && robotController.canAttackLocation(bestEnemy.location)) {
 
                     robotController.attackLocation(bestEnemy.location);
                     attackedEnemy = bestEnemy;
@@ -96,7 +123,7 @@ public class RobotSoldier implements Robot {
 
                     if (lastAttackedEnemy != null) {
 
-                        direction = robotController.getLocation().directionTo(lastAttackedEnemy.location);
+                        direction = currentLocation.directionTo(lastAttackedEnemy.location);
 
                     } else { // Find closest signal
 
@@ -105,7 +132,7 @@ public class RobotSoldier implements Robot {
 
                         for (int i = 0; i < signals.length; i++) {
 
-                            int distance = robotController.getLocation().distanceSquaredTo(signals[i].getLocation());
+                            int distance = currentLocation.distanceSquaredTo(signals[i].getLocation());
 
                             if (distance < minDistance) {
 
@@ -116,11 +143,11 @@ public class RobotSoldier implements Robot {
 
                         }
 
-                        direction = robotController.getLocation().directionTo(closestLocation);
+                        direction = currentLocation.directionTo(closestLocation);
 
                     }
 
-                    //if (lastAttackedEnemy != null && lastAttackedEnemy.type == RobotType.ZOMBIEDEN && robotController.getLocation().distanceSquaredTo(lastAttackedEnemy.location) > 3) {
+                    //if (lastAttackedEnemy != null && lastAttackedEnemy.type == RobotType.ZOMBIEDEN && currentLocation.distanceSquaredTo(lastAttackedEnemy.location) > 3) {
                     if (lastAttackedEnemy == null) { // For some reason this works way better???
 
                         final int robotID = robotController.getID();
@@ -144,9 +171,9 @@ public class RobotSoldier implements Robot {
 
                             } else {
 
-                                double rubble = robotController.senseRubble(robotController.getLocation().add(moveDirection));
+                                double rubble = robotController.senseRubble(currentLocation.add(moveDirection));
 
-                                if (rubble > 50 && rubble < 1000) {
+                                if (rubble > 50 && rubble <= 1000) {
 
                                     robotController.clearRubble(moveDirection);
                                     status += "cleared rubble ";
@@ -163,7 +190,7 @@ public class RobotSoldier implements Robot {
                 } else { // Move randomly around team
 
                     Direction direction = directions[random.nextInt(directions.length)]; // Initialize to random dir
-                    RobotInfo[] closeTeammates = robotController.senseNearbyRobots(3, team);
+                    RobotInfo[] closeTeammates = robotController.senseNearbyRobots(15, team); // How close they stay to their team, lower means they'll stay closer
 
                     if (closeTeammates.length == 0) { // Move towards team if far away
 
@@ -184,7 +211,7 @@ public class RobotSoldier implements Robot {
 
                             }
 
-                            direction = robotController.getLocation().directionTo(teammateToMoveTowards.location);
+                            direction = currentLocation.directionTo(teammateToMoveTowards.location);
 
                         }
 

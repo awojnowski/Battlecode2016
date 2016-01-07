@@ -10,6 +10,7 @@ public class RobotArchon implements Robot {
         Direction[] directions = { Direction.EAST, Direction.NORTH_EAST, Direction.NORTH, Direction.NORTH_WEST, Direction.WEST, Direction.SOUTH_WEST, Direction.SOUTH, Direction.SOUTH_EAST };
         final Random random = new Random(robotController.getID());
         final Team team = robotController.getTeam();
+        int buildCount = 0;
 
         while (true) {
 
@@ -35,7 +36,7 @@ public class RobotArchon implements Robot {
 
                 RobotType typeToBuild = RobotType.SOLDIER;
 
-                if (robotController.getRoundNum() == 0) { // Might not build if somehow near enemies at start
+                if (buildCount % 25 == 3) { // Every 3rd out of 25 builds (builds 3rd then every 25 turns)
                     typeToBuild = RobotType.SCOUT;
                 }
 
@@ -46,6 +47,7 @@ public class RobotArchon implements Robot {
                         if (robotController.canBuild(directions[i], typeToBuild)) {
 
                             robotController.build(directions[i], typeToBuild);
+                            buildCount++;
                             builtRobot = true;
                             break;
 

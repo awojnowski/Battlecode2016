@@ -11,42 +11,80 @@ public class RobotScout implements Robot {
         final Random random = new Random(robotController.getID());
         final Team team = robotController.getTeam();
         Direction facingDirection = directions[random.nextInt(directions.length)];
+        boolean kamikaze = false;
 
         while (true) {
 
             if (robotController.isCoreReady()) {
-
+                MapLocation currentLocation = robotController.getLocation();
                 MapLocation moveLocation = null;
                 RobotInfo[] nearbyRobots = robotController.senseNearbyRobots(53);
                 MapLocation nearestDen = null;
                 int nearestDenDistance = Integer.MAX_VALUE;
 
                 for (int i = 0; i < nearbyRobots.length; i++) {
+                    
+                    final RobotInfo robot = nearbyRobots[i];
 
-                    if (nearbyRobots[i].team == Team.ZOMBIE || nearbyRobots[i].team == team.opponent()) {
+                    if (robot.team == Team.ZOMBIE || robot.team == team.opponent()) {
 
-                        if (nearbyRobots[i].type == RobotType.ZOMBIEDEN) { // Found a den
+                        if (robot.type == RobotType.ZOMBIEDEN) { // Found a den
 
-                            final int distance = robotController.getLocation().distanceSquaredTo(nearbyRobots[i].location);
+                            boolean occupied = false;
+                            
+                            // Check if there is another scout near it already
+                            for (int j = 0; j < directions.length; j++) {
+                                final MapLocation searchLocation = robot.location.add(directions[j]);
+                                if (robotController.canSenseLocation(searchLocation)) {
+                                    final RobotInfo robotNearDen = robotController.senseRobotAtLocation(searchLocation);
+                                    if (robotNearDen != null && robotNearDen.team == team && robotNearDen.type == RobotType.SCOUT && robotNearDen.ID != robotController.getID()) {
+                                        occupied = true;
+                                        break;
+                                    }
+                                }
+                            }
+                            if (occupied) {
+                                continue;
+                            }
+
+                            final int distance = currentLocation.distanceSquaredTo(robot.location);
 
                             if (distance < nearestDenDistance) {
 
-                                nearestDen = nearbyRobots[i].location;
+                                nearestDen = robot.location;
                                 nearestDenDistance = distance;
 
                             }
 
-                        } else { // Found zombies
+                        } else { // Found zombies or enemies
 
-                            if (robotController.getLocation().distanceSquaredTo(nearbyRobots[i].location) < nearbyRobots[i].type.attackRadiusSquared) {
+                            if (currentLocation.distanceSquaredTo(robot.location) < robot.type.attackRadiusSquared * 2) {
 
-                                moveLocation = robotController.getLocation().subtract(robotController.getLocation().directionTo(nearbyRobots[i].location));
-                                facingDirection = robotController.getLocation().directionTo(moveLocation);
+                                if (robot.team == Team.ZOMBIE || robotController.getRoundNum() < robotController.getRoundLimit() * 0.6) {
+
+                                    moveLocation = currentLocation.subtract(currentLocation.directionTo(robot.location));
+                                    facingDirection = currentLocation.directionTo(moveLocation);
+
+                                } else {
+
+                                    kamikaze = true;
+
+                                    if (robotController.isCoreReady()) {
+
+                                        robotController.broadcastSignal(2000);
+
+                                    }
+                                }
+
                                 break;
 
                             }
 
                         }
+
+                    } else { // No nearby enemies or zombies
+
+                        kamikaze = false;
 
                     }
 
@@ -58,7 +96,7 @@ public class RobotScout implements Robot {
 
                 }
 
-                if (moveLocation != null) { // Move towards den or send signal if near
+                if (moveLocation != null && !kamikaze) { // Move towards den or send signal if near
 
                     if (nearestDenDistance < 4) {
 
@@ -66,17 +104,21 @@ public class RobotScout implements Robot {
 
                     } else {
 
-                        final Direction direction = robotController.getLocation().directionTo(moveLocation);
+                        final Direction direction = currentLocation.directionTo(moveLocation);
 
                         final int robotID = robotController.getID();
-                        for (int i = 0; i < 3; i++) {
+                        for (int i = 0; i < 5; i++) {
                             Direction moveDirection = direction;
                             if (i == 1) {
                                 moveDirection = robotID % 2 == 0 ? moveDirection.rotateLeft() : moveDirection.rotateRight();
                             } else if (i == 2) {
                                 moveDirection = robotID % 2 == 0 ? moveDirection.rotateRight() : moveDirection.rotateLeft();
+                            } else if (i == 3) {
+                                moveDirection = robotID % 2 == 0 ? moveDirection.rotateRight().rotateRight() : moveDirection.rotateLeft().rotateLeft();
+                            } else if (i == 4) {
+                                moveDirection = robotID % 2 == 0 ? moveDirection.rotateLeft().rotateLeft() : moveDirection.rotateRight().rotateRight();
                             }
-                            if (robotController.canMove(moveDirection)) {
+                            if (robotController.isCoreReady() && robotController.canMove(moveDirection)) {
                                 robotController.move(moveDirection);
                                 break;
                             }
@@ -84,9 +126,9 @@ public class RobotScout implements Robot {
 
                     }
 
-                } else { // Scout out map
+                } else if (robotController.isCoreReady() && !kamikaze) { // Scout out map
 
-                    // TODO: Can get stuck
+                    // TODO: Can be infinite loop if they're surrounded
                     while (!robotController.canMove(facingDirection)) {
 
                         facingDirection = directions[random.nextInt(directions.length)];
