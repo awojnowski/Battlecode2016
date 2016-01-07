@@ -37,7 +37,7 @@ public class CommunicationModule {
 
         final int[] message = communicationModuleSignal.serialize();
         robotController.broadcastMessageSignal(message[0], message[1], broadcastRange);
-        this.writeSignal(communicationModuleSignal);
+        this.processSignal(communicationModuleSignal);
 
     }
 
@@ -111,15 +111,21 @@ public class CommunicationModule {
                 }
 
             }
-            if (communicationModuleSignal.action == CommunicationModuleSignal.ACTION_DELETE) {
+            this.processSignal(communicationModuleSignal);
 
-                this.clearSignal(communicationModuleSignal);
+        }
 
-            } else {
+    }
 
-                this.writeSignal(communicationModuleSignal);
+    public void processSignal(final CommunicationModuleSignal communicationModuleSignal) {
 
-            }
+        if (communicationModuleSignal.action == CommunicationModuleSignal.ACTION_DELETE) {
+
+            this.clearSignal(communicationModuleSignal);
+
+        } else {
+
+            this.writeSignal(communicationModuleSignal);
 
         }
 

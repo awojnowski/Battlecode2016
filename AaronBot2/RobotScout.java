@@ -19,6 +19,29 @@ public class RobotScout implements Robot {
 
             communicationModule.processIncomingSignals(robotController);
 
+            // let's check up on existing communications to verify their information if we can
+            final Enumeration<CommunicationModuleSignal> communicationModuleSignals = communicationModule.communications.elements();
+            while (communicationModuleSignals.hasMoreElements()) {
+
+                final CommunicationModuleSignal communicationModuleSignal = communicationModuleSignals.nextElement();
+                if (robotController.canSenseLocation(communicationModuleSignal.location)) {
+
+                    if (communicationModuleSignal.type == CommunicationModuleSignal.TYPE_ZOMBIEDEN) {
+
+                        final RobotInfo robotInfo = robotController.senseRobotAtLocation(communicationModuleSignal.location);
+                        if (robotInfo == null || robotInfo.type != RobotType.ZOMBIEDEN) {
+
+                            communicationModuleSignal.action = CommunicationModuleSignal.ACTION_DELETE;
+                            communicationModule.broadcastSignal(communicationModuleSignal, robotController, CommunicationModule.MaximumBroadcastRange);
+
+                        }
+
+                    }
+
+                }
+
+            }
+
             // let's try identify what we can see
 
             final RobotInfo[] zombies = robotController.senseNearbyRobots(robotController.getType().sensorRadiusSquared, Team.ZOMBIE);
