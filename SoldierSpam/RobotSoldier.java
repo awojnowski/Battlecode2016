@@ -173,7 +173,7 @@ public class RobotSoldier implements Robot {
 
                                 double rubble = robotController.senseRubble(currentLocation.add(moveDirection));
 
-                                if (rubble > 50 && rubble <= 1000) {
+                                if (rubble > 50 && rubble <= 5000) {
 
                                     robotController.clearRubble(moveDirection);
                                     status += "cleared rubble ";
