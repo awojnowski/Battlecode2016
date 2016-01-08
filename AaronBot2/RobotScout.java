@@ -1,5 +1,6 @@
 package AaronBot2;
 
+import AaronBot2.Movement.*;
 import AaronBot2.Signals.*;
 import battlecode.common.*;
 import java.util.*;
@@ -9,7 +10,9 @@ public class RobotScout implements Robot {
     public void run(final RobotController robotController) throws GameActionException {
 
         final CommunicationModule communicationModule = new CommunicationModule();
-        final Direction[] directions = { Direction.EAST, Direction.NORTH_EAST, Direction.NORTH, Direction.NORTH_WEST, Direction.WEST, Direction.SOUTH_WEST, Direction.SOUTH, Direction.SOUTH_EAST };
+        final DirectionModule directionModule = new DirectionModule(robotController.getID());
+        final MovementModule movementModule = new MovementModule();
+
         final Random random = new Random(robotController.getID());
         final Team team = robotController.getTeam();
 
@@ -19,7 +22,30 @@ public class RobotScout implements Robot {
 
             communicationModule.processIncomingSignals(robotController);
 
-            // let's check up on existing communications to verify their information if we can
+            // let's try to make sure we're safe and run from enemies
+
+            final MapLocation currentLocation = robotController.getLocation();
+            final RobotInfo[] enemies = robotController.senseHostileRobots(currentLocation, robotController.getType().sensorRadiusSquared);
+
+            if (robotController.isCoreReady()) {
+
+                final RobotInfo dangerousEnemy = directionModule.getNearestEnemyInRangeOfMapLocation(currentLocation, enemies);
+                if (dangerousEnemy != null) {
+
+                    final Direction fleeDirection = currentLocation.directionTo(dangerousEnemy.location).opposite();
+                    final Direction fleeMovementDirection = directionModule.recommendedSafeMovementDirectionForDirection(fleeDirection, robotController, enemies);
+                    if (fleeMovementDirection != null) {
+
+                        robotController.move(fleeMovementDirection);
+
+                    }
+
+                }
+
+            }
+
+            // let's check up on existing communications to verify the information, if we can
+
             final Enumeration<CommunicationModuleSignal> communicationModuleSignals = communicationModule.communications.elements();
             while (communicationModuleSignals.hasMoreElements()) {
 
@@ -44,29 +70,26 @@ public class RobotScout implements Robot {
 
             // let's try identify what we can see
 
-            final RobotInfo[] zombies = robotController.senseNearbyRobots(robotController.getType().sensorRadiusSquared, Team.ZOMBIE);
-            for (int i = 0; i < zombies.length; i++) {
+            for (int i = 0; i < enemies.length; i++) {
 
-                final RobotInfo zombie = zombies[i];
-                if (zombie.type != RobotType.ZOMBIEDEN) {
+                final RobotInfo enemy = enemies[i];
+                if (enemy.type == RobotType.ZOMBIEDEN) {
 
-                    continue;
+                    final CommunicationModuleSignal existingSignal = communicationModule.communications.get(CommunicationModule.communicationsIndexFromLocation(enemy.location));
+                    if (existingSignal != null && existingSignal.type == CommunicationModuleSignal.TYPE_ZOMBIEDEN) {
+
+                        continue; // a signal already exists for this den
+
+                    }
+
+                    final CommunicationModuleSignal signal = new CommunicationModuleSignal();
+                    signal.action = CommunicationModuleSignal.ACTION_SEEN;
+                    signal.location = enemy.location;
+                    signal.robotIdentifier = enemy.ID;
+                    signal.type = CommunicationModuleSignal.TYPE_ZOMBIEDEN;
+                    communicationModule.broadcastSignal(signal, robotController, CommunicationModule.MaximumBroadcastRange);
 
                 }
-
-                final CommunicationModuleSignal existingSignal = communicationModule.communications.get(CommunicationModule.communicationsIndexFromLocation(zombie.location));
-                if (existingSignal != null && existingSignal.type == CommunicationModuleSignal.TYPE_ZOMBIEDEN) {
-
-                    continue; // a signal already exists for this den
-
-                }
-
-                final CommunicationModuleSignal signal = new CommunicationModuleSignal();
-                signal.action = CommunicationModuleSignal.ACTION_SEEN;
-                signal.location = zombie.location;
-                signal.robotIdentifier = zombie.ID;
-                signal.type = CommunicationModuleSignal.TYPE_ZOMBIEDEN;
-                communicationModule.broadcastSignal(signal, robotController, CommunicationModule.MaximumBroadcastRange);
 
             }
 
@@ -75,15 +98,16 @@ public class RobotScout implements Robot {
             if (robotController.isCoreReady()) {
 
                 // let's see if we have a movement direction before moving (if not, create one)
-                if (movementDirection == null) {
+                if (movementDirection == null || !robotController.onTheMap(currentLocation.add(movementDirection))) {
 
-                    movementDirection = directions[random.nextInt(directions.length)];
+                    movementDirection = directionModule.randomDirection();
 
                 }
 
-                if (robotController.canMove(movementDirection)) {
+                final Direction actualMovementDirection = directionModule.recommendedSafeMovementDirectionForDirection(movementDirection, robotController, enemies);
+                if (actualMovementDirection != null) {
 
-                    robotController.move(movementDirection);
+                    robotController.move(actualMovementDirection);
 
                 } else {
 
@@ -94,6 +118,7 @@ public class RobotScout implements Robot {
             }
 
             robotController.setIndicatorString(0, "I know of " + communicationModule.communications.size() + " communications.");
+            robotController.setIndicatorString(1, "I know of " + enemies.length + " enemies nearby.");
 
             Clock.yield();
 
