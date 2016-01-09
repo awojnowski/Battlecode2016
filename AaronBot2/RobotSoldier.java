@@ -43,8 +43,6 @@ public class RobotSoldier implements Robot {
 
             }
 
-            robotController.setIndicatorString(0, "Choosing objective at location: " + (objectiveSignal != null ? objectiveSignal.location : "(none)") + " at distance " + closestLocationDistance);
-
             // now let's verify existing information
 
             communicationModule.verifyCommunicationsInformation(robotController, false);
@@ -52,11 +50,11 @@ public class RobotSoldier implements Robot {
             // now let's see if we can attack anything
 
             boolean attacked = false;
+            final RobotInfo[] enemies = robotController.senseHostileRobots(currentLocation, robotController.getType().attackRadiusSquared);
+            final RobotInfo bestEnemy = combatModule.bestEnemyToAttackFromEnemies(enemies);
 
             if (robotController.isWeaponReady()) {
 
-                final RobotInfo[] enemies = robotController.senseHostileRobots(currentLocation, robotController.getType().attackRadiusSquared);
-                final RobotInfo bestEnemy = combatModule.bestEnemyToAttackFromEnemies(enemies);
                 if (bestEnemy != null) {
 
                     robotController.attackLocation(bestEnemy.location);
@@ -67,9 +65,9 @@ public class RobotSoldier implements Robot {
             }
 
             // now let's try move toward an assignment
-
+            
             Direction targetRubbleClearanceDirection = null;
-            if (robotController.isCoreReady() && !attacked) {
+            if (robotController.isCoreReady() && (bestEnemy == null || bestEnemy.team != robotController.getTeam().opponent())) {
 
                 if (objectiveSignal != null) {
 

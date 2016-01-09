@@ -37,6 +37,7 @@ public class RobotScout implements Robot {
                     if (fleeMovementDirection != null) {
 
                         robotController.move(fleeMovementDirection);
+                        movementDirection = fleeMovementDirection;
 
                     } else {
 
@@ -44,6 +45,7 @@ public class RobotScout implements Robot {
                         if (fleeMovementDirection != null) {
 
                             robotController.move(fleeMovementDirection);
+                            movementDirection = fleeMovementDirection;
 
                         }
 
@@ -103,6 +105,12 @@ public class RobotScout implements Robot {
                     movementDirection = null;
 
                 }
+
+            }
+
+            if (movementDirection != null) {
+
+                robotController.setIndicatorLine(currentLocation, currentLocation.add(movementDirection, 10000), 255, 255, 255);
 
             }
 

@@ -4,40 +4,44 @@ import battlecode.common.*;
 
 public class RubbleModule {
 
-    public Direction rubbleClearanceDirectionFromTargetDirection(final Direction direction, final RobotController robotController) {
+    public Direction rubbleClearanceDirectionFromTargetDirection(final Direction direction, final RobotController robotController) throws GameActionException {
 
         final MapLocation mapLocation = robotController.getLocation();
-        if (robotController.canSenseLocation(mapLocation) && robotController.senseRubble(mapLocation) > 0) {
+
+        Direction scanDirection = direction;
+        MapLocation newLocation = mapLocation.add(scanDirection);
+        if (robotController.onTheMap(newLocation) && robotController.senseRubble(newLocation) > 0) {
 
             return direction;
 
         }
 
         final boolean divisible = robotController.getID() % 2 == 0;
-        Direction scanDirection = divisible ? direction.rotateLeft() : direction.rotateRight();
-        MapLocation newLocation = mapLocation.add(scanDirection);
-        if (robotController.canSenseLocation(newLocation) && robotController.senseRubble(newLocation) > 0) {
+
+        scanDirection = divisible ? direction.rotateLeft() : direction.rotateRight();
+        newLocation = mapLocation.add(scanDirection);
+        if (robotController.onTheMap(newLocation) && robotController.senseRubble(newLocation) > 0) {
 
             return scanDirection;
 
         }
         scanDirection = divisible ? direction.rotateRight() : direction.rotateLeft();
         newLocation = mapLocation.add(scanDirection);
-        if (robotController.canSenseLocation(newLocation) && robotController.senseRubble(newLocation) > 0) {
+        if (robotController.onTheMap(newLocation) && robotController.senseRubble(newLocation) > 0) {
 
             return scanDirection;
 
         }
         scanDirection = divisible ? direction.rotateLeft().rotateLeft() : direction.rotateRight().rotateRight();
         newLocation = mapLocation.add(scanDirection);
-        if (robotController.canSenseLocation(newLocation) && robotController.senseRubble(newLocation) > 0) {
+        if (robotController.onTheMap(newLocation) && robotController.senseRubble(newLocation) > 0) {
 
             return scanDirection;
 
         }
         scanDirection = divisible ? direction.rotateRight().rotateRight() : direction.rotateLeft().rotateLeft();
         newLocation = mapLocation.add(scanDirection);
-        if (robotController.canSenseLocation(newLocation) && robotController.senseRubble(newLocation) > 0) {
+        if (robotController.onTheMap(newLocation) && robotController.senseRubble(newLocation) > 0) {
 
             return scanDirection;
 
