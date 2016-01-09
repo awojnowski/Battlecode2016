@@ -29,11 +29,11 @@ public class RobotScout implements Robot {
 
             if (robotController.isCoreReady() && communicationModule.initialInformationReceived) {
 
-                final RobotInfo dangerousEnemy = directionModule.getNearestEnemyInRangeOfMapLocation(currentLocation, enemies);
+                final RobotInfo dangerousEnemy = directionModule.getNearestEnemyInRangeOfMapLocation(currentLocation, enemies, 1);
                 if (dangerousEnemy != null) {
 
                     final Direction fleeDirection = currentLocation.directionTo(dangerousEnemy.location).opposite();
-                    Direction fleeMovementDirection = directionModule.recommendedSafeMovementDirectionForDirection(fleeDirection, robotController, enemies);
+                    Direction fleeMovementDirection = directionModule.recommendedSafeMovementDirectionForDirection(fleeDirection, robotController, enemies, 1);
                     if (fleeMovementDirection != null) {
 
                         robotController.move(fleeMovementDirection);
@@ -55,27 +55,7 @@ public class RobotScout implements Robot {
 
             // let's check up on existing communications to verify the information, if we can
 
-            final Enumeration<CommunicationModuleSignal> communicationModuleSignals = communicationModule.communications.elements();
-            while (communicationModuleSignals.hasMoreElements()) {
-
-                final CommunicationModuleSignal communicationModuleSignal = communicationModuleSignals.nextElement();
-                if (robotController.canSenseLocation(communicationModuleSignal.location)) {
-
-                    if (communicationModuleSignal.type == CommunicationModuleSignal.TYPE_ZOMBIEDEN) {
-
-                        final RobotInfo robotInfo = robotController.senseRobotAtLocation(communicationModuleSignal.location);
-                        if (robotInfo == null || robotInfo.type != RobotType.ZOMBIEDEN) {
-
-                            communicationModuleSignal.action = CommunicationModuleSignal.ACTION_DELETE;
-                            communicationModule.broadcastSignal(communicationModuleSignal, robotController, CommunicationModule.MaximumBroadcastRange);
-
-                        }
-
-                    }
-
-                }
-
-            }
+            communicationModule.verifyCommunicationsInformation(robotController, true);
 
             // let's try identify what we can see
 
@@ -84,7 +64,7 @@ public class RobotScout implements Robot {
                 final RobotInfo enemy = enemies[i];
                 if (enemy.type == RobotType.ZOMBIEDEN) {
 
-                    final CommunicationModuleSignal existingSignal = communicationModule.communications.get(CommunicationModule.communicationsIndexFromLocation(enemy.location));
+                    final CommunicationModuleSignal existingSignal = communicationModule.zombieDens.get(CommunicationModule.communicationsIndexFromLocation(enemy.location));
                     if (existingSignal != null && existingSignal.type == CommunicationModuleSignal.TYPE_ZOMBIEDEN) {
 
                         continue; // a signal already exists for this den
@@ -113,7 +93,7 @@ public class RobotScout implements Robot {
 
                 }
 
-                final Direction actualMovementDirection = directionModule.recommendedSafeMovementDirectionForDirection(movementDirection, robotController, enemies);
+                final Direction actualMovementDirection = directionModule.recommendedSafeMovementDirectionForDirection(movementDirection, robotController, enemies, 1);
                 if (actualMovementDirection != null) {
 
                     robotController.move(actualMovementDirection);
@@ -125,9 +105,6 @@ public class RobotScout implements Robot {
                 }
 
             }
-
-            robotController.setIndicatorString(0, "I know of " + communicationModule.communications.size() + " communications.");
-            robotController.setIndicatorString(1, "I know of " + enemies.length + " enemies nearby.");
 
             Clock.yield();
 

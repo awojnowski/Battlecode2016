@@ -20,16 +20,15 @@ public class RobotSoldier implements Robot {
         while (true) {
 
             communicationModule.processIncomingSignals(robotController);
-            robotController.setIndicatorString(0, "I am aware of " + communicationModule.communications.size() + " signals.");
+
+            // let's get a new assignment if necessary
 
             if (robotController.getRoundNum() % 25 == 0 && objectiveSignal == null) {
-
-                // let's get a new assignment
 
                 final MapLocation location = robotController.getLocation();
                 int closestLocationDistance = Integer.MAX_VALUE;
 
-                final Enumeration<CommunicationModuleSignal> communicationModuleSignals = communicationModule.communications.elements();
+                final Enumeration<CommunicationModuleSignal> communicationModuleSignals = communicationModule.zombieDens.elements();
                 while (communicationModuleSignals.hasMoreElements()) {
 
                     final CommunicationModuleSignal signal = communicationModuleSignals.nextElement();
@@ -43,6 +42,10 @@ public class RobotSoldier implements Robot {
                 }
 
             }
+
+            // now let's verify existing information
+
+            communicationModule.verifyCommunicationsInformation(robotController, false);
 
             // now let's try move toward an assignment
 

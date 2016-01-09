@@ -7,6 +7,8 @@ import java.util.*;
 
 public class RobotArchon implements Robot {
 
+    private static int InitialMessageUpdateLength = 2;
+
     public void run(final RobotController robotController) throws GameActionException {
 
         // instance variables
@@ -20,7 +22,7 @@ public class RobotArchon implements Robot {
 
         int scoutsBuilt = 0;
         RobotType buildingUnitType = null;
-        Enumeration<CommunicationModuleSignal> buildingUpdateSignals = null;
+        CommunicationModuleSignalCollection buildingUpdateSignalCollection = null;
 
         // loop
 
@@ -35,9 +37,9 @@ public class RobotArchon implements Robot {
 
                 if (buildingUnitType != null) {
 
-                    if (buildingUpdateSignals == null) {
+                    if (buildingUpdateSignalCollection == null) {
 
-                        buildingUpdateSignals = communicationModule.communications.elements();
+                        buildingUpdateSignalCollection = communicationModule.allCommunicationModuleSignals();
 
                     }
 
@@ -46,23 +48,23 @@ public class RobotArchon implements Robot {
 
             }
 
-            if (buildingUpdateSignals != null) {
+            if (buildingUpdateSignalCollection != null) {
 
                 boolean signalsSendingDone = true;
                 int totalSignalsSent = 0;
-                while (buildingUpdateSignals.hasMoreElements()) {
+                while (buildingUpdateSignalCollection.hasMoreElements()) {
 
-                    if (totalSignalsSent >= GameConstants.MESSAGE_SIGNALS_PER_TURN) {
+                    if (totalSignalsSent >= GameConstants.MESSAGE_SIGNALS_PER_TURN - 1) {
 
                         signalsSendingDone = false;
                         break;
 
                     }
 
-                    final CommunicationModuleSignal communicationModuleSignal = buildingUpdateSignals.nextElement();
+                    final CommunicationModuleSignal communicationModuleSignal = buildingUpdateSignalCollection.nextElement();
                     if (this.shouldBroadcastCommunicationModuleSignalToRobotType(communicationModuleSignal.type, buildingUnitType)) {
 
-                        communicationModule.broadcastSignal(communicationModuleSignal, robotController, 3);
+                        communicationModule.broadcastSignal(communicationModuleSignal, robotController, RobotArchon.InitialMessageUpdateLength);
                         totalSignalsSent ++;
 
                     }
@@ -75,9 +77,9 @@ public class RobotArchon implements Robot {
                     signal.location = robotController.getLocation();
                     signal.robotIdentifier = robotController.getID();
                     signal.type = CommunicationModuleSignal.TYPE_NONE;
-                    communicationModule.broadcastSignal(signal, robotController, 3);
+                    communicationModule.broadcastSignal(signal, robotController, RobotArchon.InitialMessageUpdateLength);
 
-                    buildingUpdateSignals = null;
+                    buildingUpdateSignalCollection = null;
 
                 }
 
@@ -111,11 +113,11 @@ public class RobotArchon implements Robot {
 
             }
 
-            final Enumeration<CommunicationModuleSignal> communicationModuleSignals = communicationModule.communications.elements();
+            final CommunicationModuleSignalCollection communicationModuleSignalCollection = communicationModule.allCommunicationModuleSignals();
             final MapLocation location = robotController.getLocation();
-            while (communicationModuleSignals.hasMoreElements()) {
+            while (communicationModuleSignalCollection.hasMoreElements()) {
 
-                final CommunicationModuleSignal communicationModuleSignal = communicationModuleSignals.nextElement();
+                final CommunicationModuleSignal communicationModuleSignal = communicationModuleSignalCollection.nextElement();
                 int[] color = new int[]{255, 255, 255};
                 if (communicationModuleSignal.type == CommunicationModuleSignal.TYPE_ZOMBIEDEN) {
 
@@ -137,7 +139,6 @@ public class RobotArchon implements Robot {
                 robotController.setIndicatorLine(location, communicationModuleSignal.location, color[0], color[1], color[2]);
 
             }
-            robotController.setIndicatorString(0, "I know of " + communicationModule.communications.size() + " communications.");
 
             Clock.yield();
 

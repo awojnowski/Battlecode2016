@@ -60,10 +60,10 @@ public class DirectionModule {
     }
 
     // will do the same as recommendedMovementDirectionForDirection but will not move within the enemy attack range
-    public Direction recommendedSafeMovementDirectionForDirection(final Direction direction, final RobotController robotController, final RobotInfo[] enemies) {
+    public Direction recommendedSafeMovementDirectionForDirection(final Direction direction, final RobotController robotController, final RobotInfo[] enemies, final double buffer) {
 
         final MapLocation mapLocation = robotController.getLocation();
-        if (robotController.canMove(direction) && this.isMapLocationSafe(mapLocation.add(direction), enemies)) {
+        if (robotController.canMove(direction) && this.isMapLocationSafe(mapLocation.add(direction), enemies, buffer)) {
 
             return direction;
 
@@ -71,25 +71,25 @@ public class DirectionModule {
 
         final boolean divisible = robotController.getID() % 2 == 0;
         Direction movementDirection = divisible ? direction.rotateLeft() : direction.rotateRight();
-        if (robotController.canMove(movementDirection) && this.isMapLocationSafe(mapLocation.add(movementDirection), enemies)) {
+        if (robotController.canMove(movementDirection) && this.isMapLocationSafe(mapLocation.add(movementDirection), enemies, buffer)) {
 
             return movementDirection;
 
         }
         movementDirection = divisible ? direction.rotateRight() : direction.rotateLeft();
-        if (robotController.canMove(movementDirection) && this.isMapLocationSafe(mapLocation.add(movementDirection), enemies)) {
+        if (robotController.canMove(movementDirection) && this.isMapLocationSafe(mapLocation.add(movementDirection), enemies, buffer)) {
 
             return movementDirection;
 
         }
         movementDirection = divisible ? direction.rotateLeft().rotateLeft() : direction.rotateRight().rotateRight();
-        if (robotController.canMove(movementDirection) && this.isMapLocationSafe(mapLocation.add(movementDirection), enemies)) {
+        if (robotController.canMove(movementDirection) && this.isMapLocationSafe(mapLocation.add(movementDirection), enemies, buffer)) {
 
             return movementDirection;
 
         }
         movementDirection = divisible ? direction.rotateRight().rotateRight() : direction.rotateLeft().rotateLeft();
-        if (robotController.canMove(movementDirection) && this.isMapLocationSafe(mapLocation.add(movementDirection), enemies)) {
+        if (robotController.canMove(movementDirection) && this.isMapLocationSafe(mapLocation.add(movementDirection), enemies, buffer)) {
 
             return movementDirection;
 
@@ -98,19 +98,19 @@ public class DirectionModule {
 
     }
 
-    public boolean isMapLocationSafe(final MapLocation mapLocation, final RobotInfo[] enemies) {
+    public boolean isMapLocationSafe(final MapLocation mapLocation, final RobotInfo[] enemies, final double buffer) {
 
-        return this.getEnemyInRangeOfMapLocation(mapLocation, enemies) == null;
+        return this.getEnemyInRangeOfMapLocation(mapLocation, enemies, buffer) == null;
 
     }
 
-    public RobotInfo getEnemyInRangeOfMapLocation(final MapLocation mapLocation, final RobotInfo[] enemies) {
+    public RobotInfo getEnemyInRangeOfMapLocation(final MapLocation mapLocation, final RobotInfo[] enemies, final double buffer) {
 
         for (int i = 0; i < enemies.length; i++) {
 
             final RobotInfo enemy = enemies[i];
             final int distance = enemy.location.distanceSquaredTo(mapLocation);
-            if (distance <= enemy.type.attackRadiusSquared) {
+            if (distance <= (int)Math.round(Math.pow(Math.sqrt(enemy.type.attackRadiusSquared) + buffer, 2))) {
 
                 return enemy;
 
@@ -121,7 +121,7 @@ public class DirectionModule {
 
     }
 
-    public RobotInfo getNearestEnemyInRangeOfMapLocation(final MapLocation mapLocation, final RobotInfo[] enemies) {
+    public RobotInfo getNearestEnemyInRangeOfMapLocation(final MapLocation mapLocation, final RobotInfo[] enemies, final double buffer) {
 
         RobotInfo nearestEnemy = null;
         int nearestEnemyDistance = Integer.MAX_VALUE;
@@ -130,7 +130,7 @@ public class DirectionModule {
 
             final RobotInfo enemy = enemies[i];
             final int distance = enemy.location.distanceSquaredTo(mapLocation);
-            if (distance <= enemy.type.attackRadiusSquared) {
+            if (distance <= (int)Math.round(Math.pow(Math.sqrt(enemy.type.attackRadiusSquared) + buffer, 2))) {
 
                 if (distance < nearestEnemyDistance) {
 
