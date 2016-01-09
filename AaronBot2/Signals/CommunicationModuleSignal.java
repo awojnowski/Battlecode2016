@@ -9,6 +9,7 @@ public class CommunicationModuleSignal {
     public static final int ACTION_NONE = 0;
     public static final int ACTION_SEEN = 1;
     public static final int ACTION_DELETE = 2;
+    public static final int ACTION_INITIAL_UPDATE_COMPLETE = 3;
 
     public static final int TYPE_NONE = 0;
     public static final int TYPE_ZOMBIEDEN = 1;

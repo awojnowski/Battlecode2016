@@ -15,6 +15,8 @@ public class CommunicationModule {
     // contains signals without a message associated with them, received last time the queue was cleared
     public final ArrayList<Signal> notifications = new ArrayList<Signal>();
 
+    public boolean initialInformationReceived = false;
+
     public interface Delegate {
 
         public boolean shouldProcessSignalType(final int signalType);
@@ -122,6 +124,10 @@ public class CommunicationModule {
         if (communicationModuleSignal.action == CommunicationModuleSignal.ACTION_DELETE) {
 
             this.clearSignal(communicationModuleSignal);
+
+        } else if (communicationModuleSignal.action == CommunicationModuleSignal.ACTION_INITIAL_UPDATE_COMPLETE) {
+
+            this.initialInformationReceived = true;
 
         } else {
 

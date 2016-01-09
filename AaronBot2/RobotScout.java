@@ -27,16 +27,25 @@ public class RobotScout implements Robot {
             final MapLocation currentLocation = robotController.getLocation();
             final RobotInfo[] enemies = robotController.senseHostileRobots(currentLocation, robotController.getType().sensorRadiusSquared);
 
-            if (robotController.isCoreReady()) {
+            if (robotController.isCoreReady() && communicationModule.initialInformationReceived) {
 
                 final RobotInfo dangerousEnemy = directionModule.getNearestEnemyInRangeOfMapLocation(currentLocation, enemies);
                 if (dangerousEnemy != null) {
 
                     final Direction fleeDirection = currentLocation.directionTo(dangerousEnemy.location).opposite();
-                    final Direction fleeMovementDirection = directionModule.recommendedSafeMovementDirectionForDirection(fleeDirection, robotController, enemies);
+                    Direction fleeMovementDirection = directionModule.recommendedSafeMovementDirectionForDirection(fleeDirection, robotController, enemies);
                     if (fleeMovementDirection != null) {
 
                         robotController.move(fleeMovementDirection);
+
+                    } else {
+
+                        fleeMovementDirection = directionModule.recommendedMovementDirectionForDirection(fleeDirection, robotController);
+                        if (fleeMovementDirection != null) {
+
+                            robotController.move(fleeMovementDirection);
+
+                        }
 
                     }
 
@@ -95,7 +104,7 @@ public class RobotScout implements Robot {
 
             // now let's try move to see more
 
-            if (robotController.isCoreReady()) {
+            if (robotController.isCoreReady() && communicationModule.initialInformationReceived) {
 
                 // let's see if we have a movement direction before moving (if not, create one)
                 if (movementDirection == null || !robotController.onTheMap(currentLocation.add(movementDirection))) {

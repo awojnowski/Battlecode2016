@@ -1,5 +1,6 @@
 package AaronBot2;
 
+import AaronBot2.Movement.*;
 import AaronBot2.Signals.*;
 import battlecode.common.*;
 import java.util.*;
@@ -8,11 +9,20 @@ public class RobotArchon implements Robot {
 
     public void run(final RobotController robotController) throws GameActionException {
 
+        // instance variables
+
+        // modules
+
         final CommunicationModule communicationModule = new CommunicationModule();
-        final Direction[] directions = { Direction.EAST, Direction.NORTH_EAST, Direction.NORTH, Direction.NORTH_WEST, Direction.WEST, Direction.SOUTH_WEST, Direction.SOUTH, Direction.SOUTH_EAST };
+        final DirectionModule directionModule = new DirectionModule(robotController.getID());
+
+        // unit building
 
         int scoutsBuilt = 0;
         RobotType buildingUnitType = null;
+        Enumeration<CommunicationModuleSignal> buildingUpdateSignals = null;
+
+        // loop
 
         while (true) {
 
@@ -25,20 +35,51 @@ public class RobotArchon implements Robot {
 
                 if (buildingUnitType != null) {
 
-                    final Enumeration<CommunicationModuleSignal> communicationModuleSignals = communicationModule.communications.elements();
-                    while (communicationModuleSignals.hasMoreElements()) {
+                    if (buildingUpdateSignals == null) {
 
-                        final CommunicationModuleSignal communicationModuleSignal = communicationModuleSignals.nextElement();
-                        if (this.shouldBroadcastCommunicationModuleSignalToRobotType(communicationModuleSignal.type, buildingUnitType)) {
-
-                            communicationModule.broadcastSignal(communicationModuleSignal, robotController, 3);
-
-                        }
+                        buildingUpdateSignals = communicationModule.communications.elements();
 
                     }
 
                 }
                 buildingUnitType = null;
+
+            }
+
+            if (buildingUpdateSignals != null) {
+
+                boolean signalsSendingDone = true;
+                int totalSignalsSent = 0;
+                while (buildingUpdateSignals.hasMoreElements()) {
+
+                    if (totalSignalsSent >= GameConstants.MESSAGE_SIGNALS_PER_TURN) {
+
+                        signalsSendingDone = false;
+                        break;
+
+                    }
+
+                    final CommunicationModuleSignal communicationModuleSignal = buildingUpdateSignals.nextElement();
+                    if (this.shouldBroadcastCommunicationModuleSignalToRobotType(communicationModuleSignal.type, buildingUnitType)) {
+
+                        communicationModule.broadcastSignal(communicationModuleSignal, robotController, 3);
+                        totalSignalsSent ++;
+
+                    }
+
+                }
+                if (signalsSendingDone) {
+
+                    final CommunicationModuleSignal signal = new CommunicationModuleSignal();
+                    signal.action = CommunicationModuleSignal.ACTION_INITIAL_UPDATE_COMPLETE;
+                    signal.location = robotController.getLocation();
+                    signal.robotIdentifier = robotController.getID();
+                    signal.type = CommunicationModuleSignal.TYPE_NONE;
+                    communicationModule.broadcastSignal(signal, robotController, 3);
+
+                    buildingUpdateSignals = null;
+
+                }
 
             }
 
@@ -51,13 +92,13 @@ public class RobotArchon implements Robot {
                     RobotType typeToBuild = RobotType.SCOUT;
                     if (robotController.getTeamParts() >= typeToBuild.partCost) {
 
-                        for (int i = 0; i < directions.length; i++) {
+                        for (int i = 0; i < directionModule.directions.length; i++) {
 
-                            if (robotController.canBuild(directions[i], typeToBuild)) {
+                            if (robotController.canBuild(directionModule.directions[i], typeToBuild)) {
 
                                 buildingUnitType = typeToBuild;
                                 scoutsBuilt ++;
-                                robotController.build(directions[i], typeToBuild);
+                                robotController.build(directionModule.directions[i], typeToBuild);
                                 break;
 
                             }
