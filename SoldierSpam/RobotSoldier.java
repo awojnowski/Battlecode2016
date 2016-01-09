@@ -169,11 +169,11 @@ public class RobotSoldier implements Robot {
                                 status += "moved ";
                                 break;
 
-                            } else {
+                            } else if (i == 2) { // If can't go straight, left, or right
 
                                 double rubble = robotController.senseRubble(currentLocation.add(moveDirection));
 
-                                if (rubble > 50 && rubble <= 5000) {
+                                if (rubble > 50 && rubble <= 5000) { // TODO: Find optimal move vs clear rubble algorithm
 
                                     robotController.clearRubble(moveDirection);
                                     status += "cleared rubble ";
