@@ -33,14 +33,14 @@ public class RobotScout implements Robot {
                 if (dangerousEnemy != null) {
 
                     final Direction fleeDirection = currentLocation.directionTo(dangerousEnemy.location).opposite();
-                    Direction fleeMovementDirection = directionModule.recommendedSafeMovementDirectionForDirection(fleeDirection, robotController, enemies, 1);
+                    Direction fleeMovementDirection = directionModule.recommendedSafeMovementDirectionForDirection(fleeDirection, robotController, enemies, 1, true);
                     if (fleeMovementDirection != null) {
 
                         robotController.move(fleeMovementDirection);
 
                     } else {
 
-                        fleeMovementDirection = directionModule.recommendedMovementDirectionForDirection(fleeDirection, robotController);
+                        fleeMovementDirection = directionModule.recommendedMovementDirectionForDirection(fleeDirection, robotController, true);
                         if (fleeMovementDirection != null) {
 
                             robotController.move(fleeMovementDirection);
@@ -93,7 +93,7 @@ public class RobotScout implements Robot {
 
                 }
 
-                final Direction actualMovementDirection = directionModule.recommendedSafeMovementDirectionForDirection(movementDirection, robotController, enemies, 1);
+                final Direction actualMovementDirection = directionModule.recommendedSafeMovementDirectionForDirection(movementDirection, robotController, enemies, 1, true);
                 if (actualMovementDirection != null) {
 
                     robotController.move(actualMovementDirection);

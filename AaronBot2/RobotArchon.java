@@ -21,6 +21,7 @@ public class RobotArchon implements Robot {
         // unit building
 
         int scoutsBuilt = 0;
+        int soldiersBuilt = 0;
         RobotType buildingUnitType = null;
         CommunicationModuleSignalCollection buildingUpdateSignalCollection = null;
 
@@ -89,21 +90,31 @@ public class RobotArchon implements Robot {
 
             if (robotController.isCoreReady()) {
 
-                if (scoutsBuilt < 2) {
+                RobotType typeToBuild = RobotType.SOLDIER;
+                if (scoutsBuilt == 0 || (int)Math.pow(scoutsBuilt + 1, 4) < soldiersBuilt) {
 
-                    RobotType typeToBuild = RobotType.SCOUT;
-                    if (robotController.getTeamParts() >= typeToBuild.partCost) {
+                    typeToBuild = RobotType.SCOUT;
 
-                        for (int i = 0; i < directionModule.directions.length; i++) {
+                }
+                if (robotController.getTeamParts() >= typeToBuild.partCost) {
 
-                            if (robotController.canBuild(directionModule.directions[i], typeToBuild)) {
+                    for (int i = 0; i < directionModule.directions.length; i++) {
 
-                                buildingUnitType = typeToBuild;
+                        if (robotController.canBuild(directionModule.directions[i], typeToBuild)) {
+
+                            buildingUnitType = typeToBuild;
+                            if (typeToBuild == RobotType.SCOUT) {
+
                                 scoutsBuilt ++;
-                                robotController.build(directionModule.directions[i], typeToBuild);
-                                break;
 
                             }
+                            if (typeToBuild == RobotType.SOLDIER) {
+
+                                soldiersBuilt ++;
+
+                            }
+                            robotController.build(directionModule.directions[i], typeToBuild);
+                            break;
 
                         }
 

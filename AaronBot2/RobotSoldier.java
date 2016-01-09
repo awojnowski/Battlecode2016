@@ -1,7 +1,9 @@
 package AaronBot2;
 
-import AaronBot2.Signals.CommunicationModule;
-import AaronBot2.Signals.CommunicationModuleSignal;
+import AaronBot2.Combat.*;
+import AaronBot2.Movement.*;
+import AaronBot2.Signals.*;
+import AaronBot2.Rubble.*;
 import battlecode.common.*;
 
 import java.util.Enumeration;
@@ -11,89 +13,94 @@ public class RobotSoldier implements Robot {
 
     public void run(final RobotController robotController) throws GameActionException {
 
+        final CombatModule combatModule = new CombatModule();
         final CommunicationModule communicationModule = new CommunicationModule();
-        final Direction[] directions = { Direction.EAST, Direction.NORTH_EAST, Direction.NORTH, Direction.NORTH_WEST, Direction.WEST, Direction.SOUTH_WEST, Direction.SOUTH, Direction.SOUTH_EAST };
-        final Random random = new Random(robotController.getID());
-
-        CommunicationModuleSignal objectiveSignal = null;
+        final DirectionModule directionModule = new DirectionModule(robotController.getID());
+        final MovementModule movementModule = new MovementModule();
+        final RubbleModule rubbleModule = new RubbleModule();
 
         while (true) {
 
             communicationModule.processIncomingSignals(robotController);
 
-            // let's get a new assignment if necessary
+            // let's get the best assignment
 
-            if (robotController.getRoundNum() % 25 == 0 && objectiveSignal == null) {
+            CommunicationModuleSignal objectiveSignal = null;
+            final MapLocation currentLocation = robotController.getLocation();
+            int closestLocationDistance = Integer.MAX_VALUE;
 
-                final MapLocation location = robotController.getLocation();
-                int closestLocationDistance = Integer.MAX_VALUE;
+            final Enumeration<CommunicationModuleSignal> communicationModuleSignals = communicationModule.zombieDens.elements();
+            while (communicationModuleSignals.hasMoreElements()) {
 
-                final Enumeration<CommunicationModuleSignal> communicationModuleSignals = communicationModule.zombieDens.elements();
-                while (communicationModuleSignals.hasMoreElements()) {
+                final CommunicationModuleSignal signal = communicationModuleSignals.nextElement();
+                final int distance = signal.location.distanceSquaredTo(currentLocation);
+                if (distance < closestLocationDistance) {
 
-                    final CommunicationModuleSignal signal = communicationModuleSignals.nextElement();
-                    final int distance = signal.location.distanceSquaredTo(location);
-                    if (distance < closestLocationDistance) {
-
-                        objectiveSignal = signal;
-
-                    }
+                    objectiveSignal = signal;
+                    closestLocationDistance = distance;
 
                 }
 
             }
+
+            robotController.setIndicatorString(0, "Choosing objective at location: " + (objectiveSignal != null ? objectiveSignal.location : "(none)") + " at distance " + closestLocationDistance);
 
             // now let's verify existing information
 
             communicationModule.verifyCommunicationsInformation(robotController, false);
 
-            // now let's try move toward an assignment
+            // now let's see if we can attack anything
+
+            boolean attacked = false;
 
             if (robotController.isWeaponReady()) {
 
+                final RobotInfo[] enemies = robotController.senseHostileRobots(currentLocation, robotController.getType().attackRadiusSquared);
+                final RobotInfo bestEnemy = combatModule.bestEnemyToAttackFromEnemies(enemies);
+                if (bestEnemy != null) {
+
+                    robotController.attackLocation(bestEnemy.location);
+                    attacked = true;
+
+                }
+
+            }
+
+            // now let's try move toward an assignment
+
+            Direction targetRubbleClearanceDirection = null;
+            if (robotController.isCoreReady() && !attacked) {
+
                 if (objectiveSignal != null) {
 
-                    if (objectiveSignal.type == CommunicationModuleSignal.TYPE_ZOMBIEDEN) {
+                    final MapLocation objectiveLocation = objectiveSignal.location;
+                    if (objectiveLocation.distanceSquaredTo(currentLocation) >= 8) {
 
-                        final MapLocation location = robotController.getLocation();
-                        final RobotType ourType = robotController.getType();
-                        final RobotInfo[] zombies = robotController.senseNearbyRobots(ourType.sensorRadiusSquared, Team.ZOMBIE);
-                        for (int i = 0; i < zombies.length; i++) {
+                        final Direction objectiveDirection = currentLocation.directionTo(objectiveLocation);
+                        final Direction objectiveMovementDirection = directionModule.recommendedMovementDirectionForDirection(objectiveDirection, robotController, false);
+                        if (objectiveMovementDirection != null) {
 
-                            final RobotInfo robot = zombies[i];
-                            if (robot.ID == objectiveSignal.robotIdentifier) {
+                            robotController.move(objectiveMovementDirection);
 
-                                if (location.distanceSquaredTo(robot.location) <= ourType.attackRadiusSquared) {
+                        } else {
 
-                                    if (robotController.canAttackLocation(robot.location)) {
-
-                                        robotController.attackLocation(robot.location);
-                                        break;
-
-                                    }
-
-                                }
-
-                            }
+                            targetRubbleClearanceDirection = objectiveDirection;
 
                         }
 
                     }
 
-                }
+                } else {
 
-            }
+                    final Direction randomDirection = directionModule.randomDirection();
+                    final Direction randomMovementDirection = directionModule.recommendedMovementDirectionForDirection(randomDirection, robotController, false);
+                    if (randomMovementDirection != null) {
 
-            if (robotController.isCoreReady()) {
+                        robotController.move(randomMovementDirection);
 
-                if (objectiveSignal != null) {
+                    } else {
 
-                    final MapLocation location = robotController.getLocation();
-                    final MapLocation objectiveLocation = objectiveSignal.location;
-                    final Direction direction = location.directionTo(objectiveLocation);
-                    if (robotController.canMove(direction)) {
-
-                        robotController.move(direction);
+                        targetRubbleClearanceDirection = randomDirection;
 
                     }
 
@@ -101,14 +108,55 @@ public class RobotSoldier implements Robot {
 
             }
 
+            // we can try clear rubble if we didn't move
+
+            if (robotController.isCoreReady()) {
+
+                if (targetRubbleClearanceDirection != null) {
+
+                    final Direction rubbleClearanceDirection = rubbleModule.rubbleClearanceDirectionFromTargetDirection(targetRubbleClearanceDirection, robotController);
+                    if (rubbleClearanceDirection != null) {
+
+                        robotController.clearRubble(rubbleClearanceDirection);
+
+                    }
+
+                }
+
+            }
+
+            // finish up
+
+            final CommunicationModuleSignalCollection communicationModuleSignalCollection = communicationModule.allCommunicationModuleSignals();
+            final MapLocation location = robotController.getLocation();
+            while (communicationModuleSignalCollection.hasMoreElements()) {
+
+                final CommunicationModuleSignal communicationModuleSignal = communicationModuleSignalCollection.nextElement();
+                int[] color = new int[]{255, 255, 255};
+                if (communicationModuleSignal.type == CommunicationModuleSignal.TYPE_ZOMBIEDEN) {
+
+                    color = new int[]{50, 255, 50};
+
+                } else if (communicationModuleSignal.type == CommunicationModuleSignal.TYPE_ENEMY_ARCHON) {
+
+                    color = new int[]{255, 0, 0};
+
+                } else if (communicationModuleSignal.type == CommunicationModuleSignal.TYPE_MAP_CORNER) {
+
+                    color = new int[]{0, 0, 0};
+
+                } else if (communicationModuleSignal.type == CommunicationModuleSignal.TYPE_MAP_CORNER) {
+
+                    color = new int[]{0, 255, 0};
+
+                }
+                robotController.setIndicatorLine(location, communicationModuleSignal.location, color[0], color[1], color[2]);
+
+            }
+
             if (objectiveSignal != null) {
 
-                robotController.setIndicatorLine(objectiveSignal.location, robotController.getLocation(), 0, 255, 0);
-                robotController.setIndicatorString(1, "I have an objective.");
-
-            } else {
-
-                robotController.setIndicatorString(1, "I DO NOT have an objective.");
+                robotController.setIndicatorLine(objectiveSignal.location, robotController.getLocation(), 255, 0, 0);
 
             }
 

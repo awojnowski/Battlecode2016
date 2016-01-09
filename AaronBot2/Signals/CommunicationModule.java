@@ -69,26 +69,17 @@ public class CommunicationModule implements CommunicationModuleDelegate {
 
     public void verifyCommunicationsInformation(final RobotController robotController, boolean broadcastInformation) throws GameActionException {
 
-        final Team team = robotController.getTeam();
-
         // verify the zombie dens
 
         final Enumeration<CommunicationModuleSignal> zombieDens = this.zombieDens.elements();
         while (zombieDens.hasMoreElements()) {
 
             final CommunicationModuleSignal communicationModuleSignal = zombieDens.nextElement();
-            if (!robotController.canSenseLocation(communicationModuleSignal.location)) {
+            if (!this.verifyZombieDenCommunicationModuleSignal(communicationModuleSignal, robotController)) {
 
-                continue;
-
-            }
-
-            final RobotInfo robotInfo = robotController.senseRobotAtLocation(communicationModuleSignal.location);
-            if (robotInfo == null || robotInfo.type != RobotType.ZOMBIEDEN) {
-
-                communicationModuleSignal.action = CommunicationModuleSignal.ACTION_DELETE;
                 if (broadcastInformation) {
 
+                    communicationModuleSignal.action = CommunicationModuleSignal.ACTION_DELETE;
                     this.broadcastSignal(communicationModuleSignal, robotController, CommunicationModule.MaximumBroadcastRange);
 
                 } else {
@@ -107,18 +98,11 @@ public class CommunicationModule implements CommunicationModuleDelegate {
         while (enemyArchons.hasMoreElements()) {
 
             final CommunicationModuleSignal communicationModuleSignal = enemyArchons.nextElement();
-            if (!robotController.canSenseLocation(communicationModuleSignal.location)) {
+            if (this.verifyEnemyArchonCommunicationModuleSignal(communicationModuleSignal, robotController)) {
 
-                continue;
-
-            }
-
-            final RobotInfo robotInfo = robotController.senseRobotAtLocation(communicationModuleSignal.location);
-            if (robotInfo == null || robotInfo.type != RobotType.ARCHON || robotInfo.team == team) {
-
-                communicationModuleSignal.action = CommunicationModuleSignal.ACTION_DELETE;
                 if (broadcastInformation) {
 
+                    communicationModuleSignal.action = CommunicationModuleSignal.ACTION_DELETE;
                     this.broadcastSignal(communicationModuleSignal, robotController, CommunicationModule.MaximumBroadcastRange);
 
                 } else {
@@ -130,6 +114,58 @@ public class CommunicationModule implements CommunicationModuleDelegate {
             }
 
         }
+
+    }
+
+    public boolean verifyCommunicationModuleSignal(final CommunicationModuleSignal communicationModuleSignal, final RobotController robotController) throws GameActionException {
+
+        if (communicationModuleSignal.type == CommunicationModuleSignal.TYPE_ENEMY_ARCHON) {
+
+            return this.verifyEnemyArchonCommunicationModuleSignal(communicationModuleSignal, robotController);
+
+        }
+        if (communicationModuleSignal.type == CommunicationModuleSignal.TYPE_ZOMBIEDEN) {
+
+            return this.verifyEnemyArchonCommunicationModuleSignal(communicationModuleSignal, robotController);
+
+        }
+        return true;
+
+    }
+
+    public boolean verifyZombieDenCommunicationModuleSignal(final CommunicationModuleSignal communicationModuleSignal, final RobotController robotController) throws GameActionException {
+
+        if (!robotController.canSenseLocation(communicationModuleSignal.location)) {
+
+            return true;
+
+        }
+
+        final RobotInfo robotInfo = robotController.senseRobotAtLocation(communicationModuleSignal.location);
+        if (robotInfo == null || robotInfo.type != RobotType.ZOMBIEDEN) {
+
+            return false;
+
+        }
+        return true;
+
+    }
+
+    public boolean verifyEnemyArchonCommunicationModuleSignal(final CommunicationModuleSignal communicationModuleSignal, final RobotController robotController) throws GameActionException {
+
+        if (!robotController.canSenseLocation(communicationModuleSignal.location)) {
+
+            return true;
+
+        }
+
+        final RobotInfo robotInfo = robotController.senseRobotAtLocation(communicationModuleSignal.location);
+        if (robotInfo == null || robotInfo.type != RobotType.ARCHON || robotInfo.team == robotController.getTeam()) {
+
+            return false;
+
+        }
+        return true;
 
     }
 

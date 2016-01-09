@@ -22,7 +22,7 @@ public class DirectionModule {
     }
 
     // checks D, D.L, D.R, D.LL, D.RR for availability
-    public Direction recommendedMovementDirectionForDirection(final Direction direction, final RobotController robotController) {
+    public Direction recommendedMovementDirectionForDirection(final Direction direction, final RobotController robotController, boolean use90) {
 
         if (robotController.canMove(direction)) {
 
@@ -43,6 +43,11 @@ public class DirectionModule {
             return movementDirection;
 
         }
+        if (use90) {
+
+            return null;
+
+        }
         movementDirection = divisible ? direction.rotateLeft().rotateLeft() : direction.rotateRight().rotateRight();
         if (robotController.canMove(movementDirection)) {
 
@@ -60,7 +65,7 @@ public class DirectionModule {
     }
 
     // will do the same as recommendedMovementDirectionForDirection but will not move within the enemy attack range
-    public Direction recommendedSafeMovementDirectionForDirection(final Direction direction, final RobotController robotController, final RobotInfo[] enemies, final double buffer) {
+    public Direction recommendedSafeMovementDirectionForDirection(final Direction direction, final RobotController robotController, final RobotInfo[] enemies, final double buffer, boolean use90) {
 
         final MapLocation mapLocation = robotController.getLocation();
         if (robotController.canMove(direction) && this.isMapLocationSafe(mapLocation.add(direction), enemies, buffer)) {
@@ -80,6 +85,11 @@ public class DirectionModule {
         if (robotController.canMove(movementDirection) && this.isMapLocationSafe(mapLocation.add(movementDirection), enemies, buffer)) {
 
             return movementDirection;
+
+        }
+        if (use90) {
+
+            return null;
 
         }
         movementDirection = divisible ? direction.rotateLeft().rotateLeft() : direction.rotateRight().rotateRight();
