@@ -4,14 +4,8 @@ import java.util.*;
 
 public class CommunicationModuleSignalCollection {
 
-    private ArrayList<Enumeration<CommunicationModuleSignal>> enumerations;
+    private ArrayList<Enumeration<CommunicationModuleSignal>> enumerations = new ArrayList<Enumeration<CommunicationModuleSignal>>();
     private int currentEnumerationIndex = 0;
-
-    public CommunicationModuleSignalCollection() {
-
-        this.enumerations = new ArrayList<Enumeration<CommunicationModuleSignal>>();
-
-    }
 
     public void addEnumeration(final Enumeration<CommunicationModuleSignal> enumeration) {
 
@@ -21,12 +15,24 @@ public class CommunicationModuleSignalCollection {
 
     public boolean hasMoreElements() {
 
-        if (this.currentEnumerationIndex >= this.enumerations.size()) {
+        while (true) {
 
-            return false;
+            if (this.currentEnumerationIndex >= this.enumerations.size()) {
+
+                return false;
+
+            }
+            if (!this.enumerations.get(this.currentEnumerationIndex).hasMoreElements()) {
+
+                this.currentEnumerationIndex++;
+
+            } else {
+
+                return true;
+
+            }
 
         }
-        return this.enumerations.get(this.currentEnumerationIndex).hasMoreElements();
 
     }
 

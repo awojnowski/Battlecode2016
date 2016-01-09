@@ -10,6 +10,7 @@ public class CommunicationModule implements CommunicationModuleDelegate {
 
     // these are the hashtables managing the received communications
     // the hashtables are indexed by an Integer which represents the location
+    public final Hashtable<Integer, CommunicationModuleSignal> enemyArchons = new Hashtable<Integer, CommunicationModuleSignal>();
     public final Hashtable<Integer, CommunicationModuleSignal> zombieDens = new Hashtable<Integer, CommunicationModuleSignal>();
 
     // contains signals without a message associated with them, received last time the queue was cleared
@@ -68,7 +69,9 @@ public class CommunicationModule implements CommunicationModuleDelegate {
 
     public void verifyCommunicationsInformation(final RobotController robotController, boolean broadcastInformation) throws GameActionException {
 
-        // clear the zombie dens
+        final Team team = robotController.getTeam();
+
+        // verify the zombie dens
 
         final Enumeration<CommunicationModuleSignal> zombieDens = this.zombieDens.elements();
         while (zombieDens.hasMoreElements()) {
@@ -91,6 +94,36 @@ public class CommunicationModule implements CommunicationModuleDelegate {
                 } else {
 
                     this.clearSignal(communicationModuleSignal, this.zombieDens);
+
+                }
+
+            }
+
+        }
+
+        // verify the archons
+
+        final Enumeration<CommunicationModuleSignal> enemyArchons = this.enemyArchons.elements();
+        while (enemyArchons.hasMoreElements()) {
+
+            final CommunicationModuleSignal communicationModuleSignal = enemyArchons.nextElement();
+            if (!robotController.canSenseLocation(communicationModuleSignal.location)) {
+
+                continue;
+
+            }
+
+            final RobotInfo robotInfo = robotController.senseRobotAtLocation(communicationModuleSignal.location);
+            if (robotInfo == null || robotInfo.type != RobotType.ARCHON || robotInfo.team == team) {
+
+                communicationModuleSignal.action = CommunicationModuleSignal.ACTION_DELETE;
+                if (broadcastInformation) {
+
+                    this.broadcastSignal(communicationModuleSignal, robotController, CommunicationModule.MaximumBroadcastRange);
+
+                } else {
+
+                    this.clearSignal(communicationModuleSignal, this.enemyArchons);
 
                 }
 
@@ -185,6 +218,11 @@ public class CommunicationModule implements CommunicationModuleDelegate {
 
     private Hashtable<Integer, CommunicationModuleSignal> getHashtableForSignalType(int signalType) {
 
+        if (signalType == CommunicationModuleSignal.TYPE_ENEMY_ARCHON) {
+
+            return this.enemyArchons;
+
+        }
         if (signalType == CommunicationModuleSignal.TYPE_ZOMBIEDEN) {
 
             return this.zombieDens;
@@ -213,6 +251,11 @@ public class CommunicationModule implements CommunicationModuleDelegate {
     public CommunicationModuleSignalCollection allCommunicationModuleSignals() {
 
         final CommunicationModuleSignalCollection communicationModuleSignalCollection = new CommunicationModuleSignalCollection();
+        if (this.delegate.shouldProcessSignalType(CommunicationModuleSignal.TYPE_ENEMY_ARCHON)) {
+
+            communicationModuleSignalCollection.addEnumeration(this.enemyArchons.elements());
+
+        }
         if (this.delegate.shouldProcessSignalType(CommunicationModuleSignal.TYPE_ZOMBIEDEN)) {
 
             communicationModuleSignalCollection.addEnumeration(this.zombieDens.elements());

@@ -65,9 +65,9 @@ public class RobotScout implements Robot {
                 if (enemy.type == RobotType.ZOMBIEDEN) {
 
                     final CommunicationModuleSignal existingSignal = communicationModule.zombieDens.get(CommunicationModule.communicationsIndexFromLocation(enemy.location));
-                    if (existingSignal != null && existingSignal.type == CommunicationModuleSignal.TYPE_ZOMBIEDEN) {
+                    if (existingSignal != null) {
 
-                        continue; // a signal already exists for this den
+                        continue;
 
                     }
 
