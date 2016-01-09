@@ -206,7 +206,7 @@ public class CommunicationModule implements CommunicationModuleDelegate {
             }
 
             final int[] message = signal.getMessage();
-            if (message.length < 2) {
+            if (message == null || message.length < 2) {
 
                 this.notifications.add(signal);
                 continue;

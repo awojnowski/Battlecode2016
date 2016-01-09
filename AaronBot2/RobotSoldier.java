@@ -6,8 +6,7 @@ import AaronBot2.Signals.*;
 import AaronBot2.Rubble.*;
 import battlecode.common.*;
 
-import java.util.Enumeration;
-import java.util.Random;
+import java.util.*;
 
 public class RobotSoldier implements Robot {
 
@@ -19,25 +18,45 @@ public class RobotSoldier implements Robot {
         final MovementModule movementModule = new MovementModule();
         final RubbleModule rubbleModule = new RubbleModule();
 
+        final RobotType type = robotController.getType();
+
+        MapLocation robotHelpSignalLocation = null;
+
         while (true) {
 
+            final MapLocation currentLocation = robotController.getLocation();
+
+            // update communication
+
             communicationModule.processIncomingSignals(robotController);
+
+            // let's check if we're done helping anything
+
+            if (robotHelpSignalLocation != null) {
+
+                final int distance = currentLocation.distanceSquaredTo(robotHelpSignalLocation);
+                if (distance < type.sensorRadiusSquared) {
+
+                    robotHelpSignalLocation = null;
+
+                }
+
+            }
 
             // let's get the best assignment
 
             CommunicationModuleSignal objectiveSignal = null;
-            final MapLocation currentLocation = robotController.getLocation();
-            int closestLocationDistance = Integer.MAX_VALUE;
+            int closestObjectiveLocationDistance = Integer.MAX_VALUE;
 
             final Enumeration<CommunicationModuleSignal> communicationModuleSignals = communicationModule.zombieDens.elements();
             while (communicationModuleSignals.hasMoreElements()) {
 
                 final CommunicationModuleSignal signal = communicationModuleSignals.nextElement();
                 final int distance = signal.location.distanceSquaredTo(currentLocation);
-                if (distance < closestLocationDistance) {
+                if (distance < closestObjectiveLocationDistance) {
 
                     objectiveSignal = signal;
-                    closestLocationDistance = distance;
+                    closestObjectiveLocationDistance = distance;
 
                 }
 
@@ -50,7 +69,7 @@ public class RobotSoldier implements Robot {
             // now let's see if we can attack anything
 
             boolean attacked = false;
-            final RobotInfo[] enemies = robotController.senseHostileRobots(currentLocation, robotController.getType().attackRadiusSquared);
+            final RobotInfo[] enemies = robotController.senseHostileRobots(currentLocation, type.attackRadiusSquared);
             final RobotInfo bestEnemy = combatModule.bestEnemyToAttackFromEnemies(enemies);
 
             if (robotController.isWeaponReady()) {
@@ -64,41 +83,110 @@ public class RobotSoldier implements Robot {
 
             }
 
+            // check if we should broadcast danger
+
+            if (bestEnemy != null && bestEnemy.team == robotController.getTeam().opponent()) {
+
+                if (robotController.getRoundNum() == 0) {
+
+                    //final int distance = CommunicationModule.maximumFreeBroadcastRangeForRobotType(type);
+                    final int distance = 1000;
+                    communicationModule.broadcastSignal(robotController, distance);
+
+                }
+
+            }
+
             // now let's try move toward an assignment
-            
+
+            boolean ableToMove = (bestEnemy == null || bestEnemy.type == RobotType.ZOMBIEDEN);
+
             Direction targetRubbleClearanceDirection = null;
-            if (robotController.isCoreReady() && (bestEnemy == null || bestEnemy.team != robotController.getTeam().opponent())) {
+            if (robotController.isCoreReady() && communicationModule.initialInformationReceived && ableToMove) {
 
-                if (objectiveSignal != null) {
+                Direction desiredMovementDirection = null;
 
-                    final MapLocation objectiveLocation = objectiveSignal.location;
-                    if (objectiveLocation.distanceSquaredTo(currentLocation) >= 8) {
+                // first check if we have signals from other robots
 
-                        final Direction objectiveDirection = currentLocation.directionTo(objectiveLocation);
-                        final Direction objectiveMovementDirection = directionModule.recommendedMovementDirectionForDirection(objectiveDirection, robotController, false);
-                        if (objectiveMovementDirection != null) {
+                if (desiredMovementDirection == null && ableToMove) {
 
-                            robotController.move(objectiveMovementDirection);
+                    if (robotHelpSignalLocation != null) {
 
-                        } else {
+                        desiredMovementDirection = currentLocation.directionTo(robotHelpSignalLocation);
 
-                            targetRubbleClearanceDirection = objectiveDirection;
+                    }
+
+                }
+
+                if (desiredMovementDirection == null && ableToMove) {
+
+                    int closestNotificationLocationDistance = Integer.MAX_VALUE;
+                    MapLocation closestNotificationLocation = null;
+
+                    final Iterator<Signal> notifications = communicationModule.notifications.iterator();
+                    while (notifications.hasNext()) {
+
+                        final Signal signal = notifications.next();
+                        final int distance = signal.getLocation().distanceSquaredTo(currentLocation);
+                        if (distance < closestNotificationLocationDistance) {
+
+                            closestNotificationLocation = signal.getLocation();
+                            closestNotificationLocationDistance = distance;
 
                         }
 
                     }
 
-                } else {
+                    if (closestNotificationLocation != null) {
 
-                    final Direction randomDirection = directionModule.randomDirection();
-                    final Direction randomMovementDirection = directionModule.recommendedMovementDirectionForDirection(randomDirection, robotController, false);
+                        desiredMovementDirection = currentLocation.directionTo(closestNotificationLocation);
+                        robotHelpSignalLocation = closestNotificationLocation;
+
+                    }
+
+                }
+
+                // now check if we have an objective
+
+                if (desiredMovementDirection == null && ableToMove) {
+
+                    if (objectiveSignal != null) {
+
+                        final MapLocation objectiveLocation = objectiveSignal.location;
+                        if (objectiveLocation.distanceSquaredTo(currentLocation) >= 8) {
+
+                            desiredMovementDirection = currentLocation.directionTo(objectiveLocation);
+
+                        } else {
+
+                            ableToMove = false;
+
+                        }
+
+                    }
+
+                }
+
+                // otherwise we can move randomly...
+
+                if (desiredMovementDirection == null && ableToMove) {
+
+                    desiredMovementDirection = directionModule.randomDirection();
+
+                }
+
+                // process movement
+
+                if (desiredMovementDirection != null && ableToMove) {
+
+                    final Direction randomMovementDirection = directionModule.recommendedMovementDirectionForDirection(desiredMovementDirection, robotController, false);
                     if (randomMovementDirection != null) {
 
                         robotController.move(randomMovementDirection);
 
                     } else {
 
-                        targetRubbleClearanceDirection = randomDirection;
+                        targetRubbleClearanceDirection = desiredMovementDirection;
 
                     }
 
@@ -108,7 +196,7 @@ public class RobotSoldier implements Robot {
 
             // we can try clear rubble if we didn't move
 
-            if (robotController.isCoreReady()) {
+            if (robotController.isCoreReady() && communicationModule.initialInformationReceived) {
 
                 if (targetRubbleClearanceDirection != null) {
 
@@ -155,6 +243,12 @@ public class RobotSoldier implements Robot {
             if (objectiveSignal != null) {
 
                 robotController.setIndicatorLine(objectiveSignal.location, robotController.getLocation(), 255, 0, 0);
+
+            }
+
+            if (robotHelpSignalLocation != null) {
+
+                robotController.setIndicatorLine(robotHelpSignalLocation, robotController.getLocation(), 0, 0, 255);
 
             }
 
