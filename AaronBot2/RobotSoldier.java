@@ -8,19 +8,18 @@ import battlecode.common.*;
 
 import java.util.*;
 
-public class RobotSoldier implements Robot {
+public class RobotSoldier implements Robot, CommunicationModuleDelegate {
 
     public void run(final RobotController robotController) throws GameActionException {
 
         final CombatModule combatModule = new CombatModule();
         final CommunicationModule communicationModule = new CommunicationModule();
+        communicationModule.delegate = this;
         final DirectionModule directionModule = new DirectionModule(robotController.getID());
         final MovementModule movementModule = new MovementModule();
         final RubbleModule rubbleModule = new RubbleModule();
 
         final RobotType type = robotController.getType();
-
-        MapLocation robotHelpSignalLocation = null;
 
         while (true) {
 
@@ -30,28 +29,19 @@ public class RobotSoldier implements Robot {
 
             communicationModule.processIncomingSignals(robotController);
 
-            // let's check if we're done helping anything
+            // let's verify existing information
 
-            if (robotHelpSignalLocation != null) {
-
-                final int distance = currentLocation.distanceSquaredTo(robotHelpSignalLocation);
-                if (distance < type.sensorRadiusSquared) {
-
-                    robotHelpSignalLocation = null;
-
-                }
-
-            }
+            communicationModule.verifyCommunicationsInformation(robotController, null, false);
 
             // let's get the best assignment
 
             CommunicationModuleSignal objectiveSignal = null;
             int closestObjectiveLocationDistance = Integer.MAX_VALUE;
 
-            final Enumeration<CommunicationModuleSignal> communicationModuleSignals = communicationModule.zombieDens.elements();
-            while (communicationModuleSignals.hasMoreElements()) {
+            final Enumeration<CommunicationModuleSignal> zombieDenCommunicationModuleSignals = communicationModule.zombieDens.elements();
+            while (zombieDenCommunicationModuleSignals.hasMoreElements()) {
 
-                final CommunicationModuleSignal signal = communicationModuleSignals.nextElement();
+                final CommunicationModuleSignal signal = zombieDenCommunicationModuleSignals.nextElement();
                 final int distance = signal.location.distanceSquaredTo(currentLocation);
                 if (distance < closestObjectiveLocationDistance) {
 
@@ -62,9 +52,19 @@ public class RobotSoldier implements Robot {
 
             }
 
-            // now let's verify existing information
+            final Enumeration<CommunicationModuleSignal> enemyArchonCommunicationModuleSignals = communicationModule.enemyArchons.elements();
+            while (enemyArchonCommunicationModuleSignals.hasMoreElements()) {
 
-            communicationModule.verifyCommunicationsInformation(robotController, false);
+                final CommunicationModuleSignal signal = enemyArchonCommunicationModuleSignals.nextElement();
+                final int distance = signal.location.distanceSquaredTo(currentLocation) * 4; // multiplying by 4 to prioritize the dens
+                if (distance < closestObjectiveLocationDistance) {
+
+                    objectiveSignal = signal;
+                    closestObjectiveLocationDistance = distance;
+
+                }
+
+            }
 
             // now let's see if we can attack anything
 
@@ -105,46 +105,6 @@ public class RobotSoldier implements Robot {
             if (robotController.isCoreReady() && communicationModule.initialInformationReceived && ableToMove) {
 
                 Direction desiredMovementDirection = null;
-
-                // first check if we have signals from other robots
-
-                if (desiredMovementDirection == null && ableToMove) {
-
-                    if (robotHelpSignalLocation != null) {
-
-                        desiredMovementDirection = currentLocation.directionTo(robotHelpSignalLocation);
-
-                    }
-
-                }
-
-                if (desiredMovementDirection == null && ableToMove) {
-
-                    int closestNotificationLocationDistance = Integer.MAX_VALUE;
-                    MapLocation closestNotificationLocation = null;
-
-                    final Iterator<Signal> notifications = communicationModule.notifications.iterator();
-                    while (notifications.hasNext()) {
-
-                        final Signal signal = notifications.next();
-                        final int distance = signal.getLocation().distanceSquaredTo(currentLocation);
-                        if (distance < closestNotificationLocationDistance) {
-
-                            closestNotificationLocation = signal.getLocation();
-                            closestNotificationLocationDistance = distance;
-
-                        }
-
-                    }
-
-                    if (closestNotificationLocation != null) {
-
-                        desiredMovementDirection = currentLocation.directionTo(closestNotificationLocation);
-                        robotHelpSignalLocation = closestNotificationLocation;
-
-                    }
-
-                }
 
                 // now check if we have an objective
 
@@ -227,14 +187,6 @@ public class RobotSoldier implements Robot {
 
                     color = new int[]{255, 0, 0};
 
-                } else if (communicationModuleSignal.type == CommunicationModuleSignal.TYPE_MAP_CORNER) {
-
-                    color = new int[]{0, 0, 0};
-
-                } else if (communicationModuleSignal.type == CommunicationModuleSignal.TYPE_MAP_CORNER) {
-
-                    color = new int[]{0, 255, 0};
-
                 }
                 robotController.setIndicatorLine(location, communicationModuleSignal.location, color[0], color[1], color[2]);
 
@@ -246,15 +198,24 @@ public class RobotSoldier implements Robot {
 
             }
 
-            if (robotHelpSignalLocation != null) {
-
-                robotController.setIndicatorLine(robotHelpSignalLocation, robotController.getLocation(), 0, 0, 255);
-
-            }
-
             Clock.yield();
 
         }
+
+    }
+
+    /*
+    COMMUNICATION MODULE DELEGATE
+    */
+
+    public boolean shouldProcessSignalType(final int signalType) {
+
+        if (signalType == CommunicationModuleSignal.TYPE_SPARE_PARTS) {
+
+            return false;
+
+        }
+        return true;
 
     }
 

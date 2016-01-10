@@ -1,4 +1,4 @@
-package AaronBot2.Signals;
+package team059.Signals;
 
 import battlecode.common.*;
 

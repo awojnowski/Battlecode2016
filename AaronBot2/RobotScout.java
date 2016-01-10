@@ -57,7 +57,7 @@ public class RobotScout implements Robot {
 
             // let's check up on existing communications to verify the information, if we can
 
-            communicationModule.verifyCommunicationsInformation(robotController, true);
+            communicationModule.verifyCommunicationsInformation(robotController, enemies, true);
 
             // let's try identify what we can see
 
@@ -79,6 +79,61 @@ public class RobotScout implements Robot {
                     signal.robotIdentifier = enemy.ID;
                     signal.type = CommunicationModuleSignal.TYPE_ZOMBIEDEN;
                     communicationModule.broadcastSignal(signal, robotController, CommunicationModule.MaximumBroadcastRange);
+
+                } else if (enemy.type == RobotType.ARCHON) {
+
+                    final ArrayList<CommunicationModuleSignal> existingSignals = communicationModule.getCommunicationModuleSignalsNearbyLocation(communicationModule.enemyArchons, currentLocation);
+                    if (existingSignals.size() > 0) {
+
+                        continue;
+
+                    }
+
+                    final CommunicationModuleSignal signal = new CommunicationModuleSignal();
+                    signal.action = CommunicationModuleSignal.ACTION_SEEN;
+                    signal.location = enemy.location;
+                    signal.robotIdentifier = enemy.ID;
+                    signal.type = CommunicationModuleSignal.TYPE_ENEMY_ARCHON;
+                    communicationModule.broadcastSignal(signal, robotController, CommunicationModule.MaximumBroadcastRange);
+
+                }
+
+            }
+
+            final int partsScanRadius = 3;
+            for (int i = -partsScanRadius; i <= partsScanRadius; i++) {
+
+                for (int j = -partsScanRadius; j <= partsScanRadius; j++) {
+
+                    final MapLocation location = new MapLocation(currentLocation.x + i, currentLocation.y + j);
+                    if (!robotController.onTheMap(location)) {
+
+                        continue;
+
+                    }
+                    if (!robotController.canSenseLocation(location)) {
+
+                        continue;
+
+                    }
+                    final double totalParts = robotController.senseParts(location);
+                    if (totalParts > 0) {
+
+                        final CommunicationModuleSignal existingSignal = communicationModule.spareParts.get(CommunicationModule.communicationsIndexFromLocation(location));
+                        if (existingSignal != null) {
+
+                            continue;
+
+                        }
+
+                        final CommunicationModuleSignal signal = new CommunicationModuleSignal();
+                        signal.action = CommunicationModuleSignal.ACTION_SEEN;
+                        signal.location = location;
+                        signal.robotIdentifier = (int)totalParts;
+                        signal.type = CommunicationModuleSignal.TYPE_SPARE_PARTS;
+                        communicationModule.broadcastSignal(signal, robotController, CommunicationModule.MaximumBroadcastRange);
+
+                    }
 
                 }
 

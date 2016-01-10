@@ -1,6 +1,7 @@
 package AaronBot2;
 
 import AaronBot2.Movement.*;
+import AaronBot2.Rubble.RubbleModule;
 import AaronBot2.Signals.*;
 import battlecode.common.*;
 import java.util.*;
@@ -17,6 +18,7 @@ public class RobotArchon implements Robot {
 
         final CommunicationModule communicationModule = new CommunicationModule();
         final DirectionModule directionModule = new DirectionModule(robotController.getID());
+        final RubbleModule rubbleModule = new RubbleModule();
 
         // unit building
 
@@ -86,6 +88,41 @@ public class RobotArchon implements Robot {
 
             }
 
+            // check to make sure we are safe
+
+            final MapLocation currentLocation = robotController.getLocation();
+            final RobotInfo[] enemies = robotController.senseHostileRobots(currentLocation, robotController.getType().sensorRadiusSquared);
+
+            if (robotController.isCoreReady()) {
+
+                final RobotInfo dangerousEnemy = directionModule.getNearestEnemyInRangeOfMapLocation(currentLocation, enemies, 1);
+                if (dangerousEnemy != null) {
+
+                    final Direction fleeDirection = currentLocation.directionTo(dangerousEnemy.location).opposite();
+                    Direction fleeMovementDirection = directionModule.recommendedSafeMovementDirectionForDirection(fleeDirection, robotController, enemies, 1, true);
+                    if (fleeMovementDirection != null) {
+
+                        robotController.move(fleeMovementDirection);
+
+                    } else {
+
+                        fleeMovementDirection = directionModule.recommendedMovementDirectionForDirection(fleeDirection, robotController, true);
+                        if (fleeMovementDirection != null) {
+
+                            robotController.move(fleeMovementDirection);
+
+                        }
+
+                    }
+
+                }
+
+            }
+
+            // let's check up on existing communications to verify the information, if we can
+
+            communicationModule.verifyCommunicationsInformation(robotController, enemies, true);
+
             // attempt to build new units
 
             if (robotController.isCoreReady()) {
@@ -124,6 +161,92 @@ public class RobotArchon implements Robot {
 
             }
 
+            // try to move toward some spare parts
+
+            Direction targetRubbleClearanceDirection = null;
+            if (robotController.isCoreReady()) {
+
+                CommunicationModuleSignal nearestPartsSignal = null;
+                int nearestPartsLocationDistance = Integer.MAX_VALUE;
+
+                final Enumeration<CommunicationModuleSignal> sparePartsCommunicationModuleSignals = communicationModule.spareParts.elements();
+                while (sparePartsCommunicationModuleSignals.hasMoreElements()) {
+
+                    final CommunicationModuleSignal signal = sparePartsCommunicationModuleSignals.nextElement();
+                    final int distance = signal.location.distanceSquaredTo(currentLocation);
+                    if (distance < nearestPartsLocationDistance) {
+
+                        nearestPartsSignal = signal;
+                        nearestPartsLocationDistance = distance;
+
+                    }
+
+                }
+
+                if (nearestPartsSignal != null) {
+
+                    final Direction nearestPartsDirection = currentLocation.directionTo(nearestPartsSignal.location);
+                    final Direction nearestPartsMovementDirection = directionModule.recommendedSafeMovementDirectionForDirection(nearestPartsDirection, robotController, enemies, 1, true);
+                    if (nearestPartsMovementDirection != null) {
+
+                        robotController.move(nearestPartsMovementDirection);
+
+                    } else {
+
+                        targetRubbleClearanceDirection = nearestPartsDirection;
+
+                    }
+
+                }
+
+            }
+
+            // we can try clear rubble if we didn't move
+
+            if (robotController.isCoreReady()) {
+
+                if (targetRubbleClearanceDirection != null) {
+
+                    final Direction rubbleClearanceDirection = rubbleModule.rubbleClearanceDirectionFromTargetDirection(targetRubbleClearanceDirection, robotController);
+                    if (rubbleClearanceDirection != null) {
+
+                        robotController.clearRubble(rubbleClearanceDirection);
+
+                    }
+
+                }
+
+            }
+
+            // try to repair any units nearby
+
+            RobotInfo injuredUnit = null;
+            double injuredUnitHealth = Integer.MAX_VALUE;
+            final RobotInfo[] friendlyRepairableUnits = robotController.senseNearbyRobots(robotController.getType().attackRadiusSquared, robotController.getTeam());
+            for (int i = 0; i < friendlyRepairableUnits.length; i++) {
+
+                final RobotInfo friendly = friendlyRepairableUnits[i];
+                if (friendly.type == RobotType.ARCHON) {
+
+                    continue;
+
+                }
+                if (friendly.health < injuredUnitHealth) {
+
+                    injuredUnit = friendly;
+                    injuredUnitHealth = friendly.health;
+
+                }
+
+            }
+            if (injuredUnit != null) {
+
+                robotController.repair(injuredUnit.location);
+
+            }
+
+            // show what we know
+
             final CommunicationModuleSignalCollection communicationModuleSignalCollection = communicationModule.allCommunicationModuleSignals();
             final MapLocation location = robotController.getLocation();
             while (communicationModuleSignalCollection.hasMoreElements()) {
@@ -138,13 +261,9 @@ public class RobotArchon implements Robot {
 
                     color = new int[]{255, 0, 0};
 
-                } else if (communicationModuleSignal.type == CommunicationModuleSignal.TYPE_MAP_CORNER) {
+                } else if (communicationModuleSignal.type == CommunicationModuleSignal.TYPE_SPARE_PARTS) {
 
-                    color = new int[]{0, 0, 0};
-
-                } else if (communicationModuleSignal.type == CommunicationModuleSignal.TYPE_MAP_CORNER) {
-
-                    color = new int[]{0, 255, 0};
+                    color = new int[]{255, 255, 255};
 
                 }
                 robotController.setIndicatorLine(location, communicationModuleSignal.location, color[0], color[1], color[2]);
