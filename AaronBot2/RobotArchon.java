@@ -109,27 +109,14 @@ public class RobotArchon implements Robot {
             final MapLocation currentLocation = robotController.getLocation();
             final RobotInfo[] enemies = robotController.senseHostileRobots(currentLocation, robotController.getType().sensorRadiusSquared);
 
-            if (robotController.isCoreReady()) {
+            if (enemies.length > 0 && robotController.isCoreReady()) {
 
-                final RobotInfo dangerousEnemy = directionModule.getNearestEnemyInRangeOfMapLocation(currentLocation, enemies, 1);
-                if (dangerousEnemy != null) {
+                final Direction fleeDirection = directionModule.averageDirectionTowardRobots(robotController, enemies).opposite();
+                Direction fleeMovementDirection = directionModule.recommendedFleeDirectionForDirection(fleeDirection, robotController, false);
+                if (fleeMovementDirection != null) {
 
-                    final Direction fleeDirection = currentLocation.directionTo(dangerousEnemy.location).opposite();
-                    Direction fleeMovementDirection = directionModule.recommendedSafeMovementDirectionForDirection(fleeDirection, robotController, enemies, 1, true);
-                    if (fleeMovementDirection != null) {
-
-                        robotController.move(fleeMovementDirection);
-
-                    } else {
-
-                        fleeMovementDirection = directionModule.recommendedMovementDirectionForDirection(fleeDirection, robotController, true);
-                        if (fleeMovementDirection != null) {
-
-                            robotController.move(fleeMovementDirection);
-
-                        }
-
-                    }
+                    robotController.move(fleeMovementDirection);
+                    robotController.setIndicatorString(1, fleeDirection.name() + " " + fleeMovementDirection.name());
 
                 }
 
@@ -190,8 +177,8 @@ public class RobotArchon implements Robot {
 
                     for (int i = 0; i < partsScanResults.locations.size(); i++) {
 
-                        final MapLocation partsLocation = partsScanResults.locations.get(i);
-                        final int distance = partsLocation.distanceSquaredTo(currentLocation);
+                    final MapLocation partsLocation = partsScanResults.locations.get(i);
+                    final int distance = partsLocation.distanceSquaredTo(currentLocation);
                         if (distance < nearestPartsLocationDistance) {
 
                             nearestPartsLocation = partsLocation;

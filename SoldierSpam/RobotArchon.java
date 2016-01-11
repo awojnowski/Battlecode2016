@@ -29,6 +29,7 @@ public class RobotArchon implements Robot {
                         Direction directionToEnemy = robotController.getLocation().directionTo(nearbyRobots[i].location);
                         bestLocation = robotController.getLocation().subtract(directionToEnemy);
                         robotController.broadcastSignal(100);
+                        break;
 
                     }
 

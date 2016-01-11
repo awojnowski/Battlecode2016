@@ -29,29 +29,14 @@ public class RobotScout implements Robot {
             final MapLocation currentLocation = robotController.getLocation();
             final RobotInfo[] enemies = robotController.senseHostileRobots(currentLocation, robotController.getType().sensorRadiusSquared);
 
-            if (robotController.isCoreReady() && communicationModule.initialInformationReceived) {
+            if (enemies.length > 0 && robotController.isCoreReady() && communicationModule.initialInformationReceived) {
 
-                final RobotInfo dangerousEnemy = directionModule.getNearestEnemyInRangeOfMapLocation(currentLocation, enemies, 1);
-                if (dangerousEnemy != null) {
+                final Direction fleeDirection = directionModule.averageDirectionTowardRobots(robotController, enemies).opposite();
+                Direction fleeMovementDirection = directionModule.recommendedFleeDirectionForDirection(fleeDirection, robotController, false);
+                if (fleeMovementDirection != null) {
 
-                    final Direction fleeDirection = currentLocation.directionTo(dangerousEnemy.location).opposite();
-                    Direction fleeMovementDirection = directionModule.recommendedSafeMovementDirectionForDirection(fleeDirection, robotController, enemies, 1, true);
-                    if (fleeMovementDirection != null) {
-
-                        robotController.move(fleeMovementDirection);
-                        movementDirection = fleeMovementDirection;
-
-                    } else {
-
-                        fleeMovementDirection = directionModule.recommendedMovementDirectionForDirection(fleeDirection, robotController, true);
-                        if (fleeMovementDirection != null) {
-
-                            robotController.move(fleeMovementDirection);
-                            movementDirection = fleeMovementDirection;
-
-                        }
-
-                    }
+                    robotController.move(fleeMovementDirection);
+                    movementDirection = fleeMovementDirection;
 
                 }
 
