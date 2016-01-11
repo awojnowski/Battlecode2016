@@ -165,7 +165,7 @@ public class DirectionModule {
             for (int i = 0; i < robots.length; i++) {
 
                 final RobotInfo robot = robots[i];
-                if (robot.type == RobotType.ZOMBIEDEN || robot.type == RobotType.ARCHON) {
+                if (!(robot.type == RobotType.ZOMBIEDEN || robot.type == RobotType.ARCHON)) {
 
                     final MapLocation location = robot.location;
                     totalRobotX += location.x;
