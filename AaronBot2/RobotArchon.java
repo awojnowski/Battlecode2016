@@ -92,10 +92,15 @@ public class RobotArchon implements Robot {
 
             // we should try activate robots
 
-            final RobotInfo[] neutrals = robotController.senseNearbyRobots(3, Team.NEUTRAL);
-            for (int i = 0; i < neutrals.length; i++) {
+            if (robotController.isCoreReady()) {
 
-                robotController.activate(neutrals[i].location);
+                final RobotInfo[] neutrals = robotController.senseNearbyRobots(3, Team.NEUTRAL);
+                for (int i = 0; i < neutrals.length; i++) {
+
+                    robotController.activate(neutrals[i].location);
+                    break;
+
+                }
 
             }
 
