@@ -1,15 +1,13 @@
-package team059.Signals;
+package Team059Old.Signals;
 
-import team059.Parts.PartsModule;
 import battlecode.common.*;
+
 import java.util.*;
 
 public class CommunicationModule implements CommunicationModuleDelegate {
 
     public static final int MaximumBroadcastRange = 20000;
-    public static final int DefaultApproximateNearbyLocationRange = 64;
-    public static final int ApproximateNearbyPartsLocationRadius = 3;
-    public static final int ApproximateNearbyPartsLocationRange = ApproximateNearbyPartsLocationRadius * ApproximateNearbyPartsLocationRadius;
+    private static final int ApproximateNearbyLocationRange = 64;
 
     // these are the hashtables managing the received communications
     // the hashtables are indexed by an Integer which represents the location
@@ -71,34 +69,11 @@ public class CommunicationModule implements CommunicationModuleDelegate {
     INFORMATION VERIFICATION
      */
 
-    public void verifyCommunicationsInformation(final RobotController robotController, RobotInfo[] enemies, final PartsModule partsModule, final boolean broadcastInformation) throws GameActionException {
+    public void verifyCommunicationsInformation(final RobotController robotController, RobotInfo[] enemies, boolean broadcastInformation) throws GameActionException {
 
         if (enemies == null) {
 
             enemies = robotController.senseHostileRobots(robotController.getLocation(), robotController.getType().sensorRadiusSquared);
-
-        }
-
-        // verify the archons
-
-        final Enumeration<CommunicationModuleSignal> enemyArchons = this.enemyArchons.elements();
-        while (enemyArchons.hasMoreElements()) {
-
-            final CommunicationModuleSignal communicationModuleSignal = enemyArchons.nextElement();
-            if (!this.verifyEnemyArchonCommunicationModuleSignal(communicationModuleSignal, robotController, enemies)) {
-
-                if (broadcastInformation) {
-
-                    communicationModuleSignal.action = CommunicationModuleSignal.ACTION_DELETE;
-                    this.broadcastSignal(communicationModuleSignal, robotController, CommunicationModule.MaximumBroadcastRange);
-
-                } else {
-
-                    this.clearSignal(communicationModuleSignal, this.enemyArchons);
-
-                }
-
-            }
 
         }
 
@@ -125,13 +100,13 @@ public class CommunicationModule implements CommunicationModuleDelegate {
 
         }
 
-        // verify the spare parts
+        // verify the archons
 
-        final Enumeration<CommunicationModuleSignal> spareParts = this.spareParts.elements();
-        while (spareParts.hasMoreElements()) {
+        final Enumeration<CommunicationModuleSignal> enemyArchons = this.enemyArchons.elements();
+        while (enemyArchons.hasMoreElements()) {
 
-            final CommunicationModuleSignal communicationModuleSignal = spareParts.nextElement();
-            if (!this.verifySparePartsCommunicationModuleSignal(communicationModuleSignal, robotController, partsModule)) {
+            final CommunicationModuleSignal communicationModuleSignal = enemyArchons.nextElement();
+            if (!this.verifyEnemyArchonCommunicationModuleSignal(communicationModuleSignal, robotController, enemies)) {
 
                 if (broadcastInformation) {
 
@@ -140,7 +115,30 @@ public class CommunicationModule implements CommunicationModuleDelegate {
 
                 } else {
 
-                    this.clearSignal(communicationModuleSignal, this.spareParts);
+                    this.clearSignal(communicationModuleSignal, this.enemyArchons);
+
+                }
+
+            }
+
+        }
+
+        // verify the spare parts
+
+        final Enumeration<CommunicationModuleSignal> spareParts = this.spareParts.elements();
+        while (spareParts.hasMoreElements()) {
+
+            final CommunicationModuleSignal communicationModuleSignal = spareParts.nextElement();
+            if (!this.verifySparePartsCommunicationModuleSignal(communicationModuleSignal, robotController)) {
+
+                if (broadcastInformation) {
+
+                    communicationModuleSignal.action = CommunicationModuleSignal.ACTION_DELETE;
+                    this.broadcastSignal(communicationModuleSignal, robotController, CommunicationModule.MaximumBroadcastRange);
+
+                } else {
+
+                    this.clearSignal(communicationModuleSignal, this.zombieDens);
 
                 }
 
@@ -168,7 +166,7 @@ public class CommunicationModule implements CommunicationModuleDelegate {
 
     }
 
-    public boolean verifySparePartsCommunicationModuleSignal(final CommunicationModuleSignal communicationModuleSignal, final RobotController robotController, final PartsModule partsModule) throws GameActionException {
+    public boolean verifySparePartsCommunicationModuleSignal(final CommunicationModuleSignal communicationModuleSignal, final RobotController robotController) throws GameActionException {
 
         if (!robotController.canSenseLocation(communicationModuleSignal.location)) {
 
@@ -176,8 +174,8 @@ public class CommunicationModule implements CommunicationModuleDelegate {
 
         }
 
-        final PartsModule.Result partsScanResults = partsModule.getPartsNearby(communicationModuleSignal.location, robotController, CommunicationModule.ApproximateNearbyPartsLocationRadius);
-        if (partsScanResults.locations.size() == 0 && partsScanResults.allPositionsScanned) {
+        final double parts = robotController.senseParts(communicationModuleSignal.location);
+        if (parts < 1) {
 
             return false;
 
@@ -199,13 +197,7 @@ public class CommunicationModule implements CommunicationModuleDelegate {
             final RobotInfo enemy = enemies[i];
             if (enemy.ID == communicationModuleSignal.robotIdentifier) {
 
-                if (communicationModuleSignal.location != enemy.location) {
-
-                    this.clearSignal(communicationModuleSignal, this.enemyArchons);
-                    communicationModuleSignal.location = enemy.location;
-                    this.processSignal(communicationModuleSignal);
-
-                }
+                communicationModuleSignal.location = enemy.location;
                 return true;
 
             }
@@ -276,7 +268,6 @@ public class CommunicationModule implements CommunicationModuleDelegate {
         if (communicationModuleSignal.action == CommunicationModuleSignal.ACTION_INITIAL_UPDATE_COMPLETE) {
 
             this.initialInformationReceived = true;
-            return;
 
         }
 
@@ -358,7 +349,7 @@ public class CommunicationModule implements CommunicationModuleDelegate {
 
     }
 
-    public ArrayList<CommunicationModuleSignal> getCommunicationModuleSignalsNearbyLocation(final Hashtable<Integer, CommunicationModuleSignal> hashtable, final MapLocation location, final int range) {
+    public ArrayList<CommunicationModuleSignal> getCommunicationModuleSignalsNearbyLocation(final Hashtable<Integer, CommunicationModuleSignal> hashtable, final MapLocation location) {
 
         final ArrayList<CommunicationModuleSignal> results = new ArrayList<CommunicationModuleSignal>();
         final Enumeration<CommunicationModuleSignal> communicationModuleSignals = hashtable.elements();
@@ -366,7 +357,7 @@ public class CommunicationModule implements CommunicationModuleDelegate {
 
             final CommunicationModuleSignal signal = communicationModuleSignals.nextElement();
             final int distance = signal.location.distanceSquaredTo(location);
-            if (distance < range) {
+            if (distance < CommunicationModule.ApproximateNearbyLocationRange) {
 
                 results.add(signal);
 

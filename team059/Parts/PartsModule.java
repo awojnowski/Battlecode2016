@@ -1,12 +1,9 @@
-package AaronBot2.Parts;
+package team059.Parts;
 
 import battlecode.common.*;
 import java.util.ArrayList;
 
 public class PartsModule {
-
-    private int[][] cache = new int[202][202];
-    private MapLocation midpointMapLocation = null;
 
     public class Result {
         public boolean allPositionsScanned = true;
@@ -20,11 +17,6 @@ public class PartsModule {
             for (int j = -partsScanRadius; j <= partsScanRadius; j++) {
 
                 final MapLocation scanLocation = new MapLocation(location.x + i, location.y + j);
-                if (this.isPartsLocationEmptyInCache(scanLocation)) {
-
-                    continue;
-
-                }
                 if (!robotController.canSenseLocation(scanLocation)) {
 
                     result.allPositionsScanned = false;
@@ -36,15 +28,10 @@ public class PartsModule {
                     continue;
 
                 }
-
                 final double totalParts = robotController.senseParts(scanLocation);
                 if (totalParts > 0) {
 
                     result.locations.add(scanLocation);
-
-                } else {
-
-                    this.cacheEmptyPartsLocation(scanLocation);
 
                 }
 
@@ -52,32 +39,6 @@ public class PartsModule {
 
         }
         return result;
-
-    }
-
-    /*
-    CACHE
-     */
-
-    private void cacheEmptyPartsLocation(final MapLocation location) {
-
-        if (this.midpointMapLocation == null) {
-
-            this.midpointMapLocation = location;
-
-        }
-        this.cache[location.x - this.midpointMapLocation.x + 100][location.y - this.midpointMapLocation.y + 100] = 1;
-
-    }
-
-    private boolean isPartsLocationEmptyInCache(final MapLocation location) {
-
-        if (this.midpointMapLocation == null) {
-
-            return false;
-
-        }
-        return this.cache[location.x - this.midpointMapLocation.x + 100][location.y - this.midpointMapLocation.y + 100] == 1;
 
     }
 

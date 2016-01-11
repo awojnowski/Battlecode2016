@@ -31,7 +31,7 @@ public class RobotSoldier implements Robot, CommunicationModuleDelegate {
 
             // let's verify existing information
 
-            communicationModule.verifyCommunicationsInformation(robotController, null, false);
+            communicationModule.verifyCommunicationsInformation(robotController, null, null, false);
 
             // let's get the best assignment
 
@@ -139,10 +139,10 @@ public class RobotSoldier implements Robot, CommunicationModuleDelegate {
 
                 if (desiredMovementDirection != null && ableToMove) {
 
-                    final Direction randomMovementDirection = directionModule.recommendedMovementDirectionForDirection(desiredMovementDirection, robotController, false);
-                    if (randomMovementDirection != null) {
+                    final Direction recommendedMovementDirection = directionModule.recommendedMovementDirectionForDirection(desiredMovementDirection, robotController, false);
+                    if (recommendedMovementDirection != null) {
 
-                        robotController.move(randomMovementDirection);
+                        robotController.move(recommendedMovementDirection);
 
                     } else {
 
@@ -160,7 +160,7 @@ public class RobotSoldier implements Robot, CommunicationModuleDelegate {
 
                 if (targetRubbleClearanceDirection != null) {
 
-                    final Direction rubbleClearanceDirection = rubbleModule.rubbleClearanceDirectionFromTargetDirection(targetRubbleClearanceDirection, robotController);
+                    final Direction rubbleClearanceDirection = rubbleModule.getRubbleClearanceDirectionFromTargetDirection(targetRubbleClearanceDirection, robotController);
                     if (rubbleClearanceDirection != null) {
 
                         robotController.clearRubble(rubbleClearanceDirection);

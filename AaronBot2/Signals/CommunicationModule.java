@@ -1,6 +1,7 @@
 package AaronBot2.Signals;
 
-import AaronBot2.Parts.PartsModule;
+import AaronBot2.Map.*;
+import AaronBot2.Parts.*;
 import battlecode.common.*;
 import java.util.*;
 
@@ -20,12 +21,13 @@ public class CommunicationModule implements CommunicationModuleDelegate {
     // contains signals without a message associated with them, received last time the queue was cleared
     public final ArrayList<Signal> notifications = new ArrayList<Signal>();
 
+    public MapInfoModule mapInfoModule = null;
     public CommunicationModuleDelegate delegate = this;
     public boolean initialInformationReceived = false;
 
-    public CommunicationModule() {
+    public CommunicationModule(final MapInfoModule mapInfoModule) {
 
-        ;
+        this.mapInfoModule = mapInfoModule;
 
     }
 

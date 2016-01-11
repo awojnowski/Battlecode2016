@@ -1,5 +1,7 @@
 package AaronBot2;
 
+import AaronBot2.Cartography.*;
+import AaronBot2.Map.*;
 import AaronBot2.Movement.*;
 import AaronBot2.Parts.PartsModule;
 import AaronBot2.Signals.*;
@@ -10,7 +12,10 @@ public class RobotScout implements Robot {
 
     public void run(final RobotController robotController) throws GameActionException {
 
-        final CommunicationModule communicationModule = new CommunicationModule();
+        final MapInfoModule mapInfoModule = new MapInfoModule();
+
+        final CartographyModule cartographyModule = new CartographyModule();
+        final CommunicationModule communicationModule = new CommunicationModule(mapInfoModule);
         final DirectionModule directionModule = new DirectionModule(robotController.getID());
         final MovementModule movementModule = new MovementModule();
         final PartsModule partsModule = new PartsModule();
@@ -26,16 +31,17 @@ public class RobotScout implements Robot {
 
             // let's try to make sure we're safe and run from enemies
 
-            final MapLocation currentLocation = robotController.getLocation();
+            MapLocation currentLocation = robotController.getLocation();
             final RobotInfo[] enemies = robotController.senseHostileRobots(currentLocation, robotController.getType().sensorRadiusSquared);
 
-            if (enemies.length > 0 && robotController.isCoreReady() && communicationModule.initialInformationReceived) {
+            if (robotController.isCoreReady() && communicationModule.initialInformationReceived && enemies.length > 0) {
 
                 final Direction fleeDirection = directionModule.averageDirectionTowardRobots(robotController, enemies).opposite();
                 Direction fleeMovementDirection = directionModule.recommendedFleeDirectionForDirection(fleeDirection, robotController, false);
                 if (fleeMovementDirection != null) {
 
                     robotController.move(fleeMovementDirection);
+                    currentLocation = robotController.getLocation();
                     movementDirection = fleeMovementDirection;
 
                 }
@@ -108,6 +114,8 @@ public class RobotScout implements Robot {
 
             }
 
+            cartographyModule.probeAndUpdateMapInfoModule(mapInfoModule, currentLocation, robotController);
+
             // now let's try move to see more
 
             if (robotController.isCoreReady() && communicationModule.initialInformationReceived) {
@@ -123,6 +131,7 @@ public class RobotScout implements Robot {
                 if (actualMovementDirection != null) {
 
                     robotController.move(actualMovementDirection);
+                    currentLocation = robotController.getLocation();
 
                 } else {
 

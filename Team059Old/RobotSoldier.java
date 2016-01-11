@@ -1,10 +1,9 @@
-package AaronBot2;
+package Team059Old;
 
-import AaronBot2.Combat.*;
-import AaronBot2.Map.MapInfoModule;
-import AaronBot2.Movement.*;
-import AaronBot2.Signals.*;
-import AaronBot2.Rubble.*;
+import Team059Old.Combat.*;
+import Team059Old.Movement.*;
+import Team059Old.Signals.*;
+import Team059Old.Rubble.*;
 import battlecode.common.*;
 
 import java.util.*;
@@ -13,10 +12,8 @@ public class RobotSoldier implements Robot, CommunicationModuleDelegate {
 
     public void run(final RobotController robotController) throws GameActionException {
 
-        final MapInfoModule mapInfoModule = new MapInfoModule();
-
         final CombatModule combatModule = new CombatModule();
-        final CommunicationModule communicationModule = new CommunicationModule(mapInfoModule);
+        final CommunicationModule communicationModule = new CommunicationModule();
         communicationModule.delegate = this;
         final DirectionModule directionModule = new DirectionModule(robotController.getID());
         final MovementModule movementModule = new MovementModule();
@@ -26,7 +23,7 @@ public class RobotSoldier implements Robot, CommunicationModuleDelegate {
 
         while (true) {
 
-            MapLocation currentLocation = robotController.getLocation();
+            final MapLocation currentLocation = robotController.getLocation();
 
             // update communication
 
@@ -34,7 +31,7 @@ public class RobotSoldier implements Robot, CommunicationModuleDelegate {
 
             // let's verify existing information
 
-            communicationModule.verifyCommunicationsInformation(robotController, null, null, false);
+            communicationModule.verifyCommunicationsInformation(robotController, null, false);
 
             // let's get the best assignment
 
@@ -142,11 +139,10 @@ public class RobotSoldier implements Robot, CommunicationModuleDelegate {
 
                 if (desiredMovementDirection != null && ableToMove) {
 
-                    final Direction recommendedMovementDirection = directionModule.recommendedMovementDirectionForDirection(desiredMovementDirection, robotController, false);
-                    if (recommendedMovementDirection != null) {
+                    final Direction randomMovementDirection = directionModule.recommendedMovementDirectionForDirection(desiredMovementDirection, robotController, false);
+                    if (randomMovementDirection != null) {
 
-                        robotController.move(recommendedMovementDirection);
-                        currentLocation = robotController.getLocation();
+                        robotController.move(randomMovementDirection);
 
                     } else {
 
@@ -164,7 +160,7 @@ public class RobotSoldier implements Robot, CommunicationModuleDelegate {
 
                 if (targetRubbleClearanceDirection != null) {
 
-                    final Direction rubbleClearanceDirection = rubbleModule.getRubbleClearanceDirectionFromTargetDirection(targetRubbleClearanceDirection, robotController);
+                    final Direction rubbleClearanceDirection = rubbleModule.rubbleClearanceDirectionFromTargetDirection(targetRubbleClearanceDirection, robotController);
                     if (rubbleClearanceDirection != null) {
 
                         robotController.clearRubble(rubbleClearanceDirection);

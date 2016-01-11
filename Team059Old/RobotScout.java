@@ -1,8 +1,7 @@
-package team059;
+package Team059Old;
 
-import team059.Movement.*;
-import team059.Parts.PartsModule;
-import team059.Signals.*;
+import Team059Old.Movement.*;
+import Team059Old.Signals.*;
 import battlecode.common.*;
 import java.util.*;
 
@@ -13,7 +12,6 @@ public class RobotScout implements Robot {
         final CommunicationModule communicationModule = new CommunicationModule();
         final DirectionModule directionModule = new DirectionModule(robotController.getID());
         final MovementModule movementModule = new MovementModule();
-        final PartsModule partsModule = new PartsModule();
 
         final Random random = new Random(robotController.getID());
         final Team team = robotController.getTeam();
@@ -29,14 +27,29 @@ public class RobotScout implements Robot {
             final MapLocation currentLocation = robotController.getLocation();
             final RobotInfo[] enemies = robotController.senseHostileRobots(currentLocation, robotController.getType().sensorRadiusSquared);
 
-            if (enemies.length > 0 && robotController.isCoreReady() && communicationModule.initialInformationReceived) {
+            if (robotController.isCoreReady() && communicationModule.initialInformationReceived) {
 
-                final Direction fleeDirection = directionModule.averageDirectionTowardRobots(robotController, enemies).opposite();
-                Direction fleeMovementDirection = directionModule.recommendedFleeDirectionForDirection(fleeDirection, robotController, false);
-                if (fleeMovementDirection != null) {
+                final RobotInfo dangerousEnemy = directionModule.getNearestEnemyInRangeOfMapLocation(currentLocation, enemies, 1);
+                if (dangerousEnemy != null) {
 
-                    robotController.move(fleeMovementDirection);
-                    movementDirection = fleeMovementDirection;
+                    final Direction fleeDirection = currentLocation.directionTo(dangerousEnemy.location).opposite();
+                    Direction fleeMovementDirection = directionModule.recommendedSafeMovementDirectionForDirection(fleeDirection, robotController, enemies, 1, true);
+                    if (fleeMovementDirection != null) {
+
+                        robotController.move(fleeMovementDirection);
+                        movementDirection = fleeMovementDirection;
+
+                    } else {
+
+                        fleeMovementDirection = directionModule.recommendedMovementDirectionForDirection(fleeDirection, robotController, true);
+                        if (fleeMovementDirection != null) {
+
+                            robotController.move(fleeMovementDirection);
+                            movementDirection = fleeMovementDirection;
+
+                        }
+
+                    }
 
                 }
 
@@ -44,14 +57,13 @@ public class RobotScout implements Robot {
 
             // let's check up on existing communications to verify the information, if we can
 
-            communicationModule.verifyCommunicationsInformation(robotController, enemies, partsModule, true);
+            communicationModule.verifyCommunicationsInformation(robotController, enemies, true);
 
             // let's try identify what we can see
 
             for (int i = 0; i < enemies.length; i++) {
 
                 final RobotInfo enemy = enemies[i];
-
                 if (enemy.type == RobotType.ZOMBIEDEN) {
 
                     final CommunicationModuleSignal existingSignal = communicationModule.zombieDens.get(CommunicationModule.communicationsIndexFromLocation(enemy.location));
@@ -70,7 +82,7 @@ public class RobotScout implements Robot {
 
                 } else if (enemy.type == RobotType.ARCHON) {
 
-                    final ArrayList<CommunicationModuleSignal> existingSignals = communicationModule.getCommunicationModuleSignalsNearbyLocation(communicationModule.enemyArchons, currentLocation, CommunicationModule.DefaultApproximateNearbyLocationRange);
+                    final ArrayList<CommunicationModuleSignal> existingSignals = communicationModule.getCommunicationModuleSignalsNearbyLocation(communicationModule.enemyArchons, currentLocation);
                     if (existingSignals.size() > 0) {
 
                         continue;
@@ -88,23 +100,42 @@ public class RobotScout implements Robot {
 
             }
 
-            final PartsModule.Result partsScanResults = partsModule.getPartsNearby(currentLocation, robotController, CommunicationModule.ApproximateNearbyPartsLocationRadius);
-            for (int i = 0; i < partsScanResults.locations.size(); i++) {
+            final int partsScanRadius = 3;
+            for (int i = -partsScanRadius; i <= partsScanRadius; i++) {
 
-                final MapLocation partsLocation = partsScanResults.locations.get(i);
-                final ArrayList<CommunicationModuleSignal> existingSignals = communicationModule.getCommunicationModuleSignalsNearbyLocation(communicationModule.spareParts, partsLocation, CommunicationModule.ApproximateNearbyPartsLocationRange);
-                if (existingSignals.size() > 0) {
+                for (int j = -partsScanRadius; j <= partsScanRadius; j++) {
 
-                    continue;
+                    final MapLocation location = new MapLocation(currentLocation.x + i, currentLocation.y + j);
+                    if (!robotController.onTheMap(location)) {
+
+                        continue;
+
+                    }
+                    if (!robotController.canSenseLocation(location)) {
+
+                        continue;
+
+                    }
+                    final double totalParts = robotController.senseParts(location);
+                    if (totalParts > 0) {
+
+                        final CommunicationModuleSignal existingSignal = communicationModule.spareParts.get(CommunicationModule.communicationsIndexFromLocation(location));
+                        if (existingSignal != null) {
+
+                            continue;
+
+                        }
+
+                        final CommunicationModuleSignal signal = new CommunicationModuleSignal();
+                        signal.action = CommunicationModuleSignal.ACTION_SEEN;
+                        signal.location = location;
+                        signal.robotIdentifier = (int)totalParts;
+                        signal.type = CommunicationModuleSignal.TYPE_SPARE_PARTS;
+                        communicationModule.broadcastSignal(signal, robotController, CommunicationModule.MaximumBroadcastRange);
+
+                    }
 
                 }
-
-                final CommunicationModuleSignal signal = new CommunicationModuleSignal();
-                signal.action = CommunicationModuleSignal.ACTION_SEEN;
-                signal.location = partsLocation;
-                signal.robotIdentifier = 0;
-                signal.type = CommunicationModuleSignal.TYPE_SPARE_PARTS;
-                communicationModule.broadcastSignal(signal, robotController, CommunicationModule.MaximumBroadcastRange);
 
             }
 

@@ -1,6 +1,7 @@
 package team059;
 
 import team059.Movement.*;
+import team059.Parts.PartsModule;
 import team059.Rubble.RubbleModule;
 import team059.Signals.*;
 import battlecode.common.*;
@@ -18,6 +19,7 @@ public class RobotArchon implements Robot {
 
         final CommunicationModule communicationModule = new CommunicationModule();
         final DirectionModule directionModule = new DirectionModule(robotController.getID());
+        final PartsModule partsModule = new PartsModule();
         final RubbleModule rubbleModule = new RubbleModule();
 
         // unit building
@@ -88,32 +90,33 @@ public class RobotArchon implements Robot {
 
             }
 
+            // we should try activate robots
+
+            if (robotController.isCoreReady()) {
+
+                final RobotInfo[] neutrals = robotController.senseNearbyRobots(3, Team.NEUTRAL);
+                for (int i = 0; i < neutrals.length; i++) {
+
+                    robotController.activate(neutrals[i].location);
+                    break;
+
+                }
+
+            }
+
             // check to make sure we are safe
 
             final MapLocation currentLocation = robotController.getLocation();
             final RobotInfo[] enemies = robotController.senseHostileRobots(currentLocation, robotController.getType().sensorRadiusSquared);
 
-            if (robotController.isCoreReady()) {
+            if (enemies.length > 0 && robotController.isCoreReady()) {
 
-                final RobotInfo dangerousEnemy = directionModule.getNearestEnemyInRangeOfMapLocation(currentLocation, enemies, 1);
-                if (dangerousEnemy != null) {
+                final Direction fleeDirection = directionModule.averageDirectionTowardRobots(robotController, enemies).opposite();
+                Direction fleeMovementDirection = directionModule.recommendedFleeDirectionForDirection(fleeDirection, robotController, false);
+                if (fleeMovementDirection != null) {
 
-                    final Direction fleeDirection = currentLocation.directionTo(dangerousEnemy.location).opposite();
-                    Direction fleeMovementDirection = directionModule.recommendedSafeMovementDirectionForDirection(fleeDirection, robotController, enemies, 1, true);
-                    if (fleeMovementDirection != null) {
-
-                        robotController.move(fleeMovementDirection);
-
-                    } else {
-
-                        fleeMovementDirection = directionModule.recommendedMovementDirectionForDirection(fleeDirection, robotController, true);
-                        if (fleeMovementDirection != null) {
-
-                            robotController.move(fleeMovementDirection);
-
-                        }
-
-                    }
+                    robotController.move(fleeMovementDirection);
+                    robotController.setIndicatorString(1, fleeDirection.name() + " " + fleeMovementDirection.name());
 
                 }
 
@@ -121,14 +124,14 @@ public class RobotArchon implements Robot {
 
             // let's check up on existing communications to verify the information, if we can
 
-            communicationModule.verifyCommunicationsInformation(robotController, enemies, true);
+            communicationModule.verifyCommunicationsInformation(robotController, enemies, partsModule, true);
 
             // attempt to build new units
 
             if (robotController.isCoreReady()) {
 
                 RobotType typeToBuild = RobotType.SOLDIER;
-                if (scoutsBuilt == 0 || (int)Math.pow(scoutsBuilt + 1, 4) < soldiersBuilt) {
+                if (scoutsBuilt == 0 || (int)Math.pow(scoutsBuilt + 1, 3) < soldiersBuilt) {
 
                     typeToBuild = RobotType.SCOUT;
 
@@ -166,26 +169,46 @@ public class RobotArchon implements Robot {
             Direction targetRubbleClearanceDirection = null;
             if (robotController.isCoreReady()) {
 
-                CommunicationModuleSignal nearestPartsSignal = null;
+                MapLocation nearestPartsLocation = null;
                 int nearestPartsLocationDistance = Integer.MAX_VALUE;
 
-                final Enumeration<CommunicationModuleSignal> sparePartsCommunicationModuleSignals = communicationModule.spareParts.elements();
-                while (sparePartsCommunicationModuleSignals.hasMoreElements()) {
+                final PartsModule.Result partsScanResults = partsModule.getPartsNearby(currentLocation, robotController, CommunicationModule.ApproximateNearbyPartsLocationRadius);
+                if (partsScanResults.locations.size() > 0) {
 
-                    final CommunicationModuleSignal signal = sparePartsCommunicationModuleSignals.nextElement();
-                    final int distance = signal.location.distanceSquaredTo(currentLocation);
-                    if (distance < nearestPartsLocationDistance) {
+                    for (int i = 0; i < partsScanResults.locations.size(); i++) {
 
-                        nearestPartsSignal = signal;
-                        nearestPartsLocationDistance = distance;
+                    final MapLocation partsLocation = partsScanResults.locations.get(i);
+                    final int distance = partsLocation.distanceSquaredTo(currentLocation);
+                        if (distance < nearestPartsLocationDistance) {
+
+                            nearestPartsLocation = partsLocation;
+                            nearestPartsLocationDistance = distance;
+
+                        }
+
+                    }
+
+                } else {
+
+                    final Enumeration<CommunicationModuleSignal> sparePartsCommunicationModuleSignals = communicationModule.spareParts.elements();
+                    while (sparePartsCommunicationModuleSignals.hasMoreElements()) {
+
+                        final CommunicationModuleSignal signal = sparePartsCommunicationModuleSignals.nextElement();
+                        final int distance = signal.location.distanceSquaredTo(currentLocation);
+                        if (distance < nearestPartsLocationDistance) {
+
+                            nearestPartsLocation = signal.location;
+                            nearestPartsLocationDistance = distance;
+
+                        }
 
                     }
 
                 }
 
-                if (nearestPartsSignal != null) {
+                if (nearestPartsLocation != null) {
 
-                    final Direction nearestPartsDirection = currentLocation.directionTo(nearestPartsSignal.location);
+                    final Direction nearestPartsDirection = currentLocation.directionTo(nearestPartsLocation);
                     final Direction nearestPartsMovementDirection = directionModule.recommendedSafeMovementDirectionForDirection(nearestPartsDirection, robotController, enemies, 1, true);
                     if (nearestPartsMovementDirection != null) {
 
@@ -207,7 +230,7 @@ public class RobotArchon implements Robot {
 
                 if (targetRubbleClearanceDirection != null) {
 
-                    final Direction rubbleClearanceDirection = rubbleModule.rubbleClearanceDirectionFromTargetDirection(targetRubbleClearanceDirection, robotController);
+                    final Direction rubbleClearanceDirection = rubbleModule.getRubbleClearanceDirectionFromTargetDirection(targetRubbleClearanceDirection, robotController);
                     if (rubbleClearanceDirection != null) {
 
                         robotController.clearRubble(rubbleClearanceDirection);
@@ -231,7 +254,7 @@ public class RobotArchon implements Robot {
                     continue;
 
                 }
-                if (friendly.health < injuredUnitHealth) {
+                if (friendly.health < injuredUnitHealth && friendly.health < friendly.maxHealth) {
 
                     injuredUnit = friendly;
                     injuredUnitHealth = friendly.health;
