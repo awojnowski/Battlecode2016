@@ -4,7 +4,26 @@ import battlecode.common.*;
 
 public class RubbleModule {
 
-    public Direction rubbleClearanceDirectionFromTargetDirection(final Direction direction, final RobotController robotController) throws GameActionException {
+    public Direction getAnyRubbleClearanceDirectionFromDirection(final Direction direction, final RobotController robotController) throws GameActionException {
+
+        final MapLocation mapLocation = robotController.getLocation();
+        Direction rubbleClearanceDirection = direction;
+        for (int i = 0; i < 8; i++) {
+
+            final MapLocation rubbleLocation = mapLocation.add(rubbleClearanceDirection);
+            if (robotController.onTheMap(rubbleLocation) && robotController.senseRubble(rubbleLocation) > 0) {
+
+                break;
+
+            }
+            rubbleClearanceDirection = robotController.getID() % 2 == 0 ? rubbleClearanceDirection.rotateLeft() : rubbleClearanceDirection.rotateRight();
+
+        }
+        return rubbleClearanceDirection;
+
+    }
+
+    public Direction getRubbleClearanceDirectionFromTargetDirection(final Direction direction, final RobotController robotController) throws GameActionException {
 
         final MapLocation mapLocation = robotController.getLocation();
 
@@ -47,7 +66,6 @@ public class RubbleModule {
 
         }
         return null;
-
 
     }
 

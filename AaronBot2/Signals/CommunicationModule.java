@@ -1,13 +1,15 @@
 package AaronBot2.Signals;
 
+import AaronBot2.Parts.PartsModule;
 import battlecode.common.*;
-
 import java.util.*;
 
 public class CommunicationModule implements CommunicationModuleDelegate {
 
     public static final int MaximumBroadcastRange = 20000;
-    private static final int ApproximateNearbyLocationRange = 64;
+    public static final int DefaultApproximateNearbyLocationRange = 64;
+    public static final int ApproximateNearbyPartsLocationRadius = 3;
+    public static final int ApproximateNearbyPartsLocationRange = ApproximateNearbyPartsLocationRadius * ApproximateNearbyPartsLocationRadius;
 
     // these are the hashtables managing the received communications
     // the hashtables are indexed by an Integer which represents the location
@@ -69,34 +71,11 @@ public class CommunicationModule implements CommunicationModuleDelegate {
     INFORMATION VERIFICATION
      */
 
-    public void verifyCommunicationsInformation(final RobotController robotController, RobotInfo[] enemies, boolean broadcastInformation) throws GameActionException {
+    public void verifyCommunicationsInformation(final RobotController robotController, RobotInfo[] enemies, final PartsModule partsModule, final boolean broadcastInformation) throws GameActionException {
 
         if (enemies == null) {
 
             enemies = robotController.senseHostileRobots(robotController.getLocation(), robotController.getType().sensorRadiusSquared);
-
-        }
-
-        // verify the zombie dens
-
-        final Enumeration<CommunicationModuleSignal> zombieDens = this.zombieDens.elements();
-        while (zombieDens.hasMoreElements()) {
-
-            final CommunicationModuleSignal communicationModuleSignal = zombieDens.nextElement();
-            if (!this.verifyZombieDenCommunicationModuleSignal(communicationModuleSignal, robotController)) {
-
-                if (broadcastInformation) {
-
-                    communicationModuleSignal.action = CommunicationModuleSignal.ACTION_DELETE;
-                    this.broadcastSignal(communicationModuleSignal, robotController, CommunicationModule.MaximumBroadcastRange);
-
-                } else {
-
-                    this.clearSignal(communicationModuleSignal, this.zombieDens);
-
-                }
-
-            }
 
         }
 
@@ -123,13 +102,13 @@ public class CommunicationModule implements CommunicationModuleDelegate {
 
         }
 
-        // verify the spare parts
+        // verify the zombie dens
 
-        final Enumeration<CommunicationModuleSignal> spareParts = this.spareParts.elements();
-        while (spareParts.hasMoreElements()) {
+        final Enumeration<CommunicationModuleSignal> zombieDens = this.zombieDens.elements();
+        while (zombieDens.hasMoreElements()) {
 
-            final CommunicationModuleSignal communicationModuleSignal = spareParts.nextElement();
-            if (!this.verifySparePartsCommunicationModuleSignal(communicationModuleSignal, robotController)) {
+            final CommunicationModuleSignal communicationModuleSignal = zombieDens.nextElement();
+            if (!this.verifyZombieDenCommunicationModuleSignal(communicationModuleSignal, robotController)) {
 
                 if (broadcastInformation) {
 
@@ -139,6 +118,29 @@ public class CommunicationModule implements CommunicationModuleDelegate {
                 } else {
 
                     this.clearSignal(communicationModuleSignal, this.zombieDens);
+
+                }
+
+            }
+
+        }
+
+        // verify the spare parts
+
+        final Enumeration<CommunicationModuleSignal> spareParts = this.spareParts.elements();
+        while (spareParts.hasMoreElements()) {
+
+            final CommunicationModuleSignal communicationModuleSignal = spareParts.nextElement();
+            if (!this.verifySparePartsCommunicationModuleSignal(communicationModuleSignal, robotController, partsModule)) {
+
+                if (broadcastInformation) {
+
+                    communicationModuleSignal.action = CommunicationModuleSignal.ACTION_DELETE;
+                    this.broadcastSignal(communicationModuleSignal, robotController, CommunicationModule.MaximumBroadcastRange);
+
+                } else {
+
+                    this.clearSignal(communicationModuleSignal, this.spareParts);
 
                 }
 
@@ -166,7 +168,7 @@ public class CommunicationModule implements CommunicationModuleDelegate {
 
     }
 
-    public boolean verifySparePartsCommunicationModuleSignal(final CommunicationModuleSignal communicationModuleSignal, final RobotController robotController) throws GameActionException {
+    public boolean verifySparePartsCommunicationModuleSignal(final CommunicationModuleSignal communicationModuleSignal, final RobotController robotController, final PartsModule partsModule) throws GameActionException {
 
         if (!robotController.canSenseLocation(communicationModuleSignal.location)) {
 
@@ -174,8 +176,8 @@ public class CommunicationModule implements CommunicationModuleDelegate {
 
         }
 
-        final double parts = robotController.senseParts(communicationModuleSignal.location);
-        if (parts < 1) {
+        final PartsModule.Result partsScanResults = partsModule.getPartsNearby(communicationModuleSignal.location, robotController, CommunicationModule.ApproximateNearbyPartsLocationRadius);
+        if (partsScanResults.locations.size() == 0 && partsScanResults.allPositionsScanned) {
 
             return false;
 
@@ -349,7 +351,7 @@ public class CommunicationModule implements CommunicationModuleDelegate {
 
     }
 
-    public ArrayList<CommunicationModuleSignal> getCommunicationModuleSignalsNearbyLocation(final Hashtable<Integer, CommunicationModuleSignal> hashtable, final MapLocation location) {
+    public ArrayList<CommunicationModuleSignal> getCommunicationModuleSignalsNearbyLocation(final Hashtable<Integer, CommunicationModuleSignal> hashtable, final MapLocation location, final int range) {
 
         final ArrayList<CommunicationModuleSignal> results = new ArrayList<CommunicationModuleSignal>();
         final Enumeration<CommunicationModuleSignal> communicationModuleSignals = hashtable.elements();
@@ -357,7 +359,7 @@ public class CommunicationModule implements CommunicationModuleDelegate {
 
             final CommunicationModuleSignal signal = communicationModuleSignals.nextElement();
             final int distance = signal.location.distanceSquaredTo(location);
-            if (distance < CommunicationModule.ApproximateNearbyLocationRange) {
+            if (distance < range) {
 
                 results.add(signal);
 

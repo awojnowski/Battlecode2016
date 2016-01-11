@@ -1,6 +1,7 @@
 package AaronBot2;
 
 import AaronBot2.Movement.*;
+import AaronBot2.Parts.PartsModule;
 import AaronBot2.Signals.*;
 import battlecode.common.*;
 import java.util.*;
@@ -12,6 +13,7 @@ public class RobotScout implements Robot {
         final CommunicationModule communicationModule = new CommunicationModule();
         final DirectionModule directionModule = new DirectionModule(robotController.getID());
         final MovementModule movementModule = new MovementModule();
+        final PartsModule partsModule = new PartsModule();
 
         final Random random = new Random(robotController.getID());
         final Team team = robotController.getTeam();
@@ -57,7 +59,7 @@ public class RobotScout implements Robot {
 
             // let's check up on existing communications to verify the information, if we can
 
-            communicationModule.verifyCommunicationsInformation(robotController, enemies, true);
+            communicationModule.verifyCommunicationsInformation(robotController, enemies, partsModule, true);
 
             // let's try identify what we can see
 
@@ -82,7 +84,7 @@ public class RobotScout implements Robot {
 
                 } else if (enemy.type == RobotType.ARCHON) {
 
-                    final ArrayList<CommunicationModuleSignal> existingSignals = communicationModule.getCommunicationModuleSignalsNearbyLocation(communicationModule.enemyArchons, currentLocation);
+                    final ArrayList<CommunicationModuleSignal> existingSignals = communicationModule.getCommunicationModuleSignalsNearbyLocation(communicationModule.enemyArchons, currentLocation, CommunicationModule.DefaultApproximateNearbyLocationRange);
                     if (existingSignals.size() > 0) {
 
                         continue;
@@ -100,42 +102,23 @@ public class RobotScout implements Robot {
 
             }
 
-            final int partsScanRadius = 3;
-            for (int i = -partsScanRadius; i <= partsScanRadius; i++) {
+            final PartsModule.Result partsScanResults = partsModule.getPartsNearby(currentLocation, robotController, CommunicationModule.ApproximateNearbyPartsLocationRadius);
+            for (int i = 0; i < partsScanResults.locations.size(); i++) {
 
-                for (int j = -partsScanRadius; j <= partsScanRadius; j++) {
+                final MapLocation partsLocation = partsScanResults.locations.get(i);
+                final ArrayList<CommunicationModuleSignal> existingSignals = communicationModule.getCommunicationModuleSignalsNearbyLocation(communicationModule.spareParts, partsLocation, CommunicationModule.ApproximateNearbyPartsLocationRange);
+                if (existingSignals.size() > 0) {
 
-                    final MapLocation location = new MapLocation(currentLocation.x + i, currentLocation.y + j);
-                    if (!robotController.onTheMap(location)) {
-
-                        continue;
-
-                    }
-                    if (!robotController.canSenseLocation(location)) {
-
-                        continue;
-
-                    }
-                    final double totalParts = robotController.senseParts(location);
-                    if (totalParts > 0) {
-
-                        final CommunicationModuleSignal existingSignal = communicationModule.spareParts.get(CommunicationModule.communicationsIndexFromLocation(location));
-                        if (existingSignal != null) {
-
-                            continue;
-
-                        }
-
-                        final CommunicationModuleSignal signal = new CommunicationModuleSignal();
-                        signal.action = CommunicationModuleSignal.ACTION_SEEN;
-                        signal.location = location;
-                        signal.robotIdentifier = (int)totalParts;
-                        signal.type = CommunicationModuleSignal.TYPE_SPARE_PARTS;
-                        communicationModule.broadcastSignal(signal, robotController, CommunicationModule.MaximumBroadcastRange);
-
-                    }
+                    continue;
 
                 }
+
+                final CommunicationModuleSignal signal = new CommunicationModuleSignal();
+                signal.action = CommunicationModuleSignal.ACTION_SEEN;
+                signal.location = partsLocation;
+                signal.robotIdentifier = 0;
+                signal.type = CommunicationModuleSignal.TYPE_SPARE_PARTS;
+                communicationModule.broadcastSignal(signal, robotController, CommunicationModule.MaximumBroadcastRange);
 
             }
 

@@ -1,6 +1,7 @@
 package AaronBot2;
 
 import AaronBot2.Movement.*;
+import AaronBot2.Parts.PartsModule;
 import AaronBot2.Rubble.RubbleModule;
 import AaronBot2.Signals.*;
 import battlecode.common.*;
@@ -18,6 +19,7 @@ public class RobotArchon implements Robot {
 
         final CommunicationModule communicationModule = new CommunicationModule();
         final DirectionModule directionModule = new DirectionModule(robotController.getID());
+        final PartsModule partsModule = new PartsModule();
         final RubbleModule rubbleModule = new RubbleModule();
 
         // unit building
@@ -121,7 +123,7 @@ public class RobotArchon implements Robot {
 
             // let's check up on existing communications to verify the information, if we can
 
-            communicationModule.verifyCommunicationsInformation(robotController, enemies, true);
+            communicationModule.verifyCommunicationsInformation(robotController, enemies, partsModule, true);
 
             // attempt to build new units
 
@@ -166,26 +168,46 @@ public class RobotArchon implements Robot {
             Direction targetRubbleClearanceDirection = null;
             if (robotController.isCoreReady()) {
 
-                CommunicationModuleSignal nearestPartsSignal = null;
+                MapLocation nearestPartsLocation = null;
                 int nearestPartsLocationDistance = Integer.MAX_VALUE;
 
-                final Enumeration<CommunicationModuleSignal> sparePartsCommunicationModuleSignals = communicationModule.spareParts.elements();
-                while (sparePartsCommunicationModuleSignals.hasMoreElements()) {
+                final PartsModule.Result partsScanResults = partsModule.getPartsNearby(currentLocation, robotController, CommunicationModule.ApproximateNearbyPartsLocationRadius);
+                if (partsScanResults.locations.size() > 0) {
 
-                    final CommunicationModuleSignal signal = sparePartsCommunicationModuleSignals.nextElement();
-                    final int distance = signal.location.distanceSquaredTo(currentLocation);
-                    if (distance < nearestPartsLocationDistance) {
+                    for (int i = 0; i < partsScanResults.locations.size(); i++) {
 
-                        nearestPartsSignal = signal;
-                        nearestPartsLocationDistance = distance;
+                        final MapLocation partsLocation = partsScanResults.locations.get(i);
+                        final int distance = partsLocation.distanceSquaredTo(currentLocation);
+                        if (distance < nearestPartsLocationDistance) {
+
+                            nearestPartsLocation = partsLocation;
+                            nearestPartsLocationDistance = distance;
+
+                        }
+
+                    }
+
+                } else {
+
+                    final Enumeration<CommunicationModuleSignal> sparePartsCommunicationModuleSignals = communicationModule.spareParts.elements();
+                    while (sparePartsCommunicationModuleSignals.hasMoreElements()) {
+
+                        final CommunicationModuleSignal signal = sparePartsCommunicationModuleSignals.nextElement();
+                        final int distance = signal.location.distanceSquaredTo(currentLocation);
+                        if (distance < nearestPartsLocationDistance) {
+
+                            nearestPartsLocation = signal.location;
+                            nearestPartsLocationDistance = distance;
+
+                        }
 
                     }
 
                 }
 
-                if (nearestPartsSignal != null) {
+                if (nearestPartsLocation != null) {
 
-                    final Direction nearestPartsDirection = currentLocation.directionTo(nearestPartsSignal.location);
+                    final Direction nearestPartsDirection = currentLocation.directionTo(nearestPartsLocation);
                     final Direction nearestPartsMovementDirection = directionModule.recommendedSafeMovementDirectionForDirection(nearestPartsDirection, robotController, enemies, 1, true);
                     if (nearestPartsMovementDirection != null) {
 
@@ -207,7 +229,7 @@ public class RobotArchon implements Robot {
 
                 if (targetRubbleClearanceDirection != null) {
 
-                    final Direction rubbleClearanceDirection = rubbleModule.rubbleClearanceDirectionFromTargetDirection(targetRubbleClearanceDirection, robotController);
+                    final Direction rubbleClearanceDirection = rubbleModule.getRubbleClearanceDirectionFromTargetDirection(targetRubbleClearanceDirection, robotController);
                     if (rubbleClearanceDirection != null) {
 
                         robotController.clearRubble(rubbleClearanceDirection);
@@ -231,7 +253,7 @@ public class RobotArchon implements Robot {
                     continue;
 
                 }
-                if (friendly.health < injuredUnitHealth) {
+                if (friendly.health < injuredUnitHealth && friendly.health < friendly.maxHealth) {
 
                     injuredUnit = friendly;
                     injuredUnitHealth = friendly.health;
