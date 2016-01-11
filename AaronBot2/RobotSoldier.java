@@ -127,6 +127,14 @@ public class RobotSoldier implements Robot, CommunicationModuleDelegate {
 
                 }
 
+                // otherwise we can move randomly...
+
+                if (desiredMovementDirection == null && ableToMove) {
+
+                    desiredMovementDirection = directionModule.randomDirection();
+
+                }
+
                 // process movement
 
                 if (desiredMovementDirection != null && ableToMove) {
@@ -150,11 +158,6 @@ public class RobotSoldier implements Robot, CommunicationModuleDelegate {
 
             if (robotController.isCoreReady() && communicationModule.initialInformationReceived) {
 
-                if (targetRubbleClearanceDirection == null) {
-
-                    targetRubbleClearanceDirection = rubbleModule.getAnyRubbleClearanceDirectionFromDirection(directionModule.randomDirection(), robotController);
-
-                }
                 if (targetRubbleClearanceDirection != null) {
 
                     final Direction rubbleClearanceDirection = rubbleModule.getRubbleClearanceDirectionFromTargetDirection(targetRubbleClearanceDirection, robotController);
