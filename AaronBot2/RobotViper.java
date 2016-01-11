@@ -10,7 +10,7 @@ public class RobotViper implements Robot {
         final DirectionModule directionModule = new DirectionModule(robotController.getID());
 
         while (true) {
-            
+
             if (robotController.isCoreReady()) {
 
                 final Direction desiredMovementDirection = directionModule.randomDirection();

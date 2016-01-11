@@ -22,7 +22,7 @@ public class CommunicationModule implements CommunicationModuleDelegate {
 
     public CommunicationModuleDelegate delegate = this;
     public boolean initialInformationReceived = false;
-
+    
     public CommunicationModule() {
 
         ;
@@ -199,7 +199,13 @@ public class CommunicationModule implements CommunicationModuleDelegate {
             final RobotInfo enemy = enemies[i];
             if (enemy.ID == communicationModuleSignal.robotIdentifier) {
 
-                communicationModuleSignal.location = enemy.location;
+                if (communicationModuleSignal.location != enemy.location) {
+
+                    this.clearSignal(communicationModuleSignal, this.enemyArchons);
+                    communicationModuleSignal.location = enemy.location;
+                    this.processSignal(communicationModuleSignal);
+
+                }
                 return true;
 
             }
@@ -270,6 +276,7 @@ public class CommunicationModule implements CommunicationModuleDelegate {
         if (communicationModuleSignal.action == CommunicationModuleSignal.ACTION_INITIAL_UPDATE_COMPLETE) {
 
             this.initialInformationReceived = true;
+            return;
 
         }
 
