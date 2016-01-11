@@ -164,9 +164,15 @@ public class DirectionModule {
             // Sum location values
             for (int i = 0; i < robots.length; i++) {
 
-                final MapLocation location = robots[i].location;
-                totalRobotX += location.x;
-                totalRobotY += location.y;
+                final RobotInfo robot = robots[i];
+                if (robot.type == RobotType.ZOMBIEDEN || robot.type == RobotType.ARCHON) {
+
+                    final MapLocation location = robot.location;
+                    totalRobotX += location.x;
+                    totalRobotY += location.y;
+
+                }
+
 
             }
 
