@@ -22,7 +22,7 @@ public class CommunicationModule implements CommunicationModuleDelegate {
 
     public CommunicationModuleDelegate delegate = this;
     public boolean initialInformationReceived = false;
-    
+
     public CommunicationModule() {
 
         ;
