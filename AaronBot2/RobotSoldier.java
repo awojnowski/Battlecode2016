@@ -139,10 +139,10 @@ public class RobotSoldier implements Robot, CommunicationModuleDelegate {
 
                 if (desiredMovementDirection != null && ableToMove) {
 
-                    final Direction randomMovementDirection = directionModule.recommendedMovementDirectionForDirection(desiredMovementDirection, robotController, false);
-                    if (randomMovementDirection != null) {
+                    final Direction recommendedMovementDirection = directionModule.recommendedMovementDirectionForDirection(desiredMovementDirection, robotController, false);
+                    if (recommendedMovementDirection != null) {
 
-                        robotController.move(randomMovementDirection);
+                        robotController.move(recommendedMovementDirection);
 
                     } else {
 

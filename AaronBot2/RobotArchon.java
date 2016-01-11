@@ -90,6 +90,15 @@ public class RobotArchon implements Robot {
 
             }
 
+            // we should try activate robots
+
+            final RobotInfo[] neutrals = robotController.senseNearbyRobots(3, Team.NEUTRAL);
+            for (int i = 0; i < neutrals.length; i++) {
+
+                robotController.activate(neutrals[i].location);
+
+            }
+
             // check to make sure we are safe
 
             final MapLocation currentLocation = robotController.getLocation();
@@ -130,7 +139,7 @@ public class RobotArchon implements Robot {
             if (robotController.isCoreReady()) {
 
                 RobotType typeToBuild = RobotType.SOLDIER;
-                if (scoutsBuilt == 0 || (int)Math.pow(scoutsBuilt + 1, 4) < soldiersBuilt) {
+                if (scoutsBuilt == 0 || (int)Math.pow(scoutsBuilt + 1, 3) < soldiersBuilt) {
 
                     typeToBuild = RobotType.SCOUT;
 
