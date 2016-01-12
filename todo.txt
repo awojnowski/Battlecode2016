@@ -1,0 +1,3 @@
+Battlecode TODO:
+
+- If a unit (like an Archon) is right beside a patch of parts with rubble on it, it will just go around the rubble infinitely instead of trying to clear the rubble (because it can always move left or right around it).

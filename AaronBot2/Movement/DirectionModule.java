@@ -169,7 +169,7 @@ public class DirectionModule {
         for (int i = 0; i < robots.length; i++) {
 
             final RobotInfo robot = robots[i];
-            if (robot.type == RobotType.ZOMBIEDEN || robot.type == RobotType.ARCHON || robot.type == RobotType.SCOUT) {
+            if (!this.isEnemyDangerous(robot, currentLocation, 1)) {
 
                 continue;
 
@@ -229,19 +229,50 @@ public class DirectionModule {
 
             final RobotInfo enemy = enemies[i];
             final int distance = enemy.location.distanceSquaredTo(mapLocation);
-            if (distance <= (int)Math.round(Math.pow(Math.sqrt(enemy.type.attackRadiusSquared) + buffer, 2))) {
+            if (distance > this.enemyAttackRadiusSquaredWithBuffer(enemy, buffer)) {
 
-                if (distance < nearestEnemyDistance) {
+                continue;
 
-                    nearestEnemy = enemy;
-                    nearestEnemyDistance = distance;
+            }
 
-                }
+            if (distance < nearestEnemyDistance) {
+
+                nearestEnemy = enemy;
+                nearestEnemyDistance = distance;
 
             }
 
         }
         return nearestEnemy;
+
+    }
+
+    /*
+    ENEMY RANKING
+     */
+
+    private boolean isEnemyDangerous(final RobotInfo enemy, final MapLocation currentLocation, final double buffer) {
+
+        if (enemy.type == RobotType.ZOMBIEDEN || enemy.type == RobotType.ARCHON || enemy.type == RobotType.SCOUT) {
+
+            return false;
+
+        }
+
+        final int distance = currentLocation.distanceSquaredTo(enemy.location);
+        if (distance > this.enemyAttackRadiusSquaredWithBuffer(enemy, buffer)) {
+
+            return false;
+
+        }
+
+        return true;
+
+    }
+
+    private int enemyAttackRadiusSquaredWithBuffer(final RobotInfo enemy, double buffer) {
+
+        return (int)Math.round(Math.pow(Math.sqrt(enemy.type.attackRadiusSquared) + buffer, 2));
 
     }
 
