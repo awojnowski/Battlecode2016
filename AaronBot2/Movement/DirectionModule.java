@@ -185,7 +185,7 @@ public class DirectionModule {
         if (totalRobotsFound == 0) {
 
             return null;
-            
+
         }
 
         final double averageRobotX = (double)totalRobotX / totalRobotsFound;
