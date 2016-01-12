@@ -70,7 +70,7 @@ public class RobotScout implements Robot {
                     signal.location = enemy.location;
                     signal.data = enemy.ID;
                     signal.type = CommunicationModuleSignal.TYPE_ZOMBIEDEN;
-                    communicationModule.broadcastSignal(signal, robotController, CommunicationModule.MaximumBroadcastRange);
+                    communicationModule.broadcastSignal(signal, robotController, CommunicationModule.maximumBroadcastRange(mapInfoModule));
 
                 } else if (enemy.type == RobotType.ARCHON) {
 
@@ -86,7 +86,7 @@ public class RobotScout implements Robot {
                     signal.location = enemy.location;
                     signal.data = enemy.ID;
                     signal.type = CommunicationModuleSignal.TYPE_ENEMY_ARCHON;
-                    communicationModule.broadcastSignal(signal, robotController, CommunicationModule.MaximumBroadcastRange);
+                    communicationModule.broadcastSignal(signal, robotController, CommunicationModule.maximumBroadcastRange(mapInfoModule));
 
                 }
 
@@ -108,7 +108,7 @@ public class RobotScout implements Robot {
                 signal.location = partsLocation;
                 signal.data = 0;
                 signal.type = CommunicationModuleSignal.TYPE_SPARE_PARTS;
-                communicationModule.broadcastSignal(signal, robotController, CommunicationModule.MaximumBroadcastRange);
+                communicationModule.broadcastSignal(signal, robotController, CommunicationModule.maximumBroadcastRange(mapInfoModule));
 
             }
 
@@ -120,7 +120,7 @@ public class RobotScout implements Robot {
                     final CommunicationModuleSignal signal = new CommunicationModuleSignal();
                     signal.action = CommunicationModuleSignal.ACTION_SEEN;
                     mapInfoModule.fillCommunicationModuleSignalWithMapSizeData(signal);
-                    communicationModule.broadcastSignal(signal, robotController, CommunicationModule.MaximumBroadcastRange);
+                    communicationModule.broadcastSignal(signal, robotController, CommunicationModule.maximumBroadcastRange(mapInfoModule));
 
                 }
 

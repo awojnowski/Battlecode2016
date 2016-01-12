@@ -6,7 +6,6 @@ import java.util.*;
 
 public class CommunicationModule implements CommunicationModuleDelegate {
 
-    public static final int MaximumBroadcastRange = 20000;
     public static final int DefaultApproximateNearbyLocationRange = 64;
     public static final int ApproximateNearbyPartsLocationRadius = 3;
     public static final int ApproximateNearbyPartsLocationRange = ApproximateNearbyPartsLocationRadius * ApproximateNearbyPartsLocationRadius;
@@ -91,7 +90,7 @@ public class CommunicationModule implements CommunicationModuleDelegate {
                 if (broadcastInformation) {
 
                     communicationModuleSignal.action = CommunicationModuleSignal.ACTION_DELETE;
-                    this.broadcastSignal(communicationModuleSignal, robotController, CommunicationModule.MaximumBroadcastRange);
+                    this.broadcastSignal(communicationModuleSignal, robotController, CommunicationModule.maximumBroadcastRange(this.mapInfoModule));
 
                 } else {
 
@@ -114,7 +113,7 @@ public class CommunicationModule implements CommunicationModuleDelegate {
                 if (broadcastInformation) {
 
                     communicationModuleSignal.action = CommunicationModuleSignal.ACTION_DELETE;
-                    this.broadcastSignal(communicationModuleSignal, robotController, CommunicationModule.MaximumBroadcastRange);
+                    this.broadcastSignal(communicationModuleSignal, robotController, CommunicationModule.maximumBroadcastRange(this.mapInfoModule));
 
                 } else {
 
@@ -137,7 +136,7 @@ public class CommunicationModule implements CommunicationModuleDelegate {
                 if (broadcastInformation) {
 
                     communicationModuleSignal.action = CommunicationModuleSignal.ACTION_DELETE;
-                    this.broadcastSignal(communicationModuleSignal, robotController, CommunicationModule.MaximumBroadcastRange);
+                    this.broadcastSignal(communicationModuleSignal, robotController, CommunicationModule.maximumBroadcastRange(this.mapInfoModule));
 
                 } else {
 
@@ -238,6 +237,22 @@ public class CommunicationModule implements CommunicationModuleDelegate {
     public static int maximumFreeBroadcastRangeForRobotType(final RobotType type) {
 
         return type.sensorRadiusSquared * 2;
+
+    }
+
+    public static int maximumBroadcastRange(final MapInfoModule mapInfoModule) {
+
+        if (!mapInfoModule.hasAllBoundaries()) {
+
+            return 20000;
+
+        } else {
+
+            final int mapWidth = mapInfoModule.mapWidth();
+            final int mapHeight = mapInfoModule.mapHeight();
+            return mapWidth * mapWidth + mapHeight * mapHeight;
+
+        }
 
     }
 

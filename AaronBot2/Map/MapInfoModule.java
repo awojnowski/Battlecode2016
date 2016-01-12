@@ -57,13 +57,22 @@ public class MapInfoModule {
         communicationModuleSignal.type = CommunicationModuleSignal.TYPE_MAP_INFO;
         communicationModuleSignal.location = new MapLocation(this.westBoundaryValue, this.northBoundaryValue);
 
-        final int mapHeight = this.southBoundaryValue - this.northBoundaryValue - 1;
-        final int mapWidth = this.eastBoundaryValue - this.westBoundaryValue - 1;
-
-        int data = mapHeight;
+        int data = this.mapHeight();
         data <<= 8;
-        data += mapWidth;
+        data += this.mapWidth();
         communicationModuleSignal.data = data;
+
+    }
+
+    public int mapWidth() {
+
+        return this.eastBoundaryValue - this.westBoundaryValue - 1;
+
+    }
+
+    public int mapHeight() {
+
+        return this.southBoundaryValue - this.northBoundaryValue - 1;
 
     }
 
