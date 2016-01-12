@@ -122,13 +122,17 @@ public class RobotArchon implements Robot {
 
             if (enemies.length > 0 && robotController.isCoreReady()) {
 
-                final Direction fleeDirection = directionModule.averageDirectionTowardRobots(robotController, enemies).opposite();
-                Direction fleeMovementDirection = directionModule.recommendedFleeDirectionForDirection(fleeDirection, robotController, false);
-                if (fleeMovementDirection != null) {
+                final Direction fleeDirection = directionModule.averageDirectionTowardRobots(robotController, enemies);
+                if (fleeDirection != null) {
 
-                    robotController.move(fleeMovementDirection);
-                    currentLocation = robotController.getLocation();
-                    robotController.setIndicatorString(1, fleeDirection.name() + " " + fleeMovementDirection.name());
+                    final Direction fleeMovementDirection = directionModule.recommendedFleeDirectionForDirection(fleeDirection.opposite(), robotController, false);
+                    if (fleeMovementDirection != null) {
+
+                        robotController.move(fleeMovementDirection);
+                        currentLocation = robotController.getLocation();
+                        robotController.setIndicatorString(1, fleeDirection.name() + " " + fleeMovementDirection.name());
+
+                    }
 
                 }
 
