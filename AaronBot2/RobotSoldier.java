@@ -60,7 +60,7 @@ public class RobotSoldier implements Robot, CommunicationModuleDelegate {
             while (enemyArchonCommunicationModuleSignals.hasMoreElements()) {
 
                 final CommunicationModuleSignal signal = enemyArchonCommunicationModuleSignals.nextElement();
-                final int distance = signal.location.distanceSquaredTo(currentLocation) * 4; // multiplying by 4 to prioritize the dens
+                final int distance = signal.location.distanceSquaredTo(currentLocation) * 6; // multiplying by 6 to prioritize the dens
                 if (distance < closestObjectiveLocationDistance) {
 
                     objectiveSignal = signal;
