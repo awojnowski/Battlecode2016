@@ -28,9 +28,6 @@ public class RobotSoldier implements Robot, CommunicationModuleDelegate {
 
         while (true) {
 
-            robotController.setIndicatorString(1, "NOT STUCK " + turnsStuck);
-            robotController.setIndicatorString(2, "Signals: " + communicationModule.notifications.size());
-
             MapLocation currentLocation = robotController.getLocation();
 
             // update communication
@@ -72,12 +69,6 @@ public class RobotSoldier implements Robot, CommunicationModuleDelegate {
 
                 }
 
-            }
-
-            if (objectiveSignal != null) {
-                robotController.setIndicatorString(0, "Objective: " + objectiveSignal.location.toString());
-            } else {
-                robotController.setIndicatorString(0, "Objective: " + "null");
             }
 
             // now let's see if we can attack anything
@@ -246,8 +237,7 @@ public class RobotSoldier implements Robot, CommunicationModuleDelegate {
 
                         if (turnsStuck > 5) {
 
-                            robotController.setIndicatorString(1, "STUCKKKK " + turnsStuck);
-                            communicationModule.clearSignal(objectiveSignal, communicationModule.zombieDens);
+                            communicationModule.clearSignal(objectiveSignal, communicationModule.enemyArchons);
                             turnsStuck = 0;
 
                         }
