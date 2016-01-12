@@ -363,7 +363,7 @@ public class CommunicationModule implements CommunicationModuleDelegate {
 
     }
 
-    private void clearSignal(final CommunicationModuleSignal communicationModuleSignal, final Hashtable<Integer, CommunicationModuleSignal> hashtable) {
+    public void clearSignal(final CommunicationModuleSignal communicationModuleSignal, final Hashtable<Integer, CommunicationModuleSignal> hashtable) {
 
         hashtable.remove(communicationModuleSignal.serializedLocation());
 

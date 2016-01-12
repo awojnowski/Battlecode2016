@@ -22,10 +22,14 @@ public class RobotSoldier implements Robot, CommunicationModuleDelegate {
         final MovementModule movementModule = new MovementModule();
         final RubbleModule rubbleModule = new RubbleModule();
         final Team currentTeam = robotController.getTeam();
+        int turnsStuck = 0;
 
         final RobotType type = robotController.getType();
 
         while (true) {
+
+            robotController.setIndicatorString(1, "NOT STUCK " + turnsStuck);
+            robotController.setIndicatorString(2, "Signals: " + communicationModule.notifications.size());
 
             MapLocation currentLocation = robotController.getLocation();
 
@@ -68,6 +72,12 @@ public class RobotSoldier implements Robot, CommunicationModuleDelegate {
 
                 }
 
+            }
+
+            if (objectiveSignal != null) {
+                robotController.setIndicatorString(0, "Objective: " + objectiveSignal.location.toString());
+            } else {
+                robotController.setIndicatorString(0, "Objective: " + "null");
             }
 
             // now let's see if we can attack anything
@@ -195,6 +205,12 @@ public class RobotSoldier implements Robot, CommunicationModuleDelegate {
                         robotController.move(recommendedMovementDirection);
                         currentLocation = robotController.getLocation();
 
+                        if (turnsStuck != 0) {
+
+                            turnsStuck = 0;
+
+                        }
+
                     } else {
 
                         targetRubbleClearanceDirection = desiredMovementDirection;
@@ -215,6 +231,30 @@ public class RobotSoldier implements Robot, CommunicationModuleDelegate {
                     if (rubbleClearanceDirection != null) {
 
                         robotController.clearRubble(rubbleClearanceDirection);
+
+                        if (turnsStuck != 0) {
+
+                            turnsStuck = 0;
+
+                        }
+
+                        // otherwise they didn't move or clear rubble, check if they're stuck
+
+                    } else if (communicationModule.notifications.size() == 0 && objectiveSignal != null) {
+
+                        turnsStuck++;
+
+                        if (turnsStuck > 5) {
+
+                            robotController.setIndicatorString(1, "STUCKKKK " + turnsStuck);
+                            communicationModule.clearSignal(objectiveSignal, communicationModule.zombieDens);
+                            turnsStuck = 0;
+
+                        }
+
+                    } else if (turnsStuck != 0) {
+
+                        turnsStuck = 0;
 
                     }
 
