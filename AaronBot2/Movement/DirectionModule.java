@@ -263,7 +263,7 @@ public class DirectionModule {
         for (int i = 0; i < directions.length; i += 2) {
 
             final Direction direction = directions[i];
-            final int sightDistance = 5;
+            final int sightDistance = (int)Math.round(Math.sqrt((double)robotController.getType().sensorRadiusSquared)) - 1;
 
             for (int j = 1; j <= sightDistance; j++) {
 
