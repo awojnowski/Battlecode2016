@@ -21,6 +21,7 @@ public class RobotSoldier implements Robot, CommunicationModuleDelegate {
         final DirectionModule directionModule = new DirectionModule(robotController.getID());
         final MovementModule movementModule = new MovementModule();
         final RubbleModule rubbleModule = new RubbleModule();
+        final Team currentTeam = robotController.getTeam();
 
         final RobotType type = robotController.getType();
 
@@ -81,6 +82,7 @@ public class RobotSoldier implements Robot, CommunicationModuleDelegate {
 
                     robotController.attackLocation(bestEnemy.location);
                     attacked = true;
+                    communicationModule.broadcastSignal(robotController, CommunicationModule.maximumFreeBroadcastRangeForRobotType(robotController.getType()));
 
                 }
 
@@ -130,11 +132,56 @@ public class RobotSoldier implements Robot, CommunicationModuleDelegate {
 
                 }
 
-                // otherwise we can move randomly...
+                // otherwise check if there are nearby signals
+
+                if (desiredMovementDirection == null && ableToMove) {
+
+                    ArrayList<Signal> signals = communicationModule.notifications;
+
+                    if (signals.size() > 0) {
+
+                        int minDistance = Integer.MAX_VALUE;
+                        MapLocation closestLocation = null;
+
+                        for (int i = 0; i < signals.size(); i++) {
+
+                            final Signal currentSignal = signals.get(i);
+                            final int distance = currentLocation.distanceSquaredTo(currentSignal.getLocation());
+
+                            if (distance < minDistance) {
+
+                                minDistance = distance;
+                                closestLocation = currentSignal.getLocation();
+
+                            }
+
+                        }
+
+                        desiredMovementDirection = currentLocation.directionTo(closestLocation);
+
+                    }
+
+                }
+
+                // if those fail we can move randomly near our teammates
 
                 if (desiredMovementDirection == null && ableToMove) {
 
                     desiredMovementDirection = directionModule.randomDirection();
+
+                    RobotInfo[] closeTeammates = robotController.senseNearbyRobots(3, currentTeam); // How close they stay to their team, lower means they'll stay closer
+
+                    if (closeTeammates.length == 0) { // Move towards team if far away
+
+                        RobotInfo[] nearbyTeammates = robotController.senseNearbyRobots(24, currentTeam);
+
+                        if (nearbyTeammates.length > 0) {
+
+                            desiredMovementDirection = directionModule.averageDirectionTowardRobots(robotController, nearbyTeammates);
+
+                        }
+
+                    }
 
                 }
 
