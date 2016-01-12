@@ -3,7 +3,6 @@ package AaronBot2;
 import AaronBot2.Cartography.*;
 import AaronBot2.Map.*;
 import AaronBot2.Movement.*;
-import AaronBot2.Parts.PartsModule;
 import AaronBot2.Signals.*;
 import battlecode.common.*;
 import java.util.*;
@@ -18,7 +17,6 @@ public class RobotScout implements Robot {
         final CommunicationModule communicationModule = new CommunicationModule(mapInfoModule);
         final DirectionModule directionModule = new DirectionModule(robotController.getID());
         final MovementModule movementModule = new MovementModule();
-        final PartsModule partsModule = new PartsModule();
 
         final Random random = new Random(robotController.getID());
         final Team team = robotController.getTeam();
@@ -50,7 +48,7 @@ public class RobotScout implements Robot {
 
             // let's check up on existing communications to verify the information, if we can
 
-            communicationModule.verifyCommunicationsInformation(robotController, enemies, partsModule, true);
+            communicationModule.verifyCommunicationsInformation(robotController, enemies, true);
 
             // let's try identify what we can see
 
@@ -70,7 +68,7 @@ public class RobotScout implements Robot {
                     final CommunicationModuleSignal signal = new CommunicationModuleSignal();
                     signal.action = CommunicationModuleSignal.ACTION_SEEN;
                     signal.location = enemy.location;
-                    signal.robotIdentifier = enemy.ID;
+                    signal.data = enemy.ID;
                     signal.type = CommunicationModuleSignal.TYPE_ZOMBIEDEN;
                     communicationModule.broadcastSignal(signal, robotController, CommunicationModule.MaximumBroadcastRange);
 
@@ -86,7 +84,7 @@ public class RobotScout implements Robot {
                     final CommunicationModuleSignal signal = new CommunicationModuleSignal();
                     signal.action = CommunicationModuleSignal.ACTION_SEEN;
                     signal.location = enemy.location;
-                    signal.robotIdentifier = enemy.ID;
+                    signal.data = enemy.ID;
                     signal.type = CommunicationModuleSignal.TYPE_ENEMY_ARCHON;
                     communicationModule.broadcastSignal(signal, robotController, CommunicationModule.MaximumBroadcastRange);
 
@@ -94,10 +92,10 @@ public class RobotScout implements Robot {
 
             }
 
-            final PartsModule.Result partsScanResults = partsModule.getPartsNearby(currentLocation, robotController, CommunicationModule.ApproximateNearbyPartsLocationRadius);
-            for (int i = 0; i < partsScanResults.locations.size(); i++) {
+            final MapLocation[] partsLocations = robotController.sensePartLocations(-1);
+            for (int i = 0; i < partsLocations.length; i++) {
 
-                final MapLocation partsLocation = partsScanResults.locations.get(i);
+                final MapLocation partsLocation = partsLocations[i];
                 final ArrayList<CommunicationModuleSignal> existingSignals = communicationModule.getCommunicationModuleSignalsNearbyLocation(communicationModule.spareParts, partsLocation, CommunicationModule.ApproximateNearbyPartsLocationRange);
                 if (existingSignals.size() > 0) {
 
@@ -108,13 +106,33 @@ public class RobotScout implements Robot {
                 final CommunicationModuleSignal signal = new CommunicationModuleSignal();
                 signal.action = CommunicationModuleSignal.ACTION_SEEN;
                 signal.location = partsLocation;
-                signal.robotIdentifier = 0;
+                signal.data = 0;
                 signal.type = CommunicationModuleSignal.TYPE_SPARE_PARTS;
                 communicationModule.broadcastSignal(signal, robotController, CommunicationModule.MaximumBroadcastRange);
 
             }
 
             cartographyModule.probeAndUpdateMapInfoModule(mapInfoModule, currentLocation, robotController);
+            if (mapInfoModule.eastBoundaryValue != MapInfoModule.UnknownValue) {
+
+                robotController.setIndicatorLine(currentLocation, currentLocation.add(Direction.EAST, 1000), 255, 123, 0);
+
+            }
+            if (mapInfoModule.westBoundaryValue != MapInfoModule.UnknownValue) {
+
+                robotController.setIndicatorLine(currentLocation, currentLocation.add(Direction.WEST, 1000), 255, 123, 0);
+
+            }
+            if (mapInfoModule.northBoundaryValue != MapInfoModule.UnknownValue) {
+
+                robotController.setIndicatorLine(currentLocation, currentLocation.add(Direction.NORTH, 1000), 255, 123, 0);
+
+            }
+            if (mapInfoModule.southBoundaryValue != MapInfoModule.UnknownValue) {
+
+                robotController.setIndicatorLine(currentLocation, currentLocation.add(Direction.SOUTH, 1000), 255, 123, 0);
+
+            }
 
             // now let's try move to see more
 

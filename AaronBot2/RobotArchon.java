@@ -2,7 +2,6 @@ package AaronBot2;
 
 import AaronBot2.Map.*;
 import AaronBot2.Movement.*;
-import AaronBot2.Parts.PartsModule;
 import AaronBot2.Rubble.RubbleModule;
 import AaronBot2.Signals.*;
 import battlecode.common.*;
@@ -17,10 +16,10 @@ public class RobotArchon implements Robot {
         // modules
 
         final MapInfoModule mapInfoModule = new MapInfoModule();
+        mapInfoModule.detectWhetherToThrowGame(robotController);
 
         final CommunicationModule communicationModule = new CommunicationModule(mapInfoModule);
         final DirectionModule directionModule = new DirectionModule(robotController.getID());
-        final PartsModule partsModule = new PartsModule();
         final RubbleModule rubbleModule = new RubbleModule();
 
         // unit building
@@ -35,6 +34,17 @@ public class RobotArchon implements Robot {
         while (true) {
 
             communicationModule.processIncomingSignals(robotController);
+
+            if (mapInfoModule.shouldThrowGame) {
+
+                final int throwRound = robotController.getID() % 200;
+                if (robotController.getRoundNum() == throwRound) {
+
+                    robotController.disintegrate();
+
+                }
+
+            }
 
             // check if we are done building a unit
             // if so, we should broadcast relevant information to that unit
@@ -81,7 +91,7 @@ public class RobotArchon implements Robot {
                     final CommunicationModuleSignal signal = new CommunicationModuleSignal();
                     signal.action = CommunicationModuleSignal.ACTION_INITIAL_UPDATE_COMPLETE;
                     signal.location = robotController.getLocation();
-                    signal.robotIdentifier = robotController.getID();
+                    signal.data = robotController.getID();
                     signal.type = CommunicationModuleSignal.TYPE_NONE;
                     communicationModule.broadcastSignal(signal, robotController, RobotArchon.InitialMessageUpdateLength);
 
@@ -126,7 +136,7 @@ public class RobotArchon implements Robot {
 
             // let's check up on existing communications to verify the information, if we can
 
-            communicationModule.verifyCommunicationsInformation(robotController, enemies, partsModule, true);
+            communicationModule.verifyCommunicationsInformation(robotController, enemies, true);
 
             // attempt to build new units
 
@@ -174,13 +184,13 @@ public class RobotArchon implements Robot {
                 MapLocation nearestPartsLocation = null;
                 int nearestPartsLocationDistance = Integer.MAX_VALUE;
 
-                final PartsModule.Result partsScanResults = partsModule.getPartsNearby(currentLocation, robotController, CommunicationModule.ApproximateNearbyPartsLocationRadius);
-                if (partsScanResults.locations.size() > 0) {
+                final MapLocation[] partsLocations = robotController.sensePartLocations(-1);
+                if (partsLocations.length > 0) {
 
-                    for (int i = 0; i < partsScanResults.locations.size(); i++) {
+                    for (int i = 0; i < partsLocations.length; i++) {
 
-                    final MapLocation partsLocation = partsScanResults.locations.get(i);
-                    final int distance = partsLocation.distanceSquaredTo(currentLocation);
+                        final MapLocation partsLocation = partsLocations[i];
+                        final int distance = partsLocation.distanceSquaredTo(currentLocation);
                         if (distance < nearestPartsLocationDistance) {
 
                             nearestPartsLocation = partsLocation;

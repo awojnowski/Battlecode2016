@@ -1,7 +1,6 @@
 package AaronBot2.Signals;
 
 import AaronBot2.Map.*;
-import AaronBot2.Parts.*;
 import battlecode.common.*;
 import java.util.*;
 
@@ -73,7 +72,7 @@ public class CommunicationModule implements CommunicationModuleDelegate {
     INFORMATION VERIFICATION
      */
 
-    public void verifyCommunicationsInformation(final RobotController robotController, RobotInfo[] enemies, final PartsModule partsModule, final boolean broadcastInformation) throws GameActionException {
+    public void verifyCommunicationsInformation(final RobotController robotController, RobotInfo[] enemies, final boolean broadcastInformation) throws GameActionException {
 
         if (enemies == null) {
 
@@ -133,7 +132,7 @@ public class CommunicationModule implements CommunicationModuleDelegate {
         while (spareParts.hasMoreElements()) {
 
             final CommunicationModuleSignal communicationModuleSignal = spareParts.nextElement();
-            if (!this.verifySparePartsCommunicationModuleSignal(communicationModuleSignal, robotController, partsModule)) {
+            if (!this.verifySparePartsCommunicationModuleSignal(communicationModuleSignal, robotController)) {
 
                 if (broadcastInformation) {
 
@@ -170,7 +169,7 @@ public class CommunicationModule implements CommunicationModuleDelegate {
 
     }
 
-    public boolean verifySparePartsCommunicationModuleSignal(final CommunicationModuleSignal communicationModuleSignal, final RobotController robotController, final PartsModule partsModule) throws GameActionException {
+    public boolean verifySparePartsCommunicationModuleSignal(final CommunicationModuleSignal communicationModuleSignal, final RobotController robotController) throws GameActionException {
 
         if (!robotController.canSenseLocation(communicationModuleSignal.location)) {
 
@@ -178,8 +177,15 @@ public class CommunicationModule implements CommunicationModuleDelegate {
 
         }
 
-        final PartsModule.Result partsScanResults = partsModule.getPartsNearby(communicationModuleSignal.location, robotController, CommunicationModule.ApproximateNearbyPartsLocationRadius);
-        if (partsScanResults.locations.size() == 0 && partsScanResults.allPositionsScanned) {
+        final int distance = robotController.getLocation().distanceSquaredTo(communicationModuleSignal.location);
+        if (distance + CommunicationModule.ApproximateNearbyPartsLocationRange > robotController.getType().sensorRadiusSquared) {
+
+            return true;
+
+        }
+
+        final MapLocation[] mapLocations = robotController.sensePartLocations(-1);
+        if (mapLocations.length == 0) {
 
             return false;
 
@@ -199,7 +205,7 @@ public class CommunicationModule implements CommunicationModuleDelegate {
         for (int i = 0; i < enemies.length; i++) {
 
             final RobotInfo enemy = enemies[i];
-            if (enemy.ID == communicationModuleSignal.robotIdentifier) {
+            if (enemy.ID == communicationModuleSignal.data) {
 
                 if (communicationModuleSignal.location != enemy.location) {
 

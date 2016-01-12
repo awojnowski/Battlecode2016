@@ -34,7 +34,7 @@ public class RobotSoldier implements Robot, CommunicationModuleDelegate {
 
             // let's verify existing information
 
-            communicationModule.verifyCommunicationsInformation(robotController, null, null, false);
+            communicationModule.verifyCommunicationsInformation(robotController, null, false);
 
             // let's get the best assignment
 
