@@ -154,34 +154,46 @@ public class DirectionModule {
     }
 
     public final Direction averageDirectionTowardRobots(final RobotController robotController, final RobotInfo[] robots) throws GameActionException {
-        if(robots == null || robots.length == 0) {
+
+        if (robots == null || robots.length == 0) {
+
             return null;
-        } else {
-            final MapLocation currentLocation = robotController.getLocation();
-            int totalRobotX = 0;
-            int totalRobotY = 0;
 
-            // Sum location values
-            for (int i = 0; i < robots.length; i++) {
+        }
 
-                final RobotInfo robot = robots[i];
-                if (!(robot.type == RobotType.ZOMBIEDEN || robot.type == RobotType.ARCHON)) {
+        final MapLocation currentLocation = robotController.getLocation();
+        int totalRobotX = 0;
+        int totalRobotY = 0;
+        int totalRobotsFound = 0;
 
-                    final MapLocation location = robot.location;
-                    totalRobotX += location.x;
-                    totalRobotY += location.y;
+        for (int i = 0; i < robots.length; i++) {
 
-                }
+            final RobotInfo robot = robots[i];
+            if (robot.type == RobotType.ZOMBIEDEN || robot.type == RobotType.ARCHON || robot.type == RobotType.SCOUT) {
 
+                continue;
 
             }
 
-            final double averageRobotX = (double)totalRobotX / robots.length;
-            final double averageRobotY = (double)totalRobotY / robots.length;
-            final double dx = (double)(averageRobotX - currentLocation.x);
-            final double dy = (double)(averageRobotY - currentLocation.y);
-            return Math.abs(dx) >= 2.414D * Math.abs(dy)?(dx > 0.0D?Direction.EAST:(dx < 0.0D?Direction.WEST:Direction.OMNI)):(Math.abs(dy) >= 2.414D * Math.abs(dx)?(dy > 0.0D?Direction.SOUTH:Direction.NORTH):(dy > 0.0D?(dx > 0.0D?Direction.SOUTH_EAST:Direction.SOUTH_WEST):(dx > 0.0D?Direction.NORTH_EAST:Direction.NORTH_WEST)));
+            final MapLocation location = robot.location;
+            totalRobotX += location.x;
+            totalRobotY += location.y;
+            totalRobotsFound ++;
+
         }
+
+        if (totalRobotsFound == 0) {
+
+            return null;
+
+        }
+
+        final double averageRobotX = (double)totalRobotX / robots.length;
+        final double averageRobotY = (double)totalRobotY / robots.length;
+        final double dx = (double)(averageRobotX - currentLocation.x);
+        final double dy = (double)(averageRobotY - currentLocation.y);
+        return Math.abs(dx) >= 2.414D * Math.abs(dy)?(dx > 0.0D?Direction.EAST:(dx < 0.0D?Direction.WEST:Direction.OMNI)):(Math.abs(dy) >= 2.414D * Math.abs(dx)?(dy > 0.0D?Direction.SOUTH:Direction.NORTH):(dy > 0.0D?(dx > 0.0D?Direction.SOUTH_EAST:Direction.SOUTH_WEST):(dx > 0.0D?Direction.NORTH_EAST:Direction.NORTH_WEST)));
+
     }
 
     public boolean isMapLocationSafe(final MapLocation mapLocation, final RobotInfo[] enemies, final double buffer) {

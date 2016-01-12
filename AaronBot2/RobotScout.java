@@ -35,12 +35,16 @@ public class RobotScout implements Robot {
             if (robotController.isCoreReady() && communicationModule.initialInformationReceived && enemies.length > 0) {
 
                 final Direction fleeDirection = directionModule.averageDirectionTowardRobots(robotController, enemies).opposite();
-                Direction fleeMovementDirection = directionModule.recommendedFleeDirectionForDirection(fleeDirection, robotController, false);
+                final Direction fleeMovementDirection = directionModule.recommendedFleeDirectionForDirection(fleeDirection, robotController, false);
                 if (fleeMovementDirection != null) {
 
                     robotController.move(fleeMovementDirection);
                     currentLocation = robotController.getLocation();
-                    movementDirection = fleeMovementDirection;
+                    if (movementDirection != null) {
+
+                        movementDirection = RobotScout.rotateDirection(movementDirection, currentLocation, robotController, mapInfoModule);
+
+                    }
 
                 }
 
@@ -145,7 +149,7 @@ public class RobotScout implements Robot {
 
                 } else {
 
-                    movementDirection = null;
+                    movementDirection = RobotScout.rotateDirection(movementDirection, currentLocation, robotController, mapInfoModule);
 
                 }
 
@@ -158,6 +162,20 @@ public class RobotScout implements Robot {
             }
 
             Clock.yield();
+
+        }
+
+    }
+
+    private static Direction rotateDirection(final Direction direction, final MapLocation location, final RobotController robotController, final MapInfoModule mapInfo) {
+
+        if (robotController.getID() % 2 == 0) {
+
+            return direction.rotateLeft();
+
+        } else {
+
+            return direction.rotateRight();
 
         }
 

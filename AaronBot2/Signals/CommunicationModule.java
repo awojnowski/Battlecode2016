@@ -220,7 +220,7 @@ public class CommunicationModule implements CommunicationModuleDelegate {
         }
 
         final int distance = robotController.getLocation().distanceSquaredTo(communicationModuleSignal.location);
-        if (distance + CommunicationModule.DefaultApproximateNearbyLocationRange > robotController.getType().sensorRadiusSquared) {
+        if (distance + 25 > robotController.getType().sensorRadiusSquared) {
 
             return true;
 
