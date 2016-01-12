@@ -185,11 +185,11 @@ public class DirectionModule {
         if (totalRobotsFound == 0) {
 
             return null;
-
+            
         }
 
-        final double averageRobotX = (double)totalRobotX / robots.length;
-        final double averageRobotY = (double)totalRobotY / robots.length;
+        final double averageRobotX = (double)totalRobotX / totalRobotsFound;
+        final double averageRobotY = (double)totalRobotY / totalRobotsFound;
         final double dx = (double)(averageRobotX - currentLocation.x);
         final double dy = (double)(averageRobotY - currentLocation.y);
         return Math.abs(dx) >= 2.414D * Math.abs(dy)?(dx > 0.0D?Direction.EAST:(dx < 0.0D?Direction.WEST:Direction.OMNI)):(Math.abs(dy) >= 2.414D * Math.abs(dx)?(dy > 0.0D?Direction.SOUTH:Direction.NORTH):(dy > 0.0D?(dx > 0.0D?Direction.SOUTH_EAST:Direction.SOUTH_WEST):(dx > 0.0D?Direction.NORTH_EAST:Direction.NORTH_WEST)));
