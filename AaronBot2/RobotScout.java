@@ -112,25 +112,17 @@ public class RobotScout implements Robot {
 
             }
 
-            cartographyModule.probeAndUpdateMapInfoModule(mapInfoModule, currentLocation, robotController);
-            if (mapInfoModule.eastBoundaryValue != MapInfoModule.UnknownValue) {
+            if (!mapInfoModule.hasAllBoundaries()) {
 
-                robotController.setIndicatorLine(currentLocation, currentLocation.add(Direction.EAST, 1000), 255, 123, 0);
+                cartographyModule.probeAndUpdateMapInfoModule(mapInfoModule, currentLocation, robotController);
+                if (mapInfoModule.hasAllBoundaries()) {
 
-            }
-            if (mapInfoModule.westBoundaryValue != MapInfoModule.UnknownValue) {
+                    final CommunicationModuleSignal signal = new CommunicationModuleSignal();
+                    signal.action = CommunicationModuleSignal.ACTION_SEEN;
+                    mapInfoModule.fillCommunicationModuleSignalWithMapSizeData(signal);
+                    communicationModule.broadcastSignal(signal, robotController, CommunicationModule.MaximumBroadcastRange);
 
-                robotController.setIndicatorLine(currentLocation, currentLocation.add(Direction.WEST, 1000), 255, 123, 0);
-
-            }
-            if (mapInfoModule.northBoundaryValue != MapInfoModule.UnknownValue) {
-
-                robotController.setIndicatorLine(currentLocation, currentLocation.add(Direction.NORTH, 1000), 255, 123, 0);
-
-            }
-            if (mapInfoModule.southBoundaryValue != MapInfoModule.UnknownValue) {
-
-                robotController.setIndicatorLine(currentLocation, currentLocation.add(Direction.SOUTH, 1000), 255, 123, 0);
+                }
 
             }
 

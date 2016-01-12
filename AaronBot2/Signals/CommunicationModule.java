@@ -287,6 +287,12 @@ public class CommunicationModule implements CommunicationModuleDelegate {
             return;
 
         }
+        if (communicationModuleSignal.type == CommunicationModuleSignal.TYPE_MAP_INFO) {
+
+            this.mapInfoModule.fillDataFromCommunicationModuleSignal(communicationModuleSignal);
+            return;
+
+        }
 
         Hashtable<Integer, CommunicationModuleSignal> hashtable = this.getHashtableForSignalType(communicationModuleSignal.type);
         if (hashtable == null) {

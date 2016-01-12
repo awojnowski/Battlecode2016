@@ -1,8 +1,13 @@
 package AaronBot2.Map;
 
+import AaronBot2.Signals.CommunicationModuleSignal;
 import battlecode.common.*;
 
+import java.util.Map;
+
 public class MapInfoModule {
+
+    public static boolean CanThrowGame = false;
 
     public static int UnknownValue = Integer.MAX_VALUE;
     public static int ThrowGameIndicatorIndex = Math.max(0, GameConstants.TEAM_MEMORY_LENGTH - 4);
@@ -16,7 +21,64 @@ public class MapInfoModule {
 
     public boolean shouldThrowGame = false;
 
+    /*
+    MAP DATA
+     */
+
+    public boolean hasAllBoundaries() {
+
+        return this.northBoundaryValue != MapInfoModule.UnknownValue &&
+                this.eastBoundaryValue != MapInfoModule.UnknownValue &&
+                this.southBoundaryValue != MapInfoModule.UnknownValue &&
+                this.westBoundaryValue != MapInfoModule.UnknownValue;
+
+    }
+
+    public void fillDataFromCommunicationModuleSignal(final CommunicationModuleSignal communicationModuleSignal) {
+
+        if (communicationModuleSignal.type == CommunicationModuleSignal.TYPE_MAP_INFO) {
+
+            final MapLocation topLeftCoordinate = communicationModuleSignal.location;
+            this.northBoundaryValue = topLeftCoordinate.y;
+            this.westBoundaryValue = topLeftCoordinate.x;
+
+            final int data = communicationModuleSignal.data;
+            final int mapWidth = (data & 0x000000FF);
+            final int mapHeight = ((data >> 8) & 0x000000FF);
+            this.eastBoundaryValue = this.westBoundaryValue + mapWidth + 1;
+            this.southBoundaryValue = this.northBoundaryValue + mapHeight + 1;
+
+        }
+
+    }
+
+    public void fillCommunicationModuleSignalWithMapSizeData(final CommunicationModuleSignal communicationModuleSignal) {
+
+        communicationModuleSignal.type = CommunicationModuleSignal.TYPE_MAP_INFO;
+        communicationModuleSignal.location = new MapLocation(this.westBoundaryValue, this.northBoundaryValue);
+
+        final int mapHeight = this.southBoundaryValue - this.northBoundaryValue - 1;
+        final int mapWidth = this.eastBoundaryValue - this.westBoundaryValue - 1;
+
+        int data = mapHeight;
+        data <<= 8;
+        data += mapWidth;
+        communicationModuleSignal.data = data;
+
+    }
+
+    /*
+    THROWING
+     */
+
     public void detectWhetherToThrowGame(final RobotController robotController) {
+
+        if (!MapInfoModule.CanThrowGame) {
+
+            this.doNotThrowGame(robotController);
+            return;
+
+        }
 
         final long[] teamMemory = robotController.getTeamMemory();
         if (teamMemory[MapInfoModule.ThrowGameIndicatorIndex] == MapInfoModule.ThrowGameIndicatorValue) {
