@@ -2,3 +2,4 @@ Battlecode TODO:
 
 - If a unit (like an Archon) is right beside a patch of parts with rubble on it, it will just go around the rubble infinitely instead of trying to clear the rubble (because it can always move left or right around it).
 - Drones should have a list of communications that they want to send out, and should only send it out when it's safe.
+- Archons should only spawn units if they’re near other units (when they get parts they should grab them then run back)
