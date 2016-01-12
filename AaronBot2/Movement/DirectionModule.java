@@ -164,6 +164,35 @@ public class DirectionModule {
         final MapLocation currentLocation = robotController.getLocation();
         int totalRobotX = 0;
         int totalRobotY = 0;
+
+        for (int i = 0; i < robots.length; i++) {
+
+            final RobotInfo robot = robots[i];
+            final MapLocation location = robot.location;
+            totalRobotX += location.x;
+            totalRobotY += location.y;
+
+        }
+
+        final double averageRobotX = (double)totalRobotX / robots.length;
+        final double averageRobotY = (double)totalRobotY / robots.length;
+        final double dx = (double)(averageRobotX - currentLocation.x);
+        final double dy = (double)(averageRobotY - currentLocation.y);
+        return Math.abs(dx) >= 2.414D * Math.abs(dy)?(dx > 0.0D?Direction.EAST:(dx < 0.0D?Direction.WEST:Direction.OMNI)):(Math.abs(dy) >= 2.414D * Math.abs(dx)?(dy > 0.0D?Direction.SOUTH:Direction.NORTH):(dy > 0.0D?(dx > 0.0D?Direction.SOUTH_EAST:Direction.SOUTH_WEST):(dx > 0.0D?Direction.NORTH_EAST:Direction.NORTH_WEST)));
+
+    }
+
+    public final Direction averageDirectionTowardDangerousRobots(final RobotController robotController, final RobotInfo[] robots) throws GameActionException {
+
+        if (robots == null || robots.length == 0) {
+
+            return null;
+
+        }
+
+        final MapLocation currentLocation = robotController.getLocation();
+        int totalRobotX = 0;
+        int totalRobotY = 0;
         int totalRobotsFound = 0;
 
         for (int i = 0; i < robots.length; i++) {
@@ -185,6 +214,69 @@ public class DirectionModule {
         if (totalRobotsFound == 0) {
 
             return null;
+
+        }
+
+        final double averageRobotX = (double)totalRobotX / totalRobotsFound;
+        final double averageRobotY = (double)totalRobotY / totalRobotsFound;
+        final double dx = (double)(averageRobotX - currentLocation.x);
+        final double dy = (double)(averageRobotY - currentLocation.y);
+        return Math.abs(dx) >= 2.414D * Math.abs(dy)?(dx > 0.0D?Direction.EAST:(dx < 0.0D?Direction.WEST:Direction.OMNI)):(Math.abs(dy) >= 2.414D * Math.abs(dx)?(dy > 0.0D?Direction.SOUTH:Direction.NORTH):(dy > 0.0D?(dx > 0.0D?Direction.SOUTH_EAST:Direction.SOUTH_WEST):(dx > 0.0D?Direction.NORTH_EAST:Direction.NORTH_WEST)));
+
+    }
+
+    public final Direction averageDirectionTowardDangerousRobotsAndOuterBounds(final RobotController robotController, final RobotInfo[] robots) throws GameActionException {
+
+        if (robots == null || robots.length == 0) {
+
+            return null;
+
+        }
+
+        final MapLocation currentLocation = robotController.getLocation();
+        int totalRobotX = 0;
+        int totalRobotY = 0;
+        int totalRobotsFound = 0;
+
+        for (int i = 0; i < robots.length; i++) {
+
+            final RobotInfo robot = robots[i];
+            if (!this.isEnemyDangerous(robot, currentLocation, 1)) {
+
+                continue;
+
+            }
+
+            final MapLocation location = robot.location;
+            totalRobotX += location.x;
+            totalRobotY += location.y;
+            totalRobotsFound ++;
+
+        }
+
+        if (totalRobotsFound == 0) {
+
+            return null;
+
+        }
+
+        for (int i = 0; i < directions.length; i += 2) {
+
+            final Direction direction = directions[i];
+            final int sightDistance = 5;
+
+            for (int j = 1; j <= sightDistance; j++) {
+
+                final MapLocation location = currentLocation.add(direction, j);
+                if (!robotController.onTheMap(location)) {
+
+                    totalRobotX += location.x;
+                    totalRobotY += location.y;
+                    totalRobotsFound ++;
+
+                }
+
+            }
 
         }
 

@@ -34,9 +34,9 @@ public class RobotScout implements Robot {
 
             if (robotController.isCoreReady() && communicationModule.initialInformationReceived && enemies.length > 0) {
 
-                final Direction fleeDirection = directionModule.averageDirectionTowardRobots(robotController, enemies);
+                final Direction fleeDirection = directionModule.averageDirectionTowardDangerousRobotsAndOuterBounds(robotController, enemies);
                 if (fleeDirection != null) {
-                    final Direction fleeMovementDirection = directionModule.recommendedFleeDirectionForDirection(fleeDirection.opposite(), robotController, false);
+                    final Direction fleeMovementDirection = directionModule.recommendedMovementDirectionForDirection(fleeDirection.opposite(), robotController, false);
                     if (fleeMovementDirection != null) {
 
                         robotController.move(fleeMovementDirection);
