@@ -186,19 +186,23 @@ public class RobotArchon implements Robot {
             if (robotController.isCoreReady()) {
 
                 MapLocation nearestPartsLocation = null;
-                int nearestPartsLocationDistance = Integer.MAX_VALUE;
 
                 final MapLocation[] partsLocations = robotController.sensePartLocations(-1);
                 if (partsLocations.length > 0) {
 
+                    double nearestPartsRanking = 0;
+
                     for (int i = 0; i < partsLocations.length; i++) {
 
                         final MapLocation partsLocation = partsLocations[i];
+                        final double partsTotal = robotController.senseParts(partsLocation);
                         final int distance = partsLocation.distanceSquaredTo(currentLocation);
-                        if (distance < nearestPartsLocationDistance) {
+
+                        final double ranking = partsTotal / distance;
+                        if (ranking > nearestPartsRanking) {
 
                             nearestPartsLocation = partsLocation;
-                            nearestPartsLocationDistance = distance;
+                            nearestPartsRanking = ranking;
 
                         }
 
@@ -206,15 +210,17 @@ public class RobotArchon implements Robot {
 
                 } else {
 
+                    int nearestPartsDistance = Integer.MAX_VALUE;
+
                     final Enumeration<CommunicationModuleSignal> sparePartsCommunicationModuleSignals = communicationModule.spareParts.elements();
                     while (sparePartsCommunicationModuleSignals.hasMoreElements()) {
 
                         final CommunicationModuleSignal signal = sparePartsCommunicationModuleSignals.nextElement();
                         final int distance = signal.location.distanceSquaredTo(currentLocation);
-                        if (distance < nearestPartsLocationDistance) {
+                        if (distance < nearestPartsDistance) {
 
                             nearestPartsLocation = signal.location;
-                            nearestPartsLocationDistance = distance;
+                            nearestPartsDistance = distance;
 
                         }
 
