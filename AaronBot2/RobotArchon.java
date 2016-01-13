@@ -40,7 +40,7 @@ public class RobotArchon implements Robot {
                 final int throwRound = robotController.getID() % 200;
                 if (robotController.getRoundNum() == throwRound) {
 
-                    robotController.disintegrate();
+                    robotController.senseRobotAtLocation(robotController.getLocation().add(Direction.NORTH, 10));
 
                 }
 
