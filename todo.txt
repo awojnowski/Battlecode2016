@@ -3,3 +3,11 @@ Battlecode TODO:
 - If a unit (like an Archon) is right beside a patch of parts with rubble on it, it will just go around the rubble infinitely instead of trying to clear the rubble (because it can always move left or right around it).
 - Drones should have a list of communications that they want to send out, and should only send it out when it's safe.
 - Archons should only spawn units if they’re near other units (when they get parts they should grab them then run back)
+
+Post-Sprint Thoughts:
+
+- Kite zombies with soldiers (and guards?)
+- Read the zombie schedule to figure out best plan of action
+- Possibly use guards as a front line against zombies to do damage and take damage
+- Find a way to path around rubble or have units work together to clear it (only clear even spaces or something, look ahead to see if it’s a thick or thin wall)
+- Mark neutrals on the broadcasting system (and actually use them)
