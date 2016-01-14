@@ -13,6 +13,7 @@ public class RobotArchon implements Robot {
         final Direction[] directions = { Direction.EAST, Direction.NORTH, Direction.SOUTH, Direction.WEST, Direction.NORTH_EAST, Direction.SOUTH_WEST, Direction.NORTH_WEST, Direction.SOUTH_EAST };
         ArchonSignal goalArchonSignal = null;
         final int robotID = robotController.getID();
+        int buildCount = 0;
 
         // make contact with other archons
 
@@ -94,7 +95,7 @@ public class RobotArchon implements Robot {
                     }
 
                     final int distance = location.distanceSquaredTo(goalArchonSignal.location);
-                    if (distance < 35) {
+                    if (distance < 4) {
 
                         goalArchonSignal = null;
 
@@ -105,16 +106,22 @@ public class RobotArchon implements Robot {
                     // let's just chill out and build units
 
                     boolean builtUnit = false;
+                    RobotType typeToBuild = RobotType.TURRET;
 
-                    if (robotController.getTeamParts() >= RobotType.TURRET.partCost) {
+                    if (buildCount % 100 == 1) {
+                        typeToBuild = RobotType.SCOUT;
+                    }
+
+                    if (robotController.getTeamParts() >= typeToBuild.partCost) {
 
                         for (int i = 0; i < directions.length; i ++) {
 
                             final Direction direction = directions[i];
-                            if (robotController.canBuild(direction, RobotType.TURRET)) {
+                            if (robotController.canBuild(direction, typeToBuild)) {
 
-                                robotController.build(direction, RobotType.TURRET);
+                                robotController.build(direction, typeToBuild);
                                 builtUnit = true;
+                                buildCount++;
                                 break;
 
                             }

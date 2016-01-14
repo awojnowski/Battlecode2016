@@ -12,3 +12,5 @@ Post-Sprint Thoughts:
 - Find a way to path around rubble or have units work together to clear it (only clear even spaces or something, look ahead to see if it’s a thick or thin wall)
 - Mark neutrals on the broadcasting system (and actually use them)
 - Some kind of anti-funnel strategy (would be really tricky)
+- Anti turret strategy
+- Don’t make our archons try to get unsafe ore!

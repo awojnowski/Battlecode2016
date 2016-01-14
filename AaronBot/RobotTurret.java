@@ -20,6 +20,8 @@ public class RobotTurret implements Robot {
             final MapLocation location = robotController.getLocation();
             final RobotInfo[] robots = robotController.senseNearbyRobots();
 
+            Signal[] signals = robotController.emptySignalQueue();
+
             if (robotController.getType() == RobotType.TURRET) {
 
                 if (robotController.isWeaponReady()) {
@@ -49,7 +51,36 @@ public class RobotTurret implements Robot {
 
                     }
 
-                    if (bestRobot != null) {
+                    // check signals if it sees nothing
+
+                    MapLocation signalLocation = null;
+
+                    if (bestRobot == null) {
+
+                        for (int i = 0; i < signals.length; i++) {
+
+                            final Signal signal = signals[i];
+                            final int[] message = signal.getMessage();
+                            if (message != null) {
+
+                                MapLocation targetLocation = new MapLocation(message[0], message[1]);
+
+                                robotController.setIndicatorString(0, "Signal location " + message[0] + ", " + message[1]);
+
+                                if (robotController.canAttackLocation(targetLocation)) {
+
+                                    robotController.attackLocation(targetLocation);
+                                    break;
+
+                                }
+
+                            }
+
+                        }
+
+                    } else {
+
+                        robotController.setIndicatorString(0, "Found best robot, signals: " + signals.length);
 
                         if (robotController.canAttackLocation(bestRobot.location)) {
 
@@ -63,7 +94,7 @@ public class RobotTurret implements Robot {
 
                 if (robotController.isCoreReady()) {
 
-                    if (robotController.getRoundNum() - lastTransformationRoundNumber > 100) {
+                    if (robotController.getRoundNum() - lastTransformationRoundNumber > 300) {
 
                         int totalEnemies = 0;
                         for (int i = 0; i < robots.length; i ++) {
@@ -92,7 +123,7 @@ public class RobotTurret implements Robot {
 
                 if (robotController.isCoreReady()) {
 
-                    if (ttmMovements < 2) {
+                    if (ttmMovements < 1) {
 
                         int increments = 0;
                         for (int i = random.nextInt(directions.length); increments < directions.length; i++, increments ++) {
