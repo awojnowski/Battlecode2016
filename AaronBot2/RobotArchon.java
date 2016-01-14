@@ -196,9 +196,10 @@ public class RobotArchon implements Robot {
 
                         final MapLocation partsLocation = partsLocations[i];
                         final double partsTotal = robotController.senseParts(partsLocation);
+                        final double rubbleTotal = Math.max(1, robotController.senseRubble(partsLocation));
                         final int distance = partsLocation.distanceSquaredTo(currentLocation);
 
-                        final double ranking = partsTotal / distance;
+                        final double ranking = partsTotal / Math.sqrt(rubbleTotal) / distance;
                         if (ranking > nearestPartsRanking) {
 
                             nearestPartsLocation = partsLocation;
