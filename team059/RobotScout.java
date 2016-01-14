@@ -59,7 +59,12 @@ public class RobotScout implements Robot {
 
             // let's check up on existing communications to verify the information, if we can
 
-            communicationModule.verifyCommunicationsInformation(robotController, enemies, true);
+            final ArrayList<CommunicationModuleSignal> verifiedSignals = communicationModule.verifyCommunicationsInformation(robotController, enemies, true);
+            for (int i = 0; i < verifiedSignals.size(); i++) {
+
+                communicationModule.enqueueSignalForBroadcast(verifiedSignals.get(i));
+
+            }
 
             // let's try identify what we can see
 
@@ -119,7 +124,7 @@ public class RobotScout implements Robot {
 
             if (communicationModule.hasEnqueuedSignalsForBroadcast()) {
 
-                if (directionModule.isMapLocationSafe(currentLocation, enemies, 2)) {
+                if (directionModule.isMapLocationSafe(currentLocation, enemies, 4)) {
 
                     communicationModule.broadcastEnqueuedSignals(robotController, CommunicationModule.maximumBroadcastRange(mapInfoModule));
 

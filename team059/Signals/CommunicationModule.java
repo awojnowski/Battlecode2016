@@ -13,7 +13,6 @@ public class CommunicationModule implements CommunicationModuleDelegate {
     // these are the hashtables managing the received communications
     // the hashtables are indexed by an Integer which represents the location
     public final Hashtable<Integer, CommunicationModuleSignal> enemyArchons = new Hashtable<Integer, CommunicationModuleSignal>();
-    public final Hashtable<Integer, CommunicationModuleSignal> spareParts = new Hashtable<Integer, CommunicationModuleSignal>();
     public final Hashtable<Integer, CommunicationModuleSignal> zombieDens = new Hashtable<Integer, CommunicationModuleSignal>();
 
     // contains signals without a message associated with them, received last time the queue was cleared
@@ -98,7 +97,9 @@ public class CommunicationModule implements CommunicationModuleDelegate {
     INFORMATION VERIFICATION
      */
 
-    public void verifyCommunicationsInformation(final RobotController robotController, RobotInfo[] enemies, final boolean broadcastInformation) throws GameActionException {
+    public ArrayList<CommunicationModuleSignal> verifyCommunicationsInformation(final RobotController robotController, RobotInfo[] enemies, final boolean broadcastInformation) throws GameActionException {
+
+        final ArrayList<CommunicationModuleSignal> signals = new ArrayList<CommunicationModuleSignal>();
 
         if (enemies == null) {
 
@@ -117,7 +118,7 @@ public class CommunicationModule implements CommunicationModuleDelegate {
                 if (broadcastInformation) {
 
                     communicationModuleSignal.action = CommunicationModuleSignal.ACTION_DELETE;
-                    this.broadcastSignal(communicationModuleSignal, robotController, CommunicationModule.maximumBroadcastRange(this.mapInfoModule));
+                    signals.add(communicationModuleSignal);
 
                 } else {
 
@@ -140,7 +141,7 @@ public class CommunicationModule implements CommunicationModuleDelegate {
                 if (broadcastInformation) {
 
                     communicationModuleSignal.action = CommunicationModuleSignal.ACTION_DELETE;
-                    this.broadcastSignal(communicationModuleSignal, robotController, CommunicationModule.maximumBroadcastRange(this.mapInfoModule));
+                    signals.add(communicationModuleSignal);
 
                 } else {
 
@@ -152,28 +153,7 @@ public class CommunicationModule implements CommunicationModuleDelegate {
 
         }
 
-        // verify the spare parts
-
-        final Enumeration<CommunicationModuleSignal> spareParts = this.spareParts.elements();
-        while (spareParts.hasMoreElements()) {
-
-            final CommunicationModuleSignal communicationModuleSignal = spareParts.nextElement();
-            if (!this.verifySparePartsCommunicationModuleSignal(communicationModuleSignal, robotController)) {
-
-                if (broadcastInformation) {
-
-                    communicationModuleSignal.action = CommunicationModuleSignal.ACTION_DELETE;
-                    this.broadcastSignal(communicationModuleSignal, robotController, CommunicationModule.maximumBroadcastRange(this.mapInfoModule));
-
-                } else {
-
-                    this.clearSignal(communicationModuleSignal, this.spareParts);
-
-                }
-
-            }
-
-        }
+        return signals;
 
     }
 
@@ -370,11 +350,6 @@ public class CommunicationModule implements CommunicationModuleDelegate {
             return this.enemyArchons;
 
         }
-        if (signalType == CommunicationModuleSignal.TYPE_SPARE_PARTS) {
-
-            return this.spareParts;
-
-        }
         if (signalType == CommunicationModuleSignal.TYPE_ZOMBIEDEN) {
 
             return this.zombieDens;
@@ -393,6 +368,17 @@ public class CommunicationModule implements CommunicationModuleDelegate {
     public void clearSignal(final CommunicationModuleSignal communicationModuleSignal, final Hashtable<Integer, CommunicationModuleSignal> hashtable) {
 
         hashtable.remove(communicationModuleSignal.serializedLocation());
+        for (int i = 0; i < this.communicationModuleSignalQueue.size(); i++) {
+
+            final CommunicationModuleSignal signal = this.communicationModuleSignalQueue.get(i);
+            if (signal.type == communicationModuleSignal.type && signal.location == communicationModuleSignal.location) {
+
+                this.communicationModuleSignalQueue.remove(i);
+                i--;
+
+            }
+
+        }
 
     }
 
@@ -406,11 +392,6 @@ public class CommunicationModule implements CommunicationModuleDelegate {
         if (this.delegate.shouldProcessSignalType(CommunicationModuleSignal.TYPE_ENEMY_ARCHON)) {
 
             communicationModuleSignalCollection.addEnumeration(this.enemyArchons.elements());
-
-        }
-        if (this.delegate.shouldProcessSignalType(CommunicationModuleSignal.TYPE_SPARE_PARTS)) {
-
-            communicationModuleSignalCollection.addEnumeration(this.spareParts.elements());
 
         }
         if (this.delegate.shouldProcessSignalType(CommunicationModuleSignal.TYPE_ZOMBIEDEN)) {

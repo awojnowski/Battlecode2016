@@ -13,9 +13,8 @@ public class CommunicationModuleSignal {
 
     public static final int TYPE_NONE = 0;
     public static final int TYPE_ZOMBIEDEN = 1;
-    public static final int TYPE_SPARE_PARTS = 2;
-    public static final int TYPE_ENEMY_ARCHON = 3;
-    public static final int TYPE_MAP_INFO = 4;
+    public static final int TYPE_ENEMY_ARCHON = 2;
+    public static final int TYPE_MAP_INFO = 3;
 
     public int action = CommunicationModuleSignal.ACTION_NONE;
     public MapLocation location;
