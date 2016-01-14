@@ -77,7 +77,7 @@ public class RobotScout implements Robot {
                     signal.location = enemy.location;
                     signal.data = enemy.ID;
                     signal.type = CommunicationModuleSignal.TYPE_ZOMBIEDEN;
-                    communicationModule.broadcastSignal(signal, robotController, CommunicationModule.maximumBroadcastRange(mapInfoModule));
+                    communicationModule.enqueueSignalForBroadcast(signal);
 
                 } else if (enemy.type == RobotType.ARCHON) {
 
@@ -93,7 +93,7 @@ public class RobotScout implements Robot {
                     signal.location = enemy.location;
                     signal.data = enemy.ID;
                     signal.type = CommunicationModuleSignal.TYPE_ENEMY_ARCHON;
-                    communicationModule.broadcastSignal(signal, robotController, CommunicationModule.maximumBroadcastRange(mapInfoModule));
+                    communicationModule.enqueueSignalForBroadcast(signal);
 
                 }
 
@@ -107,7 +107,17 @@ public class RobotScout implements Robot {
                     final CommunicationModuleSignal signal = new CommunicationModuleSignal();
                     signal.action = CommunicationModuleSignal.ACTION_SEEN;
                     mapInfoModule.fillCommunicationModuleSignalWithMapSizeData(signal);
-                    communicationModule.broadcastSignal(signal, robotController, CommunicationModule.maximumBroadcastRange(mapInfoModule));
+                    communicationModule.enqueueSignalForBroadcast(signal);
+
+                }
+
+            }
+
+            if (communicationModule.hasEnqueuedSignalsForBroadcast()) {
+
+                if (directionModule.isMapLocationSafe(currentLocation, enemies, 2)) {
+
+                    communicationModule.broadcastEnqueuedSignals(robotController, CommunicationModule.maximumBroadcastRange(mapInfoModule));
 
                 }
 

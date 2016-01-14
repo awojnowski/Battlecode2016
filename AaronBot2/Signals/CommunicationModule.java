@@ -19,6 +19,9 @@ public class CommunicationModule implements CommunicationModuleDelegate {
     // contains signals without a message associated with them, received last time the queue was cleared
     public final ArrayList<Signal> notifications = new ArrayList<Signal>();
 
+    // signal queue
+    public final ArrayList<CommunicationModuleSignal> communicationModuleSignalQueue = new ArrayList<CommunicationModuleSignal>();
+
     public MapInfoModule mapInfoModule = null;
     public CommunicationModuleDelegate delegate = this;
     public boolean initialInformationReceived = false;
@@ -44,6 +47,30 @@ public class CommunicationModule implements CommunicationModuleDelegate {
     public void broadcastSignal(final RobotController robotController, final int broadcastRange) throws GameActionException {
 
         robotController.broadcastSignal(broadcastRange);
+
+    }
+
+    public boolean hasEnqueuedSignalsForBroadcast() {
+
+        return this.communicationModuleSignalQueue.size() > 0;
+
+    }
+
+    public void enqueueSignalForBroadcast(final CommunicationModuleSignal communicationModuleSignal) {
+
+        this.communicationModuleSignalQueue.add(communicationModuleSignal);
+        this.processSignal(communicationModuleSignal);
+
+    }
+
+    public void broadcastEnqueuedSignals(final RobotController robotController, final int broadcastRange) throws GameActionException {
+
+        for (int i = 0; i < this.communicationModuleSignalQueue.size(); i++) {
+
+            this.broadcastSignal(this.communicationModuleSignalQueue.get(i), robotController, broadcastRange);
+
+        }
+        this.communicationModuleSignalQueue.clear();
 
     }
 
