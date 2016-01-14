@@ -120,7 +120,7 @@ public class RobotArchon implements Robot {
             MapLocation currentLocation = robotController.getLocation();
             final RobotInfo[] enemies = robotController.senseHostileRobots(currentLocation, robotController.getType().sensorRadiusSquared);
 
-            if (enemies.length > 0 && robotController.isCoreReady()) {
+            if (robotController.isCoreReady() && enemies.length > 0) {
 
                 final Direction fleeDirection = directionModule.averageDirectionTowardDangerousRobotsAndOuterBounds(robotController, enemies);
                 if (fleeDirection != null) {
