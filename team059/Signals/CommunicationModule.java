@@ -1,12 +1,11 @@
 package team059.Signals;
 
-import team059.Parts.PartsModule;
+import team059.Map.*;
 import battlecode.common.*;
 import java.util.*;
 
 public class CommunicationModule implements CommunicationModuleDelegate {
 
-    public static final int MaximumBroadcastRange = 20000;
     public static final int DefaultApproximateNearbyLocationRange = 64;
     public static final int ApproximateNearbyPartsLocationRadius = 3;
     public static final int ApproximateNearbyPartsLocationRange = ApproximateNearbyPartsLocationRadius * ApproximateNearbyPartsLocationRadius;
@@ -20,12 +19,13 @@ public class CommunicationModule implements CommunicationModuleDelegate {
     // contains signals without a message associated with them, received last time the queue was cleared
     public final ArrayList<Signal> notifications = new ArrayList<Signal>();
 
+    public MapInfoModule mapInfoModule = null;
     public CommunicationModuleDelegate delegate = this;
     public boolean initialInformationReceived = false;
 
-    public CommunicationModule() {
+    public CommunicationModule(final MapInfoModule mapInfoModule) {
 
-        ;
+        this.mapInfoModule = mapInfoModule;
 
     }
 
@@ -71,7 +71,7 @@ public class CommunicationModule implements CommunicationModuleDelegate {
     INFORMATION VERIFICATION
      */
 
-    public void verifyCommunicationsInformation(final RobotController robotController, RobotInfo[] enemies, final PartsModule partsModule, final boolean broadcastInformation) throws GameActionException {
+    public void verifyCommunicationsInformation(final RobotController robotController, RobotInfo[] enemies, final boolean broadcastInformation) throws GameActionException {
 
         if (enemies == null) {
 
@@ -90,7 +90,7 @@ public class CommunicationModule implements CommunicationModuleDelegate {
                 if (broadcastInformation) {
 
                     communicationModuleSignal.action = CommunicationModuleSignal.ACTION_DELETE;
-                    this.broadcastSignal(communicationModuleSignal, robotController, CommunicationModule.MaximumBroadcastRange);
+                    this.broadcastSignal(communicationModuleSignal, robotController, CommunicationModule.maximumBroadcastRange(this.mapInfoModule));
 
                 } else {
 
@@ -113,7 +113,7 @@ public class CommunicationModule implements CommunicationModuleDelegate {
                 if (broadcastInformation) {
 
                     communicationModuleSignal.action = CommunicationModuleSignal.ACTION_DELETE;
-                    this.broadcastSignal(communicationModuleSignal, robotController, CommunicationModule.MaximumBroadcastRange);
+                    this.broadcastSignal(communicationModuleSignal, robotController, CommunicationModule.maximumBroadcastRange(this.mapInfoModule));
 
                 } else {
 
@@ -131,12 +131,12 @@ public class CommunicationModule implements CommunicationModuleDelegate {
         while (spareParts.hasMoreElements()) {
 
             final CommunicationModuleSignal communicationModuleSignal = spareParts.nextElement();
-            if (!this.verifySparePartsCommunicationModuleSignal(communicationModuleSignal, robotController, partsModule)) {
+            if (!this.verifySparePartsCommunicationModuleSignal(communicationModuleSignal, robotController)) {
 
                 if (broadcastInformation) {
 
                     communicationModuleSignal.action = CommunicationModuleSignal.ACTION_DELETE;
-                    this.broadcastSignal(communicationModuleSignal, robotController, CommunicationModule.MaximumBroadcastRange);
+                    this.broadcastSignal(communicationModuleSignal, robotController, CommunicationModule.maximumBroadcastRange(this.mapInfoModule));
 
                 } else {
 
@@ -168,7 +168,7 @@ public class CommunicationModule implements CommunicationModuleDelegate {
 
     }
 
-    public boolean verifySparePartsCommunicationModuleSignal(final CommunicationModuleSignal communicationModuleSignal, final RobotController robotController, final PartsModule partsModule) throws GameActionException {
+    public boolean verifySparePartsCommunicationModuleSignal(final CommunicationModuleSignal communicationModuleSignal, final RobotController robotController) throws GameActionException {
 
         if (!robotController.canSenseLocation(communicationModuleSignal.location)) {
 
@@ -176,8 +176,15 @@ public class CommunicationModule implements CommunicationModuleDelegate {
 
         }
 
-        final PartsModule.Result partsScanResults = partsModule.getPartsNearby(communicationModuleSignal.location, robotController, CommunicationModule.ApproximateNearbyPartsLocationRadius);
-        if (partsScanResults.locations.size() == 0 && partsScanResults.allPositionsScanned) {
+        final int distance = robotController.getLocation().distanceSquaredTo(communicationModuleSignal.location);
+        if (distance + CommunicationModule.ApproximateNearbyPartsLocationRange > robotController.getType().sensorRadiusSquared) {
+
+            return true;
+
+        }
+
+        final MapLocation[] mapLocations = robotController.sensePartLocations(-1);
+        if (mapLocations.length == 0) {
 
             return false;
 
@@ -197,7 +204,7 @@ public class CommunicationModule implements CommunicationModuleDelegate {
         for (int i = 0; i < enemies.length; i++) {
 
             final RobotInfo enemy = enemies[i];
-            if (enemy.ID == communicationModuleSignal.robotIdentifier) {
+            if (enemy.ID == communicationModuleSignal.data) {
 
                 if (communicationModuleSignal.location != enemy.location) {
 
@@ -211,6 +218,14 @@ public class CommunicationModule implements CommunicationModuleDelegate {
             }
 
         }
+
+        final int distance = robotController.getLocation().distanceSquaredTo(communicationModuleSignal.location);
+        if (distance + 16 > robotController.getType().sensorRadiusSquared) {
+
+            return true;
+
+        }
+
         return false;
 
     }
@@ -222,6 +237,22 @@ public class CommunicationModule implements CommunicationModuleDelegate {
     public static int maximumFreeBroadcastRangeForRobotType(final RobotType type) {
 
         return type.sensorRadiusSquared * 2;
+
+    }
+
+    public static int maximumBroadcastRange(final MapInfoModule mapInfoModule) {
+
+        if (!mapInfoModule.hasAllBoundaries()) {
+
+            return 20000;
+
+        } else {
+
+            final int mapWidth = mapInfoModule.mapWidth();
+            final int mapHeight = mapInfoModule.mapHeight();
+            return mapWidth * mapWidth + mapHeight * mapHeight;
+
+        }
 
     }
 
@@ -279,6 +310,12 @@ public class CommunicationModule implements CommunicationModuleDelegate {
             return;
 
         }
+        if (communicationModuleSignal.type == CommunicationModuleSignal.TYPE_MAP_INFO) {
+
+            this.mapInfoModule.fillDataFromCommunicationModuleSignal(communicationModuleSignal);
+            return;
+
+        }
 
         Hashtable<Integer, CommunicationModuleSignal> hashtable = this.getHashtableForSignalType(communicationModuleSignal.type);
         if (hashtable == null) {
@@ -326,7 +363,7 @@ public class CommunicationModule implements CommunicationModuleDelegate {
 
     }
 
-    private void clearSignal(final CommunicationModuleSignal communicationModuleSignal, final Hashtable<Integer, CommunicationModuleSignal> hashtable) {
+    public void clearSignal(final CommunicationModuleSignal communicationModuleSignal, final Hashtable<Integer, CommunicationModuleSignal> hashtable) {
 
         hashtable.remove(communicationModuleSignal.serializedLocation());
 

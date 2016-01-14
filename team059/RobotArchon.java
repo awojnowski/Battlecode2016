@@ -1,7 +1,7 @@
 package team059;
 
+import team059.Map.*;
 import team059.Movement.*;
-import team059.Parts.PartsModule;
 import team059.Rubble.RubbleModule;
 import team059.Signals.*;
 import battlecode.common.*;
@@ -13,13 +13,13 @@ public class RobotArchon implements Robot {
 
     public void run(final RobotController robotController) throws GameActionException {
 
-        // instance variables
-
         // modules
 
-        final CommunicationModule communicationModule = new CommunicationModule();
+        final MapInfoModule mapInfoModule = new MapInfoModule();
+        mapInfoModule.detectWhetherToThrowGame(robotController);
+
+        final CommunicationModule communicationModule = new CommunicationModule(mapInfoModule);
         final DirectionModule directionModule = new DirectionModule(robotController.getID());
-        final PartsModule partsModule = new PartsModule();
         final RubbleModule rubbleModule = new RubbleModule();
 
         // unit building
@@ -34,6 +34,17 @@ public class RobotArchon implements Robot {
         while (true) {
 
             communicationModule.processIncomingSignals(robotController);
+
+            if (mapInfoModule.shouldThrowGame) {
+
+                final int throwRound = robotController.getID() % 200;
+                if (robotController.getRoundNum() == throwRound) {
+
+                    robotController.disintegrate();
+
+                }
+
+            }
 
             // check if we are done building a unit
             // if so, we should broadcast relevant information to that unit
@@ -80,7 +91,7 @@ public class RobotArchon implements Robot {
                     final CommunicationModuleSignal signal = new CommunicationModuleSignal();
                     signal.action = CommunicationModuleSignal.ACTION_INITIAL_UPDATE_COMPLETE;
                     signal.location = robotController.getLocation();
-                    signal.robotIdentifier = robotController.getID();
+                    signal.data = robotController.getID();
                     signal.type = CommunicationModuleSignal.TYPE_NONE;
                     communicationModule.broadcastSignal(signal, robotController, RobotArchon.InitialMessageUpdateLength);
 
@@ -106,17 +117,22 @@ public class RobotArchon implements Robot {
 
             // check to make sure we are safe
 
-            final MapLocation currentLocation = robotController.getLocation();
+            MapLocation currentLocation = robotController.getLocation();
             final RobotInfo[] enemies = robotController.senseHostileRobots(currentLocation, robotController.getType().sensorRadiusSquared);
 
             if (enemies.length > 0 && robotController.isCoreReady()) {
 
-                final Direction fleeDirection = directionModule.averageDirectionTowardRobots(robotController, enemies).opposite();
-                Direction fleeMovementDirection = directionModule.recommendedFleeDirectionForDirection(fleeDirection, robotController, false);
-                if (fleeMovementDirection != null) {
+                final Direction fleeDirection = directionModule.averageDirectionTowardDangerousRobotsAndOuterBounds(robotController, enemies);
+                if (fleeDirection != null) {
 
-                    robotController.move(fleeMovementDirection);
-                    robotController.setIndicatorString(1, fleeDirection.name() + " " + fleeMovementDirection.name());
+                    final Direction fleeMovementDirection = directionModule.recommendedMovementDirectionForDirection(fleeDirection.opposite(), robotController, false);
+                    if (fleeMovementDirection != null) {
+
+                        robotController.move(fleeMovementDirection);
+                        currentLocation = robotController.getLocation();
+                        robotController.setIndicatorString(1, fleeDirection.name() + " " + fleeMovementDirection.name());
+
+                    }
 
                 }
 
@@ -124,7 +140,7 @@ public class RobotArchon implements Robot {
 
             // let's check up on existing communications to verify the information, if we can
 
-            communicationModule.verifyCommunicationsInformation(robotController, enemies, partsModule, true);
+            communicationModule.verifyCommunicationsInformation(robotController, enemies, true);
 
             // attempt to build new units
 
@@ -170,19 +186,23 @@ public class RobotArchon implements Robot {
             if (robotController.isCoreReady()) {
 
                 MapLocation nearestPartsLocation = null;
-                int nearestPartsLocationDistance = Integer.MAX_VALUE;
 
-                final PartsModule.Result partsScanResults = partsModule.getPartsNearby(currentLocation, robotController, CommunicationModule.ApproximateNearbyPartsLocationRadius);
-                if (partsScanResults.locations.size() > 0) {
+                final MapLocation[] partsLocations = robotController.sensePartLocations(-1);
+                if (partsLocations.length > 0) {
 
-                    for (int i = 0; i < partsScanResults.locations.size(); i++) {
+                    double nearestPartsRanking = 0;
 
-                    final MapLocation partsLocation = partsScanResults.locations.get(i);
-                    final int distance = partsLocation.distanceSquaredTo(currentLocation);
-                        if (distance < nearestPartsLocationDistance) {
+                    for (int i = 0; i < partsLocations.length; i++) {
+
+                        final MapLocation partsLocation = partsLocations[i];
+                        final double partsTotal = robotController.senseParts(partsLocation);
+                        final int distance = partsLocation.distanceSquaredTo(currentLocation);
+
+                        final double ranking = partsTotal / distance;
+                        if (ranking > nearestPartsRanking) {
 
                             nearestPartsLocation = partsLocation;
-                            nearestPartsLocationDistance = distance;
+                            nearestPartsRanking = ranking;
 
                         }
 
@@ -190,15 +210,17 @@ public class RobotArchon implements Robot {
 
                 } else {
 
+                    int nearestPartsDistance = Integer.MAX_VALUE;
+
                     final Enumeration<CommunicationModuleSignal> sparePartsCommunicationModuleSignals = communicationModule.spareParts.elements();
                     while (sparePartsCommunicationModuleSignals.hasMoreElements()) {
 
                         final CommunicationModuleSignal signal = sparePartsCommunicationModuleSignals.nextElement();
                         final int distance = signal.location.distanceSquaredTo(currentLocation);
-                        if (distance < nearestPartsLocationDistance) {
+                        if (distance < nearestPartsDistance) {
 
                             nearestPartsLocation = signal.location;
-                            nearestPartsLocationDistance = distance;
+                            nearestPartsDistance = distance;
 
                         }
 
@@ -213,6 +235,7 @@ public class RobotArchon implements Robot {
                     if (nearestPartsMovementDirection != null) {
 
                         robotController.move(nearestPartsMovementDirection);
+                        currentLocation = robotController.getLocation();
 
                     } else {
 

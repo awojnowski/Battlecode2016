@@ -1,6 +1,7 @@
 package team059;
 
 import team059.Combat.*;
+import team059.Map.MapInfoModule;
 import team059.Movement.*;
 import team059.Signals.*;
 import team059.Rubble.*;
@@ -12,18 +13,22 @@ public class RobotSoldier implements Robot, CommunicationModuleDelegate {
 
     public void run(final RobotController robotController) throws GameActionException {
 
+        final MapInfoModule mapInfoModule = new MapInfoModule();
+
         final CombatModule combatModule = new CombatModule();
-        final CommunicationModule communicationModule = new CommunicationModule();
+        final CommunicationModule communicationModule = new CommunicationModule(mapInfoModule);
         communicationModule.delegate = this;
         final DirectionModule directionModule = new DirectionModule(robotController.getID());
         final MovementModule movementModule = new MovementModule();
         final RubbleModule rubbleModule = new RubbleModule();
+        final Team currentTeam = robotController.getTeam();
+        int turnsStuck = 0;
 
         final RobotType type = robotController.getType();
 
         while (true) {
 
-            final MapLocation currentLocation = robotController.getLocation();
+            MapLocation currentLocation = robotController.getLocation();
 
             // update communication
 
@@ -31,7 +36,7 @@ public class RobotSoldier implements Robot, CommunicationModuleDelegate {
 
             // let's verify existing information
 
-            communicationModule.verifyCommunicationsInformation(robotController, null, null, false);
+            communicationModule.verifyCommunicationsInformation(robotController, null, false);
 
             // let's get the best assignment
 
@@ -56,7 +61,7 @@ public class RobotSoldier implements Robot, CommunicationModuleDelegate {
             while (enemyArchonCommunicationModuleSignals.hasMoreElements()) {
 
                 final CommunicationModuleSignal signal = enemyArchonCommunicationModuleSignals.nextElement();
-                final int distance = signal.location.distanceSquaredTo(currentLocation) * 4; // multiplying by 4 to prioritize the dens
+                final int distance = signal.location.distanceSquaredTo(currentLocation) * 6; // multiplying by 6 to prioritize the dens
                 if (distance < closestObjectiveLocationDistance) {
 
                     objectiveSignal = signal;
@@ -78,6 +83,7 @@ public class RobotSoldier implements Robot, CommunicationModuleDelegate {
 
                     robotController.attackLocation(bestEnemy.location);
                     attacked = true;
+                    communicationModule.broadcastSignal(robotController, CommunicationModule.maximumFreeBroadcastRangeForRobotType(robotController.getType()));
 
                 }
 
@@ -127,11 +133,56 @@ public class RobotSoldier implements Robot, CommunicationModuleDelegate {
 
                 }
 
-                // otherwise we can move randomly...
+                // otherwise check if there are nearby signals
+
+                if (desiredMovementDirection == null && ableToMove) {
+
+                    ArrayList<Signal> signals = communicationModule.notifications;
+
+                    if (signals.size() > 0) {
+
+                        int minDistance = Integer.MAX_VALUE;
+                        MapLocation closestLocation = null;
+
+                        for (int i = 0; i < signals.size(); i++) {
+
+                            final Signal currentSignal = signals.get(i);
+                            final int distance = currentLocation.distanceSquaredTo(currentSignal.getLocation());
+
+                            if (distance < minDistance) {
+
+                                minDistance = distance;
+                                closestLocation = currentSignal.getLocation();
+
+                            }
+
+                        }
+
+                        desiredMovementDirection = currentLocation.directionTo(closestLocation);
+
+                    }
+
+                }
+
+                // if those fail we can move randomly near our teammates
 
                 if (desiredMovementDirection == null && ableToMove) {
 
                     desiredMovementDirection = directionModule.randomDirection();
+
+                    RobotInfo[] closeTeammates = robotController.senseNearbyRobots(3, currentTeam); // How close they stay to their team, lower means they'll stay closer
+
+                    if (closeTeammates.length == 0) { // Move towards team if far away
+
+                        RobotInfo[] nearbyTeammates = robotController.senseNearbyRobots(24, currentTeam);
+
+                        if (nearbyTeammates.length > 0) {
+
+                            desiredMovementDirection = directionModule.averageDirectionTowardRobots(robotController, nearbyTeammates);
+
+                        }
+
+                    }
 
                 }
 
@@ -143,6 +194,13 @@ public class RobotSoldier implements Robot, CommunicationModuleDelegate {
                     if (recommendedMovementDirection != null) {
 
                         robotController.move(recommendedMovementDirection);
+                        currentLocation = robotController.getLocation();
+
+                        if (turnsStuck != 0) {
+
+                            turnsStuck = 0;
+
+                        }
 
                     } else {
 
@@ -164,6 +222,29 @@ public class RobotSoldier implements Robot, CommunicationModuleDelegate {
                     if (rubbleClearanceDirection != null) {
 
                         robotController.clearRubble(rubbleClearanceDirection);
+
+                        if (turnsStuck != 0) {
+
+                            turnsStuck = 0;
+
+                        }
+
+                        // otherwise they didn't move or clear rubble, check if they're stuck
+
+                    } else if (communicationModule.notifications.size() == 0 && objectiveSignal != null) {
+
+                        turnsStuck++;
+
+                        if (turnsStuck > 5) {
+
+                            communicationModule.clearSignal(objectiveSignal, communicationModule.enemyArchons);
+                            turnsStuck = 0;
+
+                        }
+
+                    } else if (turnsStuck != 0) {
+
+                        turnsStuck = 0;
 
                     }
 

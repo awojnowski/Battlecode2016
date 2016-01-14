@@ -15,10 +15,11 @@ public class CommunicationModuleSignal {
     public static final int TYPE_ZOMBIEDEN = 1;
     public static final int TYPE_SPARE_PARTS = 2;
     public static final int TYPE_ENEMY_ARCHON = 3;
+    public static final int TYPE_MAP_INFO = 4;
 
     public int action = CommunicationModuleSignal.ACTION_NONE;
     public MapLocation location;
-    public int robotIdentifier;
+    public int data;
     public int type = CommunicationModuleSignal.TYPE_NONE;
 
     public CommunicationModuleSignal() {
@@ -34,9 +35,9 @@ public class CommunicationModuleSignal {
                 ((serializedSignal[0] & 0x0000ffff) >> 0) - CommunicationModuleSignal.LocationNormalizationIncrement
         ); // ([31-16], [15-0])
 
-        this.action = ((serializedSignal[1] & 0x000000f0) >> 4); // [7-4]
-        this.robotIdentifier = ((serializedSignal[1] & 0x007fff00) >> 8); // [22-8]
         this.type = ((serializedSignal[1] & 0x0000000f) >> 0); // [3-0]
+        this.action = ((serializedSignal[1] & 0x000000f0) >> 4); // [7-4]
+        this.data = ((serializedSignal[1] & 0xffffff00) >> 8); // [31-8]
 
     }
 
@@ -49,7 +50,7 @@ public class CommunicationModuleSignal {
     public int serializedData() {
 
         Integer result = 0;
-        result += this.robotIdentifier; // 15 bits
+        result += this.data; // 24 bits
         result <<= 4;
         result += this.action; // 4 bits
         result <<= 4;

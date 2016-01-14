@@ -1,7 +1,8 @@
 package team059;
 
+import team059.Cartography.*;
+import team059.Map.*;
 import team059.Movement.*;
-import team059.Parts.PartsModule;
 import team059.Signals.*;
 import battlecode.common.*;
 import java.util.*;
@@ -10,10 +11,12 @@ public class RobotScout implements Robot {
 
     public void run(final RobotController robotController) throws GameActionException {
 
-        final CommunicationModule communicationModule = new CommunicationModule();
+        final MapInfoModule mapInfoModule = new MapInfoModule();
+
+        final CartographyModule cartographyModule = new CartographyModule();
+        final CommunicationModule communicationModule = new CommunicationModule(mapInfoModule);
         final DirectionModule directionModule = new DirectionModule(robotController.getID());
         final MovementModule movementModule = new MovementModule();
-        final PartsModule partsModule = new PartsModule();
 
         final Random random = new Random(robotController.getID());
         final Team team = robotController.getTeam();
@@ -26,17 +29,25 @@ public class RobotScout implements Robot {
 
             // let's try to make sure we're safe and run from enemies
 
-            final MapLocation currentLocation = robotController.getLocation();
+            MapLocation currentLocation = robotController.getLocation();
             final RobotInfo[] enemies = robotController.senseHostileRobots(currentLocation, robotController.getType().sensorRadiusSquared);
 
-            if (enemies.length > 0 && robotController.isCoreReady() && communicationModule.initialInformationReceived) {
+            if (robotController.isCoreReady() && communicationModule.initialInformationReceived && enemies.length > 0) {
 
-                final Direction fleeDirection = directionModule.averageDirectionTowardRobots(robotController, enemies).opposite();
-                Direction fleeMovementDirection = directionModule.recommendedFleeDirectionForDirection(fleeDirection, robotController, false);
-                if (fleeMovementDirection != null) {
+                final Direction fleeDirection = directionModule.averageDirectionTowardDangerousRobotsAndOuterBounds(robotController, enemies);
+                if (fleeDirection != null) {
+                    final Direction fleeMovementDirection = directionModule.recommendedMovementDirectionForDirection(fleeDirection.opposite(), robotController, false);
+                    if (fleeMovementDirection != null) {
 
-                    robotController.move(fleeMovementDirection);
-                    movementDirection = fleeMovementDirection;
+                        robotController.move(fleeMovementDirection);
+                        currentLocation = robotController.getLocation();
+                        if (movementDirection != null) {
+
+                            movementDirection = RobotScout.rotateDirection(movementDirection, currentLocation, robotController, mapInfoModule);
+
+                        }
+
+                    }
 
                 }
 
@@ -44,7 +55,7 @@ public class RobotScout implements Robot {
 
             // let's check up on existing communications to verify the information, if we can
 
-            communicationModule.verifyCommunicationsInformation(robotController, enemies, partsModule, true);
+            communicationModule.verifyCommunicationsInformation(robotController, enemies, true);
 
             // let's try identify what we can see
 
@@ -64,9 +75,9 @@ public class RobotScout implements Robot {
                     final CommunicationModuleSignal signal = new CommunicationModuleSignal();
                     signal.action = CommunicationModuleSignal.ACTION_SEEN;
                     signal.location = enemy.location;
-                    signal.robotIdentifier = enemy.ID;
+                    signal.data = enemy.ID;
                     signal.type = CommunicationModuleSignal.TYPE_ZOMBIEDEN;
-                    communicationModule.broadcastSignal(signal, robotController, CommunicationModule.MaximumBroadcastRange);
+                    communicationModule.broadcastSignal(signal, robotController, CommunicationModule.maximumBroadcastRange(mapInfoModule));
 
                 } else if (enemy.type == RobotType.ARCHON) {
 
@@ -80,18 +91,18 @@ public class RobotScout implements Robot {
                     final CommunicationModuleSignal signal = new CommunicationModuleSignal();
                     signal.action = CommunicationModuleSignal.ACTION_SEEN;
                     signal.location = enemy.location;
-                    signal.robotIdentifier = enemy.ID;
+                    signal.data = enemy.ID;
                     signal.type = CommunicationModuleSignal.TYPE_ENEMY_ARCHON;
-                    communicationModule.broadcastSignal(signal, robotController, CommunicationModule.MaximumBroadcastRange);
+                    communicationModule.broadcastSignal(signal, robotController, CommunicationModule.maximumBroadcastRange(mapInfoModule));
 
                 }
 
             }
 
-            final PartsModule.Result partsScanResults = partsModule.getPartsNearby(currentLocation, robotController, CommunicationModule.ApproximateNearbyPartsLocationRadius);
-            for (int i = 0; i < partsScanResults.locations.size(); i++) {
+            final MapLocation[] partsLocations = robotController.sensePartLocations(-1);
+            for (int i = 0; i < partsLocations.length; i++) {
 
-                final MapLocation partsLocation = partsScanResults.locations.get(i);
+                final MapLocation partsLocation = partsLocations[i];
                 final ArrayList<CommunicationModuleSignal> existingSignals = communicationModule.getCommunicationModuleSignalsNearbyLocation(communicationModule.spareParts, partsLocation, CommunicationModule.ApproximateNearbyPartsLocationRange);
                 if (existingSignals.size() > 0) {
 
@@ -102,9 +113,23 @@ public class RobotScout implements Robot {
                 final CommunicationModuleSignal signal = new CommunicationModuleSignal();
                 signal.action = CommunicationModuleSignal.ACTION_SEEN;
                 signal.location = partsLocation;
-                signal.robotIdentifier = 0;
+                signal.data = 0;
                 signal.type = CommunicationModuleSignal.TYPE_SPARE_PARTS;
-                communicationModule.broadcastSignal(signal, robotController, CommunicationModule.MaximumBroadcastRange);
+                communicationModule.broadcastSignal(signal, robotController, CommunicationModule.maximumBroadcastRange(mapInfoModule));
+
+            }
+
+            if (!mapInfoModule.hasAllBoundaries()) {
+
+                cartographyModule.probeAndUpdateMapInfoModule(mapInfoModule, currentLocation, robotController);
+                if (mapInfoModule.hasAllBoundaries()) {
+
+                    final CommunicationModuleSignal signal = new CommunicationModuleSignal();
+                    signal.action = CommunicationModuleSignal.ACTION_SEEN;
+                    mapInfoModule.fillCommunicationModuleSignalWithMapSizeData(signal);
+                    communicationModule.broadcastSignal(signal, robotController, CommunicationModule.maximumBroadcastRange(mapInfoModule));
+
+                }
 
             }
 
@@ -123,10 +148,11 @@ public class RobotScout implements Robot {
                 if (actualMovementDirection != null) {
 
                     robotController.move(actualMovementDirection);
+                    currentLocation = robotController.getLocation();
 
                 } else {
 
-                    movementDirection = null;
+                    movementDirection = RobotScout.rotateDirection(movementDirection, currentLocation, robotController, mapInfoModule);
 
                 }
 
@@ -139,6 +165,20 @@ public class RobotScout implements Robot {
             }
 
             Clock.yield();
+
+        }
+
+    }
+
+    private static Direction rotateDirection(final Direction direction, final MapLocation location, final RobotController robotController, final MapInfoModule mapInfo) {
+
+        if (robotController.getID() % 2 == 0) {
+
+            return direction.rotateLeft();
+
+        } else {
+
+            return direction.rotateRight();
 
         }
 

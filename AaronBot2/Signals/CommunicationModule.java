@@ -244,7 +244,7 @@ public class CommunicationModule implements CommunicationModuleDelegate {
 
         if (!mapInfoModule.hasAllBoundaries()) {
 
-            return 20000;
+            return 12800;
 
         } else {
 
