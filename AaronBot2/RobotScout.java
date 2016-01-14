@@ -99,26 +99,6 @@ public class RobotScout implements Robot {
 
             }
 
-            final MapLocation[] partsLocations = robotController.sensePartLocations(-1);
-            for (int i = 0; i < partsLocations.length; i++) {
-
-                final MapLocation partsLocation = partsLocations[i];
-                final ArrayList<CommunicationModuleSignal> existingSignals = communicationModule.getCommunicationModuleSignalsNearbyLocation(communicationModule.spareParts, partsLocation, CommunicationModule.ApproximateNearbyPartsLocationRange);
-                if (existingSignals.size() > 0) {
-
-                    continue;
-
-                }
-
-                final CommunicationModuleSignal signal = new CommunicationModuleSignal();
-                signal.action = CommunicationModuleSignal.ACTION_SEEN;
-                signal.location = partsLocation;
-                signal.data = 0;
-                signal.type = CommunicationModuleSignal.TYPE_SPARE_PARTS;
-                communicationModule.broadcastSignal(signal, robotController, CommunicationModule.maximumBroadcastRange(mapInfoModule));
-
-            }
-
             if (!mapInfoModule.hasAllBoundaries()) {
 
                 cartographyModule.probeAndUpdateMapInfoModule(mapInfoModule, currentLocation, robotController);
