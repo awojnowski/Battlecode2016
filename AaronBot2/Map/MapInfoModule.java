@@ -7,7 +7,8 @@ import java.util.Map;
 
 public class MapInfoModule {
 
-    public static boolean CanThrowGame = true;
+    // set this to determine whether to throw games or not (games throw on Desert first, currently)
+    public static boolean CanThrowGame = false;
 
     public static int UnknownValue = Integer.MAX_VALUE;
     public static int ThrowGameIndicatorIndex = Math.max(0, GameConstants.TEAM_MEMORY_LENGTH - 4);
