@@ -299,9 +299,7 @@ public class DirectionModule {
         for (int i = 0; i < enemies.length; i++) {
 
             final RobotInfo enemy = enemies[i];
-            final int distance = enemy.location.distanceSquaredTo(mapLocation);
-            final int goalDistance = buffer == 0 ? enemy.type.attackRadiusSquared : (int)Math.round(Math.pow(Math.sqrt(enemy.type.attackRadiusSquared) + buffer, 2));
-            if (distance <= goalDistance) {
+            if (this.isEnemyDangerous(enemy, mapLocation, buffer)) {
 
                 return enemy;
 
@@ -321,12 +319,11 @@ public class DirectionModule {
 
             final RobotInfo enemy = enemies[i];
             final int distance = enemy.location.distanceSquaredTo(mapLocation);
-            if (distance > this.enemyAttackRadiusSquaredWithBuffer(enemy, buffer)) {
+            if (!this.isEnemyDangerous(enemy, distance, buffer)) {
 
                 continue;
 
             }
-
             if (distance < nearestEnemyDistance) {
 
                 nearestEnemy = enemy;
@@ -343,28 +340,43 @@ public class DirectionModule {
     ENEMY RANKING
      */
 
-    private boolean isEnemyDangerous(final RobotInfo enemy, final MapLocation currentLocation, final double buffer) {
+    private boolean isEnemyTypeDangerous(final RobotInfo enemy) {
 
         if (enemy.type == RobotType.ZOMBIEDEN || enemy.type == RobotType.ARCHON || enemy.type == RobotType.SCOUT) {
 
             return false;
 
         }
+        return true;
+
+    }
+
+    private boolean isEnemyDangerous(final RobotInfo enemy, final MapLocation currentLocation, final double buffer) {
 
         final int distance = currentLocation.distanceSquaredTo(enemy.location);
+        return this.isEnemyDangerous(enemy, distance, buffer);
+
+    }
+
+    private boolean isEnemyDangerous(final RobotInfo enemy, final int distance, final double buffer) {
+
+        if (!this.isEnemyTypeDangerous(enemy)) {
+
+            return false;
+
+        }
         if (distance > this.enemyAttackRadiusSquaredWithBuffer(enemy, buffer)) {
 
             return false;
 
         }
-
         return true;
 
     }
 
     private int enemyAttackRadiusSquaredWithBuffer(final RobotInfo enemy, double buffer) {
 
-        return (int)Math.round(Math.pow(Math.sqrt(enemy.type.attackRadiusSquared) + buffer, 2));
+        return buffer == 0 ? enemy.type.attackRadiusSquared : (int)Math.round(Math.pow(Math.sqrt(enemy.type.attackRadiusSquared) + buffer, 2));
 
     }
 

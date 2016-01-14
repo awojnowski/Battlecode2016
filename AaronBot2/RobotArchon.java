@@ -35,6 +35,8 @@ public class RobotArchon implements Robot {
 
             communicationModule.processIncomingSignals(robotController);
 
+            // firstly check if we are throwing this game or not
+
             if (mapInfoModule.shouldThrowGame) {
 
                 final int throwRound = robotController.getID() % 200;
@@ -46,23 +48,35 @@ public class RobotArchon implements Robot {
 
             }
 
+            // we should try activate robots
+
+            if (robotController.isCoreReady()) {
+
+                final RobotInfo[] neutrals = robotController.senseNearbyRobots(GameConstants.ARCHON_ACTIVATION_RANGE, Team.NEUTRAL);
+                for (int i = 0; i < neutrals.length; i++) {
+
+                    robotController.activate(neutrals[i].location);
+                    buildingUpdateSignalCollection = communicationModule.allCommunicationModuleSignals();
+                    break;
+
+                }
+
+            }
+
             // check if we are done building a unit
-            // if so, we should broadcast relevant information to that unit
 
             if (robotController.isCoreReady()) {
 
                 if (buildingUnitType != null) {
 
-                    if (buildingUpdateSignalCollection == null) {
-
-                        buildingUpdateSignalCollection = communicationModule.allCommunicationModuleSignals();
-
-                    }
+                    buildingUpdateSignalCollection = communicationModule.allCommunicationModuleSignals();
 
                 }
                 buildingUnitType = null;
 
             }
+
+            // let's broadcast any remaining information that we have to the nearby, recently created units
 
             if (buildingUpdateSignalCollection != null) {
 
@@ -101,20 +115,6 @@ public class RobotArchon implements Robot {
 
             }
 
-            // we should try activate robots
-
-            if (robotController.isCoreReady()) {
-
-                final RobotInfo[] neutrals = robotController.senseNearbyRobots(3, Team.NEUTRAL);
-                for (int i = 0; i < neutrals.length; i++) {
-
-                    robotController.activate(neutrals[i].location);
-                    break;
-
-                }
-
-            }
-
             // check to make sure we are safe
 
             MapLocation currentLocation = robotController.getLocation();
@@ -140,7 +140,22 @@ public class RobotArchon implements Robot {
 
             // let's check up on existing communications to verify the information, if we can
 
-            communicationModule.verifyCommunicationsInformation(robotController, enemies, true);
+            final ArrayList<CommunicationModuleSignal> verifiedSignals = communicationModule.verifyCommunicationsInformation(robotController, enemies, true);
+            for (int i = 0; i < verifiedSignals.size(); i++) {
+
+                communicationModule.enqueueSignalForBroadcast(verifiedSignals.get(i));
+
+            }
+
+            if (communicationModule.hasEnqueuedSignalsForBroadcast()) {
+
+                if (directionModule.isMapLocationSafe(currentLocation, enemies, 4)) {
+
+                    communicationModule.broadcastEnqueuedSignals(robotController, CommunicationModule.maximumBroadcastRange(mapInfoModule));
+
+                }
+
+            }
 
             // attempt to build new units
 
@@ -209,26 +224,7 @@ public class RobotArchon implements Robot {
 
                     }
 
-                } else {
-
-                    int nearestPartsDistance = Integer.MAX_VALUE;
-
-                    final Enumeration<CommunicationModuleSignal> sparePartsCommunicationModuleSignals = communicationModule.spareParts.elements();
-                    while (sparePartsCommunicationModuleSignals.hasMoreElements()) {
-
-                        final CommunicationModuleSignal signal = sparePartsCommunicationModuleSignals.nextElement();
-                        final int distance = signal.location.distanceSquaredTo(currentLocation);
-                        if (distance < nearestPartsDistance) {
-
-                            nearestPartsLocation = signal.location;
-                            nearestPartsDistance = distance;
-
-                        }
-
-                    }
-
                 }
-
                 if (nearestPartsLocation != null) {
 
                     final Direction nearestPartsDirection = currentLocation.directionTo(nearestPartsLocation);
@@ -307,10 +303,6 @@ public class RobotArchon implements Robot {
                 } else if (communicationModuleSignal.type == CommunicationModuleSignal.TYPE_ENEMY_ARCHON) {
 
                     color = new int[]{255, 0, 0};
-
-                } else if (communicationModuleSignal.type == CommunicationModuleSignal.TYPE_SPARE_PARTS) {
-
-                    color = new int[]{255, 255, 255};
 
                 }
                 robotController.setIndicatorLine(location, communicationModuleSignal.location, color[0], color[1], color[2]);

@@ -291,11 +291,6 @@ public class RobotSoldier implements Robot, CommunicationModuleDelegate {
 
     public boolean shouldProcessSignalType(final int signalType) {
 
-        if (signalType == CommunicationModuleSignal.TYPE_SPARE_PARTS) {
-
-            return false;
-
-        }
         return true;
 
     }
