@@ -134,7 +134,7 @@ public class RobotScout implements Robot {
 
                 }
 
-                final Direction actualMovementDirection = directionModule.recommendedSafeMovementDirectionForDirection(movementDirection, robotController, enemies, 1, true);
+                final Direction actualMovementDirection = directionModule.recommendedSafeMovementDirectionForDirection(movementDirection, robotController, enemies, 2, true);
                 if (actualMovementDirection != null) {
 
                     robotController.move(actualMovementDirection);
