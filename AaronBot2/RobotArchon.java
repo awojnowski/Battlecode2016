@@ -4,6 +4,7 @@ import AaronBot2.Map.*;
 import AaronBot2.Movement.*;
 import AaronBot2.Rubble.RubbleModule;
 import AaronBot2.Signals.*;
+import AaronBot2.ZombieSpawns.ZombieSpawnsModule;
 import battlecode.common.*;
 import java.util.*;
 
@@ -28,6 +29,12 @@ public class RobotArchon implements Robot {
         int soldiersBuilt = 0;
         RobotType buildingUnitType = null;
         CommunicationModuleSignalCollection buildingUpdateSignalCollection = null;
+
+        // general
+
+        final Team currentTeam = robotController.getTeam();
+
+        ZombieSpawnsModule.setSpawnScheduleIfNeeded(robotController);
 
         // loop
 
