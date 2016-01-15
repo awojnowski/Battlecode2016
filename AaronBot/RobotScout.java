@@ -13,7 +13,7 @@ public class RobotScout implements Robot {
 
             for (int i = 0; i < nearbyZombies.length; i++) {
 
-                final RobotInfo zombie = nearbyEnemies[i];
+                final RobotInfo zombie = nearbyZombies[i];
                 robotController.broadcastMessageSignal(100, zombie.location.x, zombie.location.y);
 
             }
@@ -22,6 +22,44 @@ public class RobotScout implements Robot {
 
                 final RobotInfo enemy = nearbyEnemies[i];
                 robotController.broadcastMessageSignal(enemy.location.x, enemy.location.y, 100);
+
+            }
+
+            RobotInfo[] nearbyAllies = robotController.senseNearbyRobots(8, robotController.getTeam());
+            Direction awayFromArchon = null;
+            int turretCount = 0;
+
+            for (int i = 0; i < nearbyAllies.length; i++) {
+
+                final RobotInfo ally = nearbyAllies[i];
+
+                if (ally.type == RobotType.ARCHON) {
+
+                    awayFromArchon = ally.location.directionTo(robotController.getLocation());
+
+                } else if (ally.type == RobotType.TURRET) {
+
+                    turretCount++;
+
+                }
+
+                if (robotController.isCoreReady() && turretCount > 7 && awayFromArchon != null) {
+
+                    if (robotController.canMove(awayFromArchon)) {
+
+                        robotController.move(awayFromArchon);
+
+                    } else if (robotController.canMove(awayFromArchon.rotateLeft())) {
+
+                        robotController.move(awayFromArchon.rotateLeft());
+
+                    } else if (robotController.canMove(awayFromArchon.rotateRight())) {
+
+                        robotController.move(awayFromArchon.rotateRight());
+
+                    }
+
+                }
 
             }
 
