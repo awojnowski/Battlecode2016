@@ -37,8 +37,7 @@ public class RobotSoldier implements Robot {
 
         State currentState = State.UNKNOWN;
 
-        Direction infoGatherDirection = null;
-        boolean returnToRendezvous = false;
+        MapLocation turtleLocation = null;
 
         while (true) {
 
@@ -50,7 +49,6 @@ public class RobotSoldier implements Robot {
             Direction desiredMovementDirection = null;
 
             Direction desiredRubbleClearanceDirection = null;
-            boolean canClearAnyRubbleDirection = false;
 
             // ROUND CONSTANTS
 
@@ -69,6 +67,7 @@ public class RobotSoldier implements Robot {
             // process communication
 
             communicationModule.processIncomingSignals(robotController);
+            communicationModule.verifyCommunicationsInformation(robotController, enemies, false);
 
             // handle states
 
@@ -97,7 +96,7 @@ public class RobotSoldier implements Robot {
                 while (enemyArchonCommunicationModuleSignals.hasMoreElements()) {
 
                     final CommunicationModuleSignal signal = enemyArchonCommunicationModuleSignals.nextElement();
-                    final int distance = signal.location.distanceSquaredTo(currentLocation) * 6; // multiplying by 6 to prioritize the dens
+                    final int distance = signal.location.distanceSquaredTo(currentLocation);
                     if (distance < closestObjectiveLocationDistance) {
 
                         objectiveSignal = signal;
@@ -111,20 +110,35 @@ public class RobotSoldier implements Robot {
 
                     desiredMovementDirection = currentLocation.directionTo(objectiveSignal.location);
 
-                } else {
+                } else if (currentLocation.distanceSquaredTo(archonRendezvousLocation) < 64) {
 
                     desiredMovementDirection = directionModule.randomDirection();
 
+                } else {
+
+                    desiredMovementDirection = currentLocation.directionTo(archonRendezvousLocation);
+
                 }
 
-                // now let's try see if we can attack anything
+                // see if we can attack anything
 
                 final RobotInfo[] attackableEnemies = robotController.senseHostileRobots(currentLocation, currentType.attackRadiusSquared);
                 desiredAttackUnit = combatModule.bestEnemyToAttackFromEnemies(attackableEnemies);
 
             } else if (currentState == State.TURTLE) {
 
-                ;
+                // see if we can attack anything
+
+                final RobotInfo[] attackableEnemies = robotController.senseHostileRobots(currentLocation, currentType.attackRadiusSquared);
+                desiredAttackUnit = combatModule.bestEnemyToAttackFromEnemies(attackableEnemies);
+
+                // try to go to the turtle location
+
+                if (currentLocation.distanceSquaredTo(turtleLocation) > 35) {
+
+                    desiredMovementDirection = currentLocation.directionTo(turtleLocation);
+
+                }
 
             }
 
@@ -164,16 +178,7 @@ public class RobotSoldier implements Robot {
 
             if (robotController.isCoreReady() && desiredRubbleClearanceDirection != null) {
 
-                Direction rubbleClearanceDirection = null;
-                if (canClearAnyRubbleDirection) {
-
-                    rubbleClearanceDirection = rubbleModule.getAnyRubbleClearanceDirectionFromDirection(desiredRubbleClearanceDirection, robotController);
-
-                } else {
-
-                    rubbleClearanceDirection = rubbleModule.getRubbleClearanceDirectionFromTargetDirection(desiredRubbleClearanceDirection, robotController);
-
-                }
+                Direction rubbleClearanceDirection = rubbleModule.getRubbleClearanceDirectionFromTargetDirection(desiredRubbleClearanceDirection, robotController);
                 if (rubbleClearanceDirection != null) {
 
                     robotController.clearRubble(rubbleClearanceDirection);
@@ -186,7 +191,13 @@ public class RobotSoldier implements Robot {
 
             if (currentState == State.SKIRMISH) {
 
-                ;
+                turtleLocation = communicationModule.turtleLocation;
+                if (turtleLocation != null) {
+
+                    turtleLocation = turtleLocation;
+                    currentState = State.TURTLE;
+
+                }
 
             } else if (currentState == State.TURTLE) {
 

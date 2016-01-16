@@ -15,6 +15,7 @@ import java.util.*;
 public class RobotArchon implements Robot {
 
     private static int InitialMessageUpdateLength = 2;
+    private static int TurtleRoundNumber = 300;
 
     enum State {
         UNKNOWN,
@@ -47,9 +48,11 @@ public class RobotArchon implements Robot {
         int scoutsBuilt = 0;
         int soldiersBuilt = 0;
 
+        MapLocation turtleLocation = null;
+
         // ARCHON_RENDEZVOUS
 
-        MapLocation archonRendezvousLocation = null;
+        final MapLocation archonRendezvousLocation = movementModule.getArchonRendezvousLocation(robotController.getLocation(), robotController.getInitialArchonLocations(robotController.getTeam()));
 
         // run
 
@@ -76,11 +79,8 @@ public class RobotArchon implements Robot {
 
             if (currentState == State.UNKNOWN) {
 
-                final MapLocation[] archonLocations = robotController.getInitialArchonLocations(robotController.getTeam());
-                final MapLocation rendezvousLocation = movementModule.getArchonRendezvousLocation(currentLocation, archonLocations);
-                if (rendezvousLocation != null && !rendezvousLocation.equals(currentLocation)) {
+                if (archonRendezvousLocation != null && !archonRendezvousLocation.equals(currentLocation) && robotController.getRoundNum() < RobotArchon.TurtleRoundNumber) {
 
-                    archonRendezvousLocation = rendezvousLocation;
                     currentState = State.ARCHON_RENDEZVOUS;
 
                 } else {
@@ -253,7 +253,88 @@ public class RobotArchon implements Robot {
 
             } else if (currentState == State.TURTLE) {
 
-                ;
+                if (turtleLocation == null) {
+
+                    turtleLocation = communicationModule.turtleLocation;
+
+                }
+                if (turtleLocation == null) {
+
+                    // we need to find the best corner, otherwise we stay where we are
+
+                    final int eastBoundary = mapInfoModule.eastBoundaryValue;
+                    final int northBoundary = mapInfoModule.northBoundaryValue;
+                    final int westBoundary = mapInfoModule.westBoundaryValue;
+                    final int southBoundary = mapInfoModule.southBoundaryValue;
+
+                    final MapLocation topLeftCorner     = (westBoundary != MapInfoModule.UnknownValue && northBoundary != MapInfoModule.UnknownValue) ? new MapLocation(westBoundary, northBoundary) : null;
+                    final MapLocation topRightCorner    = (eastBoundary != MapInfoModule.UnknownValue && northBoundary != MapInfoModule.UnknownValue) ? new MapLocation(eastBoundary, northBoundary) : null;
+                    final MapLocation bottomLeftCorner  = (westBoundary != MapInfoModule.UnknownValue && southBoundary != MapInfoModule.UnknownValue) ? new MapLocation(westBoundary, southBoundary) : null;
+                    final MapLocation bottomRightCorner = (eastBoundary != MapInfoModule.UnknownValue && southBoundary != MapInfoModule.UnknownValue) ? new MapLocation(eastBoundary, southBoundary) : null;
+
+                    MapLocation bestLocation = null;
+                    int bestLocationDistance = Integer.MAX_VALUE;
+                    if (topLeftCorner != null) {
+
+                        final int distance = topLeftCorner.distanceSquaredTo(archonRendezvousLocation);
+                        if (distance < bestLocationDistance) {
+
+                            bestLocation = topLeftCorner;
+                            bestLocationDistance = distance;
+
+                        }
+
+                    }
+                    if (topRightCorner != null) {
+
+                        final int distance = topRightCorner.distanceSquaredTo(archonRendezvousLocation);
+                        if (distance < bestLocationDistance) {
+
+                            bestLocation = topRightCorner;
+                            bestLocationDistance = distance;
+
+                        }
+
+                    }
+                    if (bottomLeftCorner != null) {
+
+                        final int distance = bottomLeftCorner.distanceSquaredTo(archonRendezvousLocation);
+                        if (distance < bestLocationDistance) {
+
+                            bestLocation = bottomLeftCorner;
+                            bestLocationDistance = distance;
+
+                        }
+
+                    }
+                    if (bottomRightCorner != null) {
+
+                        final int distance = bottomRightCorner.distanceSquaredTo(archonRendezvousLocation);
+                        if (distance < bestLocationDistance) {
+
+                            bestLocation = bottomRightCorner;
+                            bestLocationDistance = distance;
+
+                        }
+
+                    }
+                    if (bestLocation == null) {
+
+                        bestLocation = archonRendezvousLocation;
+
+                    }
+                    turtleLocation = bestLocation;
+
+                    final CommunicationModuleSignal signal = new CommunicationModuleSignal();
+                    signal.action = CommunicationModuleSignal.ACTION_SEEN;
+                    signal.type = CommunicationModuleSignal.TYPE_TURTLE_LOCATION;
+                    signal.data = 0;
+                    signal.location = turtleLocation;
+                    communicationModule.broadcastSignal(signal, robotController, CommunicationModule.maximumBroadcastRange(mapInfoModule));
+
+                }
+
+                desiredMovementDirection = currentLocation.directionTo(turtleLocation);
 
             }
 
@@ -329,14 +410,13 @@ public class RobotArchon implements Robot {
                 final int distance = currentLocation.distanceSquaredTo(archonRendezvousLocation);
                 if (distance < 16) {
 
-                    archonRendezvousLocation = null;
                     currentState = State.INITIAL_UNIT_BUILD;
 
                 }
 
             } else if (currentState == State.INITIAL_UNIT_BUILD) {
 
-                if (robotController.getRoundNum() >= 300) {
+                if (robotController.getRoundNum() >= RobotArchon.TurtleRoundNumber) {
 
                     currentState = State.TURTLE;
 
@@ -345,6 +425,33 @@ public class RobotArchon implements Robot {
             } else if (currentState == State.TURTLE) {
 
                 ;
+
+            }
+
+            // try to repair any units nearby
+
+            RobotInfo injuredUnit = null;
+            double injuredUnitHealth = Integer.MAX_VALUE;
+            final RobotInfo[] friendlyRepairableUnits = robotController.senseNearbyRobots(currentType.attackRadiusSquared, robotController.getTeam());
+            for (int i = 0; i < friendlyRepairableUnits.length; i++) {
+
+                final RobotInfo friendly = friendlyRepairableUnits[i];
+                if (friendly.type == RobotType.ARCHON) {
+
+                    continue;
+
+                }
+                if (friendly.health < injuredUnitHealth && friendly.health < friendly.maxHealth) {
+
+                    injuredUnit = friendly;
+                    injuredUnitHealth = friendly.health;
+
+                }
+
+            }
+            if (injuredUnit != null) {
+
+                robotController.repair(injuredUnit.location);
 
             }
 

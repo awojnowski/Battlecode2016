@@ -32,6 +32,12 @@ public class RubbleModule {
 
     public Direction getRubbleClearanceDirectionFromTargetDirection(final Direction direction, final RobotController robotController) throws GameActionException {
 
+        if (direction == Direction.OMNI) {
+
+            return null;
+
+        }
+
         final MapLocation mapLocation = robotController.getLocation();
 
         Direction scanDirection = direction;

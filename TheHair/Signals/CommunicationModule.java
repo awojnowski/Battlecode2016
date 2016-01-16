@@ -24,6 +24,7 @@ public class CommunicationModule implements CommunicationModuleDelegate {
     public MapInfoModule mapInfoModule = null;
     public CommunicationModuleDelegate delegate = this;
     public boolean initialInformationReceived = false;
+    public MapLocation turtleLocation = null;
 
     public CommunicationModule(final MapInfoModule mapInfoModule) {
 
@@ -324,6 +325,12 @@ public class CommunicationModule implements CommunicationModuleDelegate {
                 communicationModuleSignal.type == CommunicationModuleSignal.TYPE_MAP_WALL_SOUTH) {
 
             this.mapInfoModule.fillDataFromCommunicationModuleSignal(communicationModuleSignal);
+            return;
+
+        }
+        if (communicationModuleSignal.type == CommunicationModuleSignal.TYPE_TURTLE_LOCATION) {
+
+            this.turtleLocation = communicationModuleSignal.location;
             return;
 
         }
