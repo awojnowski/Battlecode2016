@@ -14,3 +14,4 @@ Post-Sprint Thoughts:
 - Some kind of anti-funnel strategy (would be really tricky)
 - Anti turret strategy
 - Don’t make our archons try to get unsafe ore!
+- Look out for going back and forth when we bug around rubble (farm)
