@@ -15,6 +15,10 @@ public class CommunicationModuleSignal {
     public static final int TYPE_ZOMBIEDEN = 1;
     public static final int TYPE_ENEMY_ARCHON = 2;
     public static final int TYPE_MAP_INFO = 3;
+    public static final int TYPE_MAP_WALL_EAST = 4;
+    public static final int TYPE_MAP_WALL_NORTH = 5;
+    public static final int TYPE_MAP_WALL_WEST = 6;
+    public static final int TYPE_MAP_WALL_SOUTH = 7;
 
     public int action = CommunicationModuleSignal.ACTION_NONE;
     public MapLocation location;
@@ -69,6 +73,12 @@ public class CommunicationModuleSignal {
      */
 
     public static int serializeMapLocation(MapLocation mapLocation) {
+
+        if (mapLocation == null) {
+
+            return 0;
+
+        }
 
         int result = 0;
         result += mapLocation.x + CommunicationModuleSignal.LocationNormalizationIncrement; // 16 bits

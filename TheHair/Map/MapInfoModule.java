@@ -49,6 +49,22 @@ public class MapInfoModule {
             this.eastBoundaryValue = this.westBoundaryValue + mapWidth + 1;
             this.southBoundaryValue = this.northBoundaryValue + mapHeight + 1;
 
+        } else if (communicationModuleSignal.type == CommunicationModuleSignal.TYPE_MAP_WALL_EAST) {
+
+            this.eastBoundaryValue = communicationModuleSignal.data;
+
+        } else if (communicationModuleSignal.type == CommunicationModuleSignal.TYPE_MAP_WALL_NORTH) {
+
+            this.northBoundaryValue = communicationModuleSignal.data;
+
+        } else if (communicationModuleSignal.type == CommunicationModuleSignal.TYPE_MAP_WALL_WEST) {
+
+            this.westBoundaryValue = communicationModuleSignal.data;
+
+        } else if (communicationModuleSignal.type == CommunicationModuleSignal.TYPE_MAP_WALL_SOUTH) {
+
+            this.southBoundaryValue = communicationModuleSignal.data;
+
         }
 
     }

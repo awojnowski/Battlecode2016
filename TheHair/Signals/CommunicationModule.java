@@ -317,7 +317,11 @@ public class CommunicationModule implements CommunicationModuleDelegate {
             return;
 
         }
-        if (communicationModuleSignal.type == CommunicationModuleSignal.TYPE_MAP_INFO) {
+        if (communicationModuleSignal.type == CommunicationModuleSignal.TYPE_MAP_INFO ||
+                communicationModuleSignal.type == CommunicationModuleSignal.TYPE_MAP_WALL_EAST ||
+                communicationModuleSignal.type == CommunicationModuleSignal.TYPE_MAP_WALL_NORTH ||
+                communicationModuleSignal.type == CommunicationModuleSignal.TYPE_MAP_WALL_WEST ||
+                communicationModuleSignal.type == CommunicationModuleSignal.TYPE_MAP_WALL_SOUTH) {
 
             this.mapInfoModule.fillDataFromCommunicationModuleSignal(communicationModuleSignal);
             return;
@@ -399,6 +403,54 @@ public class CommunicationModule implements CommunicationModuleDelegate {
             communicationModuleSignalCollection.addEnumeration(this.zombieDens.elements());
 
         }
+
+        final ArrayList<CommunicationModuleSignal> mapInfoSignals = new ArrayList<CommunicationModuleSignal>();
+        if (this.mapInfoModule.hasAllBoundaries()) {
+
+            final CommunicationModuleSignal signal = new CommunicationModuleSignal();
+            signal.action = CommunicationModuleSignal.ACTION_SEEN;
+            this.mapInfoModule.fillCommunicationModuleSignalWithMapSizeData(signal);
+            mapInfoSignals.add(signal);
+
+        } else {
+
+            if (this.mapInfoModule.eastBoundaryValue != MapInfoModule.UnknownValue) {
+
+                final CommunicationModuleSignal signal = new CommunicationModuleSignal();
+                signal.action = CommunicationModuleSignal.ACTION_SEEN;
+                signal.type = CommunicationModuleSignal.TYPE_MAP_WALL_EAST;
+                signal.data = this.mapInfoModule.eastBoundaryValue;
+                mapInfoSignals.add(signal);
+
+            } else if (this.mapInfoModule.northBoundaryValue != MapInfoModule.UnknownValue) {
+
+                final CommunicationModuleSignal signal = new CommunicationModuleSignal();
+                signal.action = CommunicationModuleSignal.ACTION_SEEN;
+                signal.type = CommunicationModuleSignal.TYPE_MAP_WALL_NORTH;
+                signal.data = this.mapInfoModule.northBoundaryValue;
+                mapInfoSignals.add(signal);
+
+            } else if (this.mapInfoModule.westBoundaryValue != MapInfoModule.UnknownValue) {
+
+                final CommunicationModuleSignal signal = new CommunicationModuleSignal();
+                signal.action = CommunicationModuleSignal.ACTION_SEEN;
+                signal.type = CommunicationModuleSignal.TYPE_MAP_WALL_WEST;
+                signal.data = this.mapInfoModule.westBoundaryValue;
+                mapInfoSignals.add(signal);
+
+            } else if (this.mapInfoModule.southBoundaryValue != MapInfoModule.UnknownValue) {
+
+                final CommunicationModuleSignal signal = new CommunicationModuleSignal();
+                signal.action = CommunicationModuleSignal.ACTION_SEEN;
+                signal.type = CommunicationModuleSignal.TYPE_MAP_WALL_SOUTH;
+                signal.data = this.mapInfoModule.southBoundaryValue;
+                mapInfoSignals.add(signal);
+
+            }
+
+        }
+        communicationModuleSignalCollection.addEnumeration(Collections.enumeration(mapInfoSignals));
+
         return communicationModuleSignalCollection;
 
     }

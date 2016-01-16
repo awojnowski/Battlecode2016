@@ -6,6 +6,7 @@ public class RubbleModule {
 
     public Direction getAnyRubbleClearanceDirectionFromDirection(final Direction direction, final RobotController robotController) throws GameActionException {
 
+        boolean found = false;
         final MapLocation mapLocation = robotController.getLocation();
         Direction rubbleClearanceDirection = direction;
         for (int i = 0; i < 8; i++) {
@@ -13,10 +14,16 @@ public class RubbleModule {
             final MapLocation rubbleLocation = mapLocation.add(rubbleClearanceDirection);
             if (robotController.onTheMap(rubbleLocation) && robotController.senseRubble(rubbleLocation) > 0) {
 
+                found = true;
                 break;
 
             }
             rubbleClearanceDirection = robotController.getID() % 2 == 0 ? rubbleClearanceDirection.rotateLeft() : rubbleClearanceDirection.rotateRight();
+
+        }
+        if (!found) {
+
+            return null;
 
         }
         return rubbleClearanceDirection;
