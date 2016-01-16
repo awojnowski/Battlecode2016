@@ -25,6 +25,8 @@ public class RobotScout implements Robot {
 
         while (true) {
 
+            robotController.setIndicatorString(1, "Queue: " + communicationModule.communicationModuleSignalQueue.size());
+
             communicationModule.processIncomingSignals(robotController);
 
             String rotateStatus = "";
@@ -166,6 +168,27 @@ public class RobotScout implements Robot {
             }
 
             robotController.setIndicatorString(0, rotateStatus);
+
+            // show what we know
+
+            final CommunicationModuleSignalCollection communicationModuleSignalCollection = communicationModule.allCommunicationModuleSignals();
+            final MapLocation location = robotController.getLocation();
+            while (communicationModuleSignalCollection.hasMoreElements()) {
+
+                final CommunicationModuleSignal communicationModuleSignal = communicationModuleSignalCollection.nextElement();
+                int[] color = new int[]{255, 255, 255};
+                if (communicationModuleSignal.type == CommunicationModuleSignal.TYPE_ZOMBIEDEN) {
+
+                    color = new int[]{50, 255, 50};
+
+                } else if (communicationModuleSignal.type == CommunicationModuleSignal.TYPE_ENEMY_ARCHON) {
+
+                    color = new int[]{255, 0, 0};
+
+                }
+                robotController.setIndicatorLine(location, communicationModuleSignal.location, color[0], color[1], color[2]);
+
+            }
 
             Clock.yield();
 

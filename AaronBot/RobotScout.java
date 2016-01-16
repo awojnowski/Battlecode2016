@@ -8,20 +8,24 @@ public class RobotScout implements Robot {
 
         while (true) {
 
+            int signals = 0;
+
             RobotInfo[] nearbyZombies = robotController.senseNearbyRobots(-1, Team.ZOMBIE);
             RobotInfo[] nearbyEnemies = robotController.senseNearbyRobots(-1, robotController.getTeam().opponent());
 
-            for (int i = 0; i < nearbyZombies.length; i++) {
+            for (int i = 0; i < nearbyZombies.length && signals < 20; i++) {
 
                 final RobotInfo zombie = nearbyZombies[i];
                 robotController.broadcastMessageSignal(100, zombie.location.x, zombie.location.y);
+                signals++;
 
             }
 
-            for (int i = 0; i < nearbyEnemies.length; i++) {
+            for (int i = 0; i < nearbyEnemies.length && signals < 20; i++) {
 
                 final RobotInfo enemy = nearbyEnemies[i];
                 robotController.broadcastMessageSignal(enemy.location.x, enemy.location.y, 100);
+                signals++;
 
             }
 

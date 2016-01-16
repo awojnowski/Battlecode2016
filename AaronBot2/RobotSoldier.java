@@ -23,10 +23,16 @@ public class RobotSoldier implements Robot, CommunicationModuleDelegate {
         final RubbleModule rubbleModule = new RubbleModule();
         final Team currentTeam = robotController.getTeam();
         int turnsStuck = 0;
+        double lastHealth = robotController.getHealth();
+        Direction lastDirection = Direction.NONE;
+        boolean stop = false;
 
         final RobotType type = robotController.getType();
 
         while (true) {
+
+            boolean lostHealth = (lastHealth != robotController.getHealth());
+            lastHealth = robotController.getHealth();
 
             MapLocation currentLocation = robotController.getLocation();
 
@@ -91,7 +97,7 @@ public class RobotSoldier implements Robot, CommunicationModuleDelegate {
 
             // movement variables
 
-            boolean ableToMove = (bestEnemy == null || bestEnemy.type == RobotType.ZOMBIEDEN);
+            boolean ableToMove = (bestEnemy == null || bestEnemy.type == RobotType.ZOMBIEDEN || bestEnemy.type == RobotType.TURRET);
             Direction targetRubbleClearanceDirection = null;
             Direction desiredMovementDirection = null;
 
@@ -113,6 +119,17 @@ public class RobotSoldier implements Robot, CommunicationModuleDelegate {
                 }
 
             }
+
+            // check if they're getting hit by turrets
+
+//            if (bestEnemy == null && lostHealth) {
+//
+//                desiredMovementDirection = lastDirection.opposite();
+//                stop = true;
+//
+//            }
+//
+//            ableToMove = !stop;
 
             // now let's try move toward an assignment
 
@@ -194,12 +211,13 @@ public class RobotSoldier implements Robot, CommunicationModuleDelegate {
 
                 // process movement
 
-                if (desiredMovementDirection != null && ableToMove) {
+                if (desiredMovementDirection != null) {
 
                     final Direction recommendedMovementDirection = directionModule.recommendedMovementDirectionForDirection(desiredMovementDirection, robotController, false);
                     if (recommendedMovementDirection != null) {
 
                         robotController.move(recommendedMovementDirection);
+                        lastDirection = recommendedMovementDirection;
                         currentLocation = robotController.getLocation();
 
                         if (turnsStuck != 0) {
