@@ -90,7 +90,8 @@ public class RobotScout implements Robot {
                         signal.data = mapInfoModule.eastBoundaryValue;
                         communicationModule.enqueueSignalForBroadcast(signal);
 
-                    } else if (!hasNorth && mapInfoModule.northBoundaryValue != MapInfoModule.UnknownValue) {
+                    }
+                    if (!hasNorth && mapInfoModule.northBoundaryValue != MapInfoModule.UnknownValue) {
 
                         final CommunicationModuleSignal signal = new CommunicationModuleSignal();
                         signal.action = CommunicationModuleSignal.ACTION_SEEN;
@@ -98,7 +99,8 @@ public class RobotScout implements Robot {
                         signal.data = mapInfoModule.northBoundaryValue;
                         communicationModule.enqueueSignalForBroadcast(signal);
 
-                    } else if (!hasWest && mapInfoModule.westBoundaryValue != MapInfoModule.UnknownValue) {
+                    }
+                    if (!hasWest && mapInfoModule.westBoundaryValue != MapInfoModule.UnknownValue) {
 
                         final CommunicationModuleSignal signal = new CommunicationModuleSignal();
                         signal.action = CommunicationModuleSignal.ACTION_SEEN;
@@ -106,7 +108,8 @@ public class RobotScout implements Robot {
                         signal.data = mapInfoModule.westBoundaryValue;
                         communicationModule.enqueueSignalForBroadcast(signal);
 
-                    } else if (!hasSouth && mapInfoModule.southBoundaryValue != MapInfoModule.UnknownValue) {
+                    }
+                    if (!hasSouth && mapInfoModule.southBoundaryValue != MapInfoModule.UnknownValue) {
 
                         final CommunicationModuleSignal signal = new CommunicationModuleSignal();
                         signal.action = CommunicationModuleSignal.ACTION_SEEN;
@@ -128,7 +131,7 @@ public class RobotScout implements Robot {
 
             } else if (currentState == State.TURRET_VISION) {
 
-
+                ;
 
             }
 
@@ -152,11 +155,11 @@ public class RobotScout implements Robot {
 
             if (currentState == State.INFO_GATHER) {
 
-
+                ;
 
             } else if (currentState == State.TURRET_VISION) {
 
-
+                ;
 
             }
 
