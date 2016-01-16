@@ -1,4 +1,4 @@
-package TheHair.ZombieSpawns;
+package team059.ZombieSpawns;
 
 import battlecode.common.*;
 

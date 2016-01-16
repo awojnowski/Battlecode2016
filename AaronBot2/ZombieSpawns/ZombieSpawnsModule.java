@@ -1,6 +1,5 @@
 package AaronBot2.ZombieSpawns;
 
-import AaronBot.Robot;
 import battlecode.common.*;
 
 public class ZombieSpawnsModule {

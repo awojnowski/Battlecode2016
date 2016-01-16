@@ -71,13 +71,38 @@ public class RobotSoldier implements Robot, CommunicationModuleDelegate {
 
             }
 
-            // now let's see if we can attack anything
+            // now let's see if we should kite or attack anything
 
             boolean attacked = false;
-            final RobotInfo[] enemies = robotController.senseHostileRobots(currentLocation, type.attackRadiusSquared);
-            final RobotInfo bestEnemy = combatModule.bestEnemyToAttackFromEnemies(enemies);
+            final RobotInfo[] immediateEnemies = robotController.senseHostileRobots(currentLocation, 3);
+            final RobotInfo[] immediateKitableZombies = CombatModule.robotsOfTypesFromRobots(immediateEnemies, new RobotType[]{RobotType.STANDARDZOMBIE, RobotType.BIGZOMBIE});
+            RobotInfo bestEnemy;
 
-            if (robotController.isWeaponReady()) {
+            if (immediateKitableZombies.length > 0) {
+
+                bestEnemy = combatModule.lowestHealthEnemyFromEnemies(immediateKitableZombies);
+
+            } else {
+
+                final RobotInfo[] enemies = robotController.senseHostileRobots(currentLocation, type.attackRadiusSquared);
+                bestEnemy = combatModule.lowestHealthEnemyFromEnemies(enemies);
+
+            }
+
+            // movement variables
+
+            boolean ableToMove = (bestEnemy == null || bestEnemy.type == RobotType.ZOMBIEDEN);
+            Direction targetRubbleClearanceDirection = null;
+            Direction desiredMovementDirection = null;
+
+            if (bestEnemy != null && (bestEnemy.type == RobotType.STANDARDZOMBIE || bestEnemy.type == RobotType.BIGZOMBIE) && currentLocation.distanceSquaredTo(bestEnemy.location) <= bestEnemy.type.attackRadiusSquared) {
+
+                // should kite
+
+                ableToMove = true;
+                desiredMovementDirection = currentLocation.directionTo(bestEnemy.location).opposite();
+
+            } else if (robotController.isWeaponReady()) {
 
                 if (bestEnemy != null) {
 
@@ -89,28 +114,9 @@ public class RobotSoldier implements Robot, CommunicationModuleDelegate {
 
             }
 
-            // check if we should broadcast danger
-
-            if (bestEnemy != null && bestEnemy.team == robotController.getTeam().opponent()) {
-
-                if (robotController.getRoundNum() == 0) {
-
-                    //final int distance = CommunicationModule.maximumFreeBroadcastRangeForRobotType(type);
-                    final int distance = 1000;
-                    communicationModule.broadcastSignal(robotController, distance);
-
-                }
-
-            }
-
             // now let's try move toward an assignment
 
-            boolean ableToMove = (bestEnemy == null || bestEnemy.type == RobotType.ZOMBIEDEN);
-
-            Direction targetRubbleClearanceDirection = null;
             if (robotController.isCoreReady() && communicationModule.initialInformationReceived && ableToMove) {
-
-                Direction desiredMovementDirection = null;
 
                 // now check if we have an objective
 
@@ -238,6 +244,7 @@ public class RobotSoldier implements Robot, CommunicationModuleDelegate {
                         if (turnsStuck > 5) {
 
                             communicationModule.clearSignal(objectiveSignal, communicationModule.enemyArchons);
+                            communicationModule.clearSignal(objectiveSignal, communicationModule.zombieDens);
                             turnsStuck = 0;
 
                         }

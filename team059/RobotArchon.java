@@ -1,9 +1,11 @@
 package team059;
 
+import team059.Combat.CombatModule;
 import team059.Map.*;
 import team059.Movement.*;
 import team059.Rubble.RubbleModule;
 import team059.Signals.*;
+import team059.ZombieSpawns.ZombieSpawnsModule;
 import battlecode.common.*;
 import java.util.*;
 
@@ -28,6 +30,12 @@ public class RobotArchon implements Robot {
         int soldiersBuilt = 0;
         RobotType buildingUnitType = null;
         CommunicationModuleSignalCollection buildingUpdateSignalCollection = null;
+
+        // general
+
+        final Team currentTeam = robotController.getTeam();
+
+        ZombieSpawnsModule.setSpawnScheduleIfNeeded(robotController);
 
         // loop
 
@@ -261,11 +269,50 @@ public class RobotArchon implements Robot {
 
             }
 
+            // otherwise, try to follow the soldier clump
+
+            if (robotController.isCoreReady()) {
+
+                Direction desiredMovementDirection = null;
+
+                RobotInfo[] closeAllies = robotController.senseNearbyRobots(3, currentTeam); // How close they stay to their team, lower means they'll stay closer
+                RobotInfo[] closeSoldiers = CombatModule.robotsOfTypesFromRobots(closeAllies, new RobotType[]{RobotType.SOLDIER});
+
+                if (closeSoldiers.length < 2) { // Move towards team if far away
+
+                    RobotInfo[] nearbyTeammates = robotController.senseNearbyRobots(-1, currentTeam);
+
+                    if (nearbyTeammates.length > 0) {
+
+                        desiredMovementDirection = directionModule.averageDirectionTowardRobots(robotController, nearbyTeammates);
+
+                    }
+
+                }
+
+                if (desiredMovementDirection != null) {
+
+                    final Direction movementDirection = directionModule.recommendedSafeMovementDirectionForDirection(desiredMovementDirection, robotController, enemies, 1, true);
+                    if (movementDirection != null) {
+
+                        robotController.move(movementDirection);
+                        currentLocation = robotController.getLocation();
+
+                    } else {
+
+                        targetRubbleClearanceDirection = desiredMovementDirection;
+
+                    }
+
+                }
+
+            }
+
             // try to repair any units nearby
 
             RobotInfo injuredUnit = null;
             double injuredUnitHealth = Integer.MAX_VALUE;
-            final RobotInfo[] friendlyRepairableUnits = robotController.senseNearbyRobots(robotController.getType().attackRadiusSquared, robotController.getTeam());
+            final RobotInfo[] friendlyRepairableUnits = robotController.senseNearbyRobots(robotController.getType().attackRadiusSquared, currentTeam);
             for (int i = 0; i < friendlyRepairableUnits.length; i++) {
 
                 final RobotInfo friendly = friendlyRepairableUnits[i];
