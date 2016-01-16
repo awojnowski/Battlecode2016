@@ -238,6 +238,7 @@ public class RobotSoldier implements Robot, CommunicationModuleDelegate {
                         if (turnsStuck > 5) {
 
                             communicationModule.clearSignal(objectiveSignal, communicationModule.enemyArchons);
+                            communicationModule.clearSignal(objectiveSignal, communicationModule.zombieDens);
                             turnsStuck = 0;
 
                         }
