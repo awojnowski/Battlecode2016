@@ -47,12 +47,6 @@ public class RobotScout implements Robot {
             Direction desiredMovementDirection = null;
             boolean moveSafely = false;
 
-            Direction desiredUnitBuildDirection = null;
-            RobotType desiredUnitBuildType = null;
-
-            Direction desiredRubbleClearanceDirection = null;
-            boolean canClearAnyRubbleDirection = false;
-
             // ROUND CONSTANTS
 
             final RobotInfo[] enemies = robotController.senseHostileRobots(currentLocation, currentType.sensorRadiusSquared);
@@ -70,6 +64,7 @@ public class RobotScout implements Robot {
             // process communication
 
             communicationModule.processIncomingSignals(robotController);
+            communicationModule.verifyCommunicationsInformation(robotController, enemies, true);
 
             // check map boundaries
 

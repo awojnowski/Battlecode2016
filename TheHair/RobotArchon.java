@@ -94,6 +94,7 @@ public class RobotArchon implements Robot {
             // process communication
 
             communicationModule.processIncomingSignals(robotController);
+            communicationModule.verifyCommunicationsInformation(robotController, enemies, true);
 
             // check if we are done building a unit
 
@@ -267,6 +268,10 @@ public class RobotArchon implements Robot {
 
                     robotController.move(movementDirection);
                     currentLocation = robotController.getLocation();
+
+                } else {
+
+                    desiredRubbleClearanceDirection = desiredMovementDirection;
 
                 }
 
