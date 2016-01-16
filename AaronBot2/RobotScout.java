@@ -25,11 +25,7 @@ public class RobotScout implements Robot {
 
         while (true) {
 
-            robotController.setIndicatorString(1, "Queue: " + communicationModule.communicationModuleSignalQueue.size());
-
             communicationModule.processIncomingSignals(robotController);
-
-            String rotateStatus = "";
 
             // let's try to make sure we're safe and run from enemies
 
@@ -47,9 +43,7 @@ public class RobotScout implements Robot {
                         currentLocation = robotController.getLocation();
                         if (movementDirection != null) {
 
-                            rotateStatus += movementDirection + " -> ";
                             movementDirection = RobotScout.rotateDirection(movementDirection, currentLocation, robotController, mapInfoModule);
-                            rotateStatus += movementDirection + "; ";
 
                         }
 
@@ -153,9 +147,7 @@ public class RobotScout implements Robot {
 
                 } else {
 
-                    rotateStatus += movementDirection + " -> ";
                     movementDirection = RobotScout.rotateDirection(movementDirection, currentLocation, robotController, mapInfoModule);
-                    rotateStatus += movementDirection + "; ";
 
                 }
 
@@ -166,8 +158,6 @@ public class RobotScout implements Robot {
                 robotController.setIndicatorLine(currentLocation, currentLocation.add(movementDirection, 10000), 255, 255, 255);
 
             }
-
-            robotController.setIndicatorString(0, rotateStatus);
 
             // show what we know
 
