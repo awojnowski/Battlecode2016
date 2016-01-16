@@ -22,15 +22,20 @@ public class RobotScout implements Robot {
         final CartographyModule cartographyModule = new CartographyModule();
         final CommunicationModule communicationModule = new CommunicationModule(mapInfoModule);
         final DirectionModule directionModule = new DirectionModule(robotController.getID());
+        final MovementModule movementModule = new MovementModule();
         final RubbleModule rubbleModule = new RubbleModule();
 
         // GLOBAL CONSTANTS
 
+        final MapLocation archonRendezvousLocation = movementModule.getArchonRendezvousLocation(robotController.getLocation(), robotController.getInitialArchonLocations(robotController.getTeam()));
         final RobotType currentType = robotController.getType();
 
         // GLOBAL FLAGS
 
         State currentState = State.UNKNOWN;
+
+        Direction infoGatherDirection = null;
+        boolean returnToRendezvous = false;
 
         while (true) {
 
@@ -38,6 +43,7 @@ public class RobotScout implements Robot {
 
             MapLocation currentLocation = robotController.getLocation();
             Direction desiredMovementDirection = null;
+            boolean moveSafely = false;
 
             Direction desiredUnitBuildDirection = null;
             RobotType desiredUnitBuildType = null;
@@ -65,59 +71,118 @@ public class RobotScout implements Robot {
 
             // check map boundaries
 
-            if (!mapInfoModule.hasAllBoundaries()) {
+            if (communicationModule.initialInformationReceived) {
 
-                final boolean hasEast  = mapInfoModule.eastBoundaryValue != MapInfoModule.UnknownValue;
-                final boolean hasNorth = mapInfoModule.northBoundaryValue != MapInfoModule.UnknownValue;
-                final boolean hasWest  = mapInfoModule.westBoundaryValue != MapInfoModule.UnknownValue;
-                final boolean hasSouth = mapInfoModule.southBoundaryValue != MapInfoModule.UnknownValue;
+                if (!mapInfoModule.hasAllBoundaries()) {
 
-                cartographyModule.probeAndUpdateMapInfoModule(mapInfoModule, currentLocation, robotController);
-                if (mapInfoModule.hasAllBoundaries()) {
+                    final boolean hasEast  = mapInfoModule.eastBoundaryValue != MapInfoModule.UnknownValue;
+                    final boolean hasNorth = mapInfoModule.northBoundaryValue != MapInfoModule.UnknownValue;
+                    final boolean hasWest  = mapInfoModule.westBoundaryValue != MapInfoModule.UnknownValue;
+                    final boolean hasSouth = mapInfoModule.southBoundaryValue != MapInfoModule.UnknownValue;
 
-                    final CommunicationModuleSignal signal = new CommunicationModuleSignal();
-                    signal.action = CommunicationModuleSignal.ACTION_SEEN;
-                    mapInfoModule.fillCommunicationModuleSignalWithMapSizeData(signal);
-                    communicationModule.enqueueSignalForBroadcast(signal);
-
-                } else {
-
-                    if (!hasEast && mapInfoModule.eastBoundaryValue != MapInfoModule.UnknownValue) {
+                    cartographyModule.probeAndUpdateMapInfoModule(mapInfoModule, currentLocation, robotController);
+                    if (mapInfoModule.hasAllBoundaries()) {
 
                         final CommunicationModuleSignal signal = new CommunicationModuleSignal();
                         signal.action = CommunicationModuleSignal.ACTION_SEEN;
-                        signal.type = CommunicationModuleSignal.TYPE_MAP_WALL_EAST;
-                        signal.data = mapInfoModule.eastBoundaryValue;
+                        mapInfoModule.fillCommunicationModuleSignalWithMapSizeData(signal);
                         communicationModule.enqueueSignalForBroadcast(signal);
 
+                    } else {
+
+                        if (!hasEast && mapInfoModule.eastBoundaryValue != MapInfoModule.UnknownValue) {
+
+                            final CommunicationModuleSignal signal = new CommunicationModuleSignal();
+                            signal.action = CommunicationModuleSignal.ACTION_SEEN;
+                            signal.type = CommunicationModuleSignal.TYPE_MAP_WALL_EAST;
+                            signal.data = mapInfoModule.eastBoundaryValue;
+                            communicationModule.enqueueSignalForBroadcast(signal);
+
+                        }
+                        if (!hasNorth && mapInfoModule.northBoundaryValue != MapInfoModule.UnknownValue) {
+
+                            final CommunicationModuleSignal signal = new CommunicationModuleSignal();
+                            signal.action = CommunicationModuleSignal.ACTION_SEEN;
+                            signal.type = CommunicationModuleSignal.TYPE_MAP_WALL_NORTH;
+                            signal.data = mapInfoModule.northBoundaryValue;
+                            communicationModule.enqueueSignalForBroadcast(signal);
+
+                        }
+                        if (!hasWest && mapInfoModule.westBoundaryValue != MapInfoModule.UnknownValue) {
+
+                            final CommunicationModuleSignal signal = new CommunicationModuleSignal();
+                            signal.action = CommunicationModuleSignal.ACTION_SEEN;
+                            signal.type = CommunicationModuleSignal.TYPE_MAP_WALL_WEST;
+                            signal.data = mapInfoModule.westBoundaryValue;
+                            communicationModule.enqueueSignalForBroadcast(signal);
+
+                        }
+                        if (!hasSouth && mapInfoModule.southBoundaryValue != MapInfoModule.UnknownValue) {
+
+                            final CommunicationModuleSignal signal = new CommunicationModuleSignal();
+                            signal.action = CommunicationModuleSignal.ACTION_SEEN;
+                            signal.type = CommunicationModuleSignal.TYPE_MAP_WALL_SOUTH;
+                            signal.data = mapInfoModule.southBoundaryValue;
+                            communicationModule.enqueueSignalForBroadcast(signal);
+
+                        }
+
                     }
-                    if (!hasNorth && mapInfoModule.northBoundaryValue != MapInfoModule.UnknownValue) {
+
+                }
+
+                // let's try identify what we can see
+
+                for (int i = 0; i < enemies.length; i++) {
+
+                    final RobotInfo enemy = enemies[i];
+
+                    if (enemy.type == RobotType.ZOMBIEDEN) {
+
+                        final CommunicationModuleSignal existingSignal = communicationModule.zombieDens.get(CommunicationModule.communicationsIndexFromLocation(enemy.location));
+                        if (existingSignal != null) {
+
+                            continue;
+
+                        }
 
                         final CommunicationModuleSignal signal = new CommunicationModuleSignal();
                         signal.action = CommunicationModuleSignal.ACTION_SEEN;
-                        signal.type = CommunicationModuleSignal.TYPE_MAP_WALL_NORTH;
-                        signal.data = mapInfoModule.northBoundaryValue;
+                        signal.location = enemy.location;
+                        signal.data = enemy.ID;
+                        signal.type = CommunicationModuleSignal.TYPE_ZOMBIEDEN;
                         communicationModule.enqueueSignalForBroadcast(signal);
 
-                    }
-                    if (!hasWest && mapInfoModule.westBoundaryValue != MapInfoModule.UnknownValue) {
+                    } else if (enemy.type == RobotType.ARCHON) {
+
+                        final ArrayList<CommunicationModuleSignal> existingSignals = communicationModule.getCommunicationModuleSignalsNearbyLocation(communicationModule.enemyArchons, currentLocation, CommunicationModule.DefaultApproximateNearbyLocationRange);
+                        if (existingSignals.size() > 0) {
+
+                            continue;
+
+                        }
 
                         final CommunicationModuleSignal signal = new CommunicationModuleSignal();
                         signal.action = CommunicationModuleSignal.ACTION_SEEN;
-                        signal.type = CommunicationModuleSignal.TYPE_MAP_WALL_WEST;
-                        signal.data = mapInfoModule.westBoundaryValue;
+                        signal.location = enemy.location;
+                        signal.data = enemy.ID;
+                        signal.type = CommunicationModuleSignal.TYPE_ENEMY_ARCHON;
                         communicationModule.enqueueSignalForBroadcast(signal);
 
                     }
-                    if (!hasSouth && mapInfoModule.southBoundaryValue != MapInfoModule.UnknownValue) {
 
-                        final CommunicationModuleSignal signal = new CommunicationModuleSignal();
-                        signal.action = CommunicationModuleSignal.ACTION_SEEN;
-                        signal.type = CommunicationModuleSignal.TYPE_MAP_WALL_SOUTH;
-                        signal.data = mapInfoModule.southBoundaryValue;
-                        communicationModule.enqueueSignalForBroadcast(signal);
+                }
 
-                    }
+            }
+
+            // see if we are in danger
+
+            if (enemies.length > 0) {
+
+                final Direction fleeDirection = directionModule.averageDirectionTowardDangerousRobotsAndOuterBounds(robotController, enemies);
+                if (fleeDirection != null) {
+
+                    desiredMovementDirection = fleeDirection.opposite();
 
                 }
 
@@ -127,7 +192,50 @@ public class RobotScout implements Robot {
 
             if (currentState == State.INFO_GATHER) {
 
-                desiredMovementDirection = directionModule.randomDirection();
+                if (desiredMovementDirection == null) {
+
+                    if (infoGatherDirection == null) {
+
+                        infoGatherDirection = directionModule.randomDirection();
+
+                    }
+                    if (returnToRendezvous) {
+
+                        if (currentLocation.distanceSquaredTo(archonRendezvousLocation) < 64) {
+
+                            returnToRendezvous = false;
+                            infoGatherDirection = infoGatherDirection.rotateLeft().rotateLeft();
+
+                        }
+
+                    } else {
+
+                        if (currentLocation.distanceSquaredTo(archonRendezvousLocation) > robotController.getRoundNum() * 2) {
+
+                            returnToRendezvous = true;
+
+                        }
+
+                    }
+                    final MapLocation targetLocation = currentLocation.add(infoGatherDirection);
+                    if (!robotController.onTheMap(targetLocation)) {
+
+                        infoGatherDirection = infoGatherDirection.rotateLeft().rotateLeft();
+
+                    }
+                    if (returnToRendezvous) {
+
+                        desiredMovementDirection = currentLocation.directionTo(archonRendezvousLocation);
+                        moveSafely = true;
+
+                    } else {
+
+                        desiredMovementDirection = infoGatherDirection;
+                        moveSafely = true;
+
+                    }
+
+                }
 
             } else if (currentState == State.TURRET_VISION) {
 
@@ -139,9 +247,18 @@ public class RobotScout implements Robot {
 
             // attempt to move to the desired movement location
 
-            if (robotController.isCoreReady() && desiredMovementDirection != null) {
+            if (robotController.isCoreReady() && communicationModule.initialInformationReceived && desiredMovementDirection != null) {
 
-                final Direction movementDirection = directionModule.recommendedMovementDirectionForDirection(desiredMovementDirection, robotController, false);
+                Direction movementDirection = null;
+                if (moveSafely) {
+
+                    movementDirection = directionModule.recommendedSafeMovementDirectionForDirection(desiredMovementDirection, robotController, enemies, 2, true);
+
+                } else {
+
+                    movementDirection = directionModule.recommendedMovementDirectionForDirection(desiredMovementDirection, robotController, false);
+
+                }
                 if (movementDirection != null) {
 
                     robotController.move(movementDirection);

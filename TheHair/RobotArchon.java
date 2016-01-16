@@ -1,6 +1,5 @@
 package TheHair;
 
-import AaronBot2.Signals.*;
 import TheHair.Cartography.*;
 import TheHair.Map.*;
 import TheHair.Movement.*;
@@ -30,11 +29,13 @@ public class RobotArchon implements Robot {
         final CartographyModule cartographyModule = new CartographyModule();
         final CommunicationModule communicationModule = new CommunicationModule(mapInfoModule);
         final DirectionModule directionModule = new DirectionModule(robotController.getID());
+        final MovementModule movementModule = new MovementModule();
         final RubbleModule rubbleModule = new RubbleModule();
 
         // GLOBAL CONSTANTS
 
         final RobotType currentType = robotController.getType();
+        final int totalArchons = robotController.getInitialArchonLocations(robotController.getTeam()).length;
 
         // GLOBAL FLAGS
 
@@ -42,6 +43,9 @@ public class RobotArchon implements Robot {
 
         RobotType currentBuildingUnitType = null;
         CommunicationModuleSignalCollection buildingUnitUpdateSignalCollection = null;
+        int guardsBuilt = 0;
+        int scoutsBuilt = 0;
+        int soldiersBuilt = 0;
 
         // ARCHON_RENDEZVOUS
 
@@ -73,7 +77,7 @@ public class RobotArchon implements Robot {
             if (currentState == State.UNKNOWN) {
 
                 final MapLocation[] archonLocations = robotController.getInitialArchonLocations(robotController.getTeam());
-                final MapLocation rendezvousLocation = this.getRendezvousLocation(currentLocation, archonLocations);
+                final MapLocation rendezvousLocation = movementModule.getArchonRendezvousLocation(currentLocation, archonLocations);
                 if (rendezvousLocation != null && !rendezvousLocation.equals(currentLocation)) {
 
                     archonRendezvousLocation = rendezvousLocation;
@@ -141,7 +145,7 @@ public class RobotArchon implements Robot {
 
             // check map boundaries
 
-            if (!mapInfoModule.hasAllBoundaries()) {
+            if (!mapInfoModule.hasAllBoundaries() && false) { // intentionally disabled
 
                 final boolean hasEast  = mapInfoModule.eastBoundaryValue != MapInfoModule.UnknownValue;
                 final boolean hasNorth = mapInfoModule.northBoundaryValue != MapInfoModule.UnknownValue;
@@ -207,7 +211,20 @@ public class RobotArchon implements Robot {
 
             } else if (currentState == State.INITIAL_UNIT_BUILD) {
 
-                RobotType unitBuildType = RobotType.SCOUT;
+                RobotType unitBuildType = null;
+                if (scoutsBuilt == 0) {
+
+                    unitBuildType = RobotType.SCOUT;
+
+                } else if (guardsBuilt * 2 < soldiersBuilt) {
+
+                    unitBuildType = RobotType.GUARD;
+
+                } else {
+
+                    unitBuildType = RobotType.SOLDIER;
+
+                }
                 if (robotController.hasBuildRequirements(unitBuildType)) {
 
                     Direction unitBuildDirection = directionModule.randomDirection();
@@ -258,6 +275,20 @@ public class RobotArchon implements Robot {
             // attempt to build units
 
             if (robotController.isCoreReady() && desiredUnitBuildType != null && desiredUnitBuildDirection != null) {
+
+                if (desiredUnitBuildType == RobotType.GUARD) {
+
+                    guardsBuilt ++;
+
+                } else if (desiredUnitBuildType == RobotType.SCOUT) {
+
+                    scoutsBuilt ++;
+
+                } else if (desiredUnitBuildType == RobotType.SOLDIER) {
+
+                    soldiersBuilt ++;
+
+                }
 
                 robotController.build(desiredUnitBuildDirection, desiredUnitBuildType);
                 currentBuildingUnitType = desiredUnitBuildType;
@@ -352,42 +383,6 @@ public class RobotArchon implements Robot {
             Clock.yield();
 
         }
-
-    }
-
-    /*
-    RENDEZVOUS
-     */
-
-    private MapLocation getRendezvousLocation(final MapLocation currentLocation, final MapLocation[] archonLocations) {
-
-        int nearestArchonDistance = Integer.MAX_VALUE;
-        MapLocation nearestArchonLocation = null;
-
-        for (int i = 0; i < archonLocations.length; i++) {
-
-            final MapLocation testLocation = archonLocations[i];
-            int distanceTotal = 0;
-            for (int j = 0; j < archonLocations.length; j++) {
-
-                if (i == j) {
-
-                    continue;
-
-                }
-                distanceTotal += testLocation.distanceSquaredTo(archonLocations[j]);
-
-            }
-            if (distanceTotal < nearestArchonDistance) {
-
-                nearestArchonDistance = distanceTotal;
-                nearestArchonLocation = testLocation;
-
-            }
-
-        }
-
-        return nearestArchonLocation;
 
     }
 
