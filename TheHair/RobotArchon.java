@@ -54,7 +54,7 @@ public class RobotArchon implements Robot {
             // ROUND FLAGS
 
             MapLocation currentLocation = robotController.getLocation();
-            MapLocation desiredMovementLocation = null;
+            Direction desiredMovementDirection = null;
 
             Direction desiredUnitBuildDirection = null;
             RobotType desiredUnitBuildType = null;
@@ -70,7 +70,7 @@ public class RobotArchon implements Robot {
 
             // we must figure out the initial archon state
 
-            if (robotController.getRoundNum() == 0) {
+            if (currentState == State.UNKNOWN) {
 
                 final MapLocation[] archonLocations = robotController.getInitialArchonLocations(robotController.getTeam());
                 final MapLocation rendezvousLocation = this.getRendezvousLocation(currentLocation, archonLocations);
@@ -200,7 +200,7 @@ public class RobotArchon implements Robot {
 
             if (currentState == State.ARCHON_RENDEZVOUS) {
 
-                desiredMovementLocation = archonRendezvousLocation;
+                desiredMovementDirection = currentLocation.directionTo(archonRendezvousLocation);
 
             } else if (currentState == State.INITIAL_UNIT_BUILD) {
 
@@ -240,9 +240,8 @@ public class RobotArchon implements Robot {
 
             // attempt to move to the desired movement location
 
-            if (robotController.isCoreReady() && desiredMovementLocation != null) {
+            if (robotController.isCoreReady() && desiredMovementDirection != null) {
 
-                final Direction desiredMovementDirection = currentLocation.directionTo(desiredMovementLocation);
                 final Direction movementDirection = directionModule.recommendedMovementDirectionForDirection(desiredMovementDirection, robotController, false);
                 if (movementDirection != null) {
 

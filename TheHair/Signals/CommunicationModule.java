@@ -422,7 +422,8 @@ public class CommunicationModule implements CommunicationModuleDelegate {
                 signal.data = this.mapInfoModule.eastBoundaryValue;
                 mapInfoSignals.add(signal);
 
-            } else if (this.mapInfoModule.northBoundaryValue != MapInfoModule.UnknownValue) {
+            }
+            if (this.mapInfoModule.northBoundaryValue != MapInfoModule.UnknownValue) {
 
                 final CommunicationModuleSignal signal = new CommunicationModuleSignal();
                 signal.action = CommunicationModuleSignal.ACTION_SEEN;
@@ -430,7 +431,8 @@ public class CommunicationModule implements CommunicationModuleDelegate {
                 signal.data = this.mapInfoModule.northBoundaryValue;
                 mapInfoSignals.add(signal);
 
-            } else if (this.mapInfoModule.westBoundaryValue != MapInfoModule.UnknownValue) {
+            }
+            if (this.mapInfoModule.westBoundaryValue != MapInfoModule.UnknownValue) {
 
                 final CommunicationModuleSignal signal = new CommunicationModuleSignal();
                 signal.action = CommunicationModuleSignal.ACTION_SEEN;
@@ -438,7 +440,8 @@ public class CommunicationModule implements CommunicationModuleDelegate {
                 signal.data = this.mapInfoModule.westBoundaryValue;
                 mapInfoSignals.add(signal);
 
-            } else if (this.mapInfoModule.southBoundaryValue != MapInfoModule.UnknownValue) {
+            }
+            if (this.mapInfoModule.southBoundaryValue != MapInfoModule.UnknownValue) {
 
                 final CommunicationModuleSignal signal = new CommunicationModuleSignal();
                 signal.action = CommunicationModuleSignal.ACTION_SEEN;
