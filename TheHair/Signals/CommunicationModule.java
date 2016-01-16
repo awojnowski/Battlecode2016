@@ -60,7 +60,6 @@ public class CommunicationModule implements CommunicationModuleDelegate {
     public void enqueueSignalForBroadcast(final CommunicationModuleSignal communicationModuleSignal) {
 
         this.communicationModuleSignalQueue.add(communicationModuleSignal);
-        this.processSignal(communicationModuleSignal);
 
     }
 
@@ -122,11 +121,8 @@ public class CommunicationModule implements CommunicationModuleDelegate {
                     communicationModuleSignal.action = CommunicationModuleSignal.ACTION_DELETE;
                     signals.add(communicationModuleSignal);
 
-                } else {
-
-                    this.clearSignal(communicationModuleSignal, this.enemyArchons);
-
                 }
+                this.clearSignal(communicationModuleSignal, this.enemyArchons);
 
             }
 
@@ -145,11 +141,8 @@ public class CommunicationModule implements CommunicationModuleDelegate {
                     communicationModuleSignal.action = CommunicationModuleSignal.ACTION_DELETE;
                     signals.add(communicationModuleSignal);
 
-                } else {
-
-                    this.clearSignal(communicationModuleSignal, this.zombieDens);
-
                 }
+                this.clearSignal(communicationModuleSignal, this.zombieDens);
 
             }
 
