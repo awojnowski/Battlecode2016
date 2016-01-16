@@ -29,7 +29,7 @@ public class RobotPlayer {
 
         } else if (type == RobotType.GUARD) {
 
-            return new RobotGuard();
+            return new RobotSoldier();
 
         } else if (type == RobotType.SCOUT) {
 

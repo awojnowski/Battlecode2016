@@ -41,8 +41,6 @@ public class CommunicationModule implements CommunicationModuleDelegate {
         robotController.broadcastMessageSignal(message[0], message[1], broadcastRange);
         this.processSignal(communicationModuleSignal);
 
-        System.out.println("Broadcasting signal: " + communicationModuleSignal.location + " with type " + communicationModuleSignal.type);
-
     }
 
     public void broadcastSignal(final RobotController robotController, final int broadcastRange) throws GameActionException {

@@ -30,6 +30,8 @@ public class RobotScout implements Robot {
         final MapLocation archonRendezvousLocation = movementModule.getArchonRendezvousLocation(robotController.getLocation(), robotController.getInitialArchonLocations(robotController.getTeam()));
         final RobotType currentType = robotController.getType();
 
+        int consecutiveInvalidMovementTurns = 0;
+
         // GLOBAL FLAGS
 
         State currentState = State.UNKNOWN;
@@ -230,6 +232,12 @@ public class RobotScout implements Robot {
 
                     } else {
 
+                        if (consecutiveInvalidMovementTurns > 3) {
+
+                            infoGatherDirection = infoGatherDirection.rotateLeft().rotateLeft();
+
+                        }
+
                         desiredMovementDirection = infoGatherDirection;
                         moveSafely = true;
 
@@ -263,6 +271,12 @@ public class RobotScout implements Robot {
 
                     robotController.move(movementDirection);
                     currentLocation = robotController.getLocation();
+
+                    consecutiveInvalidMovementTurns = 0;
+
+                } else {
+
+                    consecutiveInvalidMovementTurns ++;
 
                 }
 

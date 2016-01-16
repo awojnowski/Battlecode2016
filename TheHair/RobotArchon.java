@@ -357,6 +357,29 @@ public class RobotArchon implements Robot {
 
             // update indicators
 
+            final CommunicationModuleSignalCollection communicationModuleSignalCollection = communicationModule.allCommunicationModuleSignals();
+            final MapLocation location = robotController.getLocation();
+            while (communicationModuleSignalCollection.hasMoreElements()) {
+
+                final CommunicationModuleSignal communicationModuleSignal = communicationModuleSignalCollection.nextElement();
+                int[] color = new int[]{255, 255, 255};
+                if (communicationModuleSignal.type == CommunicationModuleSignal.TYPE_ZOMBIEDEN) {
+
+                    color = new int[]{50, 255, 50};
+
+                } else if (communicationModuleSignal.type == CommunicationModuleSignal.TYPE_ENEMY_ARCHON) {
+
+                    color = new int[]{255, 0, 0};
+
+                }
+                if (communicationModuleSignal.location != null) {
+
+                    robotController.setIndicatorLine(location, communicationModuleSignal.location, color[0], color[1], color[2]);
+
+                }
+
+            }
+
             if (mapInfoModule.eastBoundaryValue != MapInfoModule.UnknownValue) {
 
                 robotController.setIndicatorLine(currentLocation, currentLocation.add(Direction.EAST, 1000), 255, 125, 0);
