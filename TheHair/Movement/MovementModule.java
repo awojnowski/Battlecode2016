@@ -1,8 +1,33 @@
 package TheHair.Movement;
 
 import battlecode.common.*;
+import java.util.*;
 
 public class MovementModule {
+
+    private ArrayList<MapLocation> previousMovementLocations = new ArrayList<MapLocation>();
+
+    /*
+    MOVEMENT LOCATIONS
+     */
+
+    public void addMovementLocation(final MapLocation location) {
+
+        this.previousMovementLocations.add(location);
+
+    }
+
+    public boolean isMovementLocationRepetitive(final MapLocation location) {
+
+        final int size = this.previousMovementLocations.size();
+        if (size < 2) {
+
+            return false;
+
+        }
+        return this.previousMovementLocations.get(size - 2).equals(location);
+
+    }
 
     /*
     RENDEZVOUS

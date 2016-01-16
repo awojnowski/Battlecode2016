@@ -1,6 +1,7 @@
 package TheHair.Signals;
 
 import TheHair.Map.*;
+import TheHair.Turtle.TurtleInfo;
 import battlecode.common.*;
 import java.util.*;
 
@@ -24,7 +25,7 @@ public class CommunicationModule implements CommunicationModuleDelegate {
     public MapInfoModule mapInfoModule = null;
     public CommunicationModuleDelegate delegate = this;
     public boolean initialInformationReceived = false;
-    public MapLocation turtleLocation = null;
+    public TurtleInfo turtleInfo = new TurtleInfo();
 
     public CommunicationModule(final MapInfoModule mapInfoModule) {
 
@@ -328,9 +329,10 @@ public class CommunicationModule implements CommunicationModuleDelegate {
             return;
 
         }
-        if (communicationModuleSignal.type == CommunicationModuleSignal.TYPE_TURTLE_LOCATION) {
+        if (communicationModuleSignal.type == CommunicationModuleSignal.TYPE_TURTLE_INFO) {
 
-            this.turtleLocation = communicationModuleSignal.location;
+            this.turtleInfo.location = communicationModuleSignal.location;
+            this.turtleInfo.fillFromSerializedData(communicationModuleSignal.data);
             return;
 
         }
@@ -399,17 +401,24 @@ public class CommunicationModule implements CommunicationModuleDelegate {
 
     public CommunicationModuleSignalCollection allCommunicationModuleSignals() {
 
+        // archons
+
         final CommunicationModuleSignalCollection communicationModuleSignalCollection = new CommunicationModuleSignalCollection();
         if (this.delegate.shouldProcessSignalType(CommunicationModuleSignal.TYPE_ENEMY_ARCHON)) {
 
             communicationModuleSignalCollection.addEnumeration(this.enemyArchons.elements());
 
         }
+
+        // zombies
+
         if (this.delegate.shouldProcessSignalType(CommunicationModuleSignal.TYPE_ZOMBIEDEN)) {
 
             communicationModuleSignalCollection.addEnumeration(this.zombieDens.elements());
 
         }
+
+        // map info
 
         final ArrayList<CommunicationModuleSignal> mapInfoSignals = new ArrayList<CommunicationModuleSignal>();
         if (this.mapInfoModule.hasAllBoundaries()) {
@@ -460,6 +469,21 @@ public class CommunicationModule implements CommunicationModuleDelegate {
 
         }
         communicationModuleSignalCollection.addEnumeration(Collections.enumeration(mapInfoSignals));
+
+        // turtle info
+
+        final ArrayList<CommunicationModuleSignal> turtleSignals = new ArrayList<CommunicationModuleSignal>();
+        {
+            final CommunicationModuleSignal signal = new CommunicationModuleSignal();
+            signal.action = CommunicationModuleSignal.ACTION_SEEN;
+            signal.type = CommunicationModuleSignal.TYPE_TURTLE_INFO;
+            signal.data = this.turtleInfo.serialize();
+            signal.location = this.turtleInfo.location;
+            turtleSignals.add(signal);
+        }
+        communicationModuleSignalCollection.addEnumeration(Collections.enumeration(turtleSignals));
+
+        // all done!
 
         return communicationModuleSignalCollection;
 

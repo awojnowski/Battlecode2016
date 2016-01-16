@@ -8,6 +8,7 @@ import TheHair.Signals.*;
 import TheHair.Signals.CommunicationModule;
 import TheHair.Signals.CommunicationModuleSignal;
 import TheHair.Signals.CommunicationModuleSignalCollection;
+import TheHair.Turtle.TurtlePlacementModule;
 import TheHair.ZombieSpawns.ZombieSpawnsModule;
 import battlecode.common.*;
 import java.util.*;
@@ -21,7 +22,8 @@ public class RobotArchon implements Robot {
         UNKNOWN,
         ARCHON_RENDEZVOUS,
         INITIAL_UNIT_BUILD,
-        TURTLE
+        TURTLE_STAGING,
+        TURTLE_BUILDING
     }
 
     public void run(final RobotController robotController) throws GameActionException {
@@ -32,6 +34,7 @@ public class RobotArchon implements Robot {
         final DirectionModule directionModule = new DirectionModule(robotController.getID());
         final MovementModule movementModule = new MovementModule();
         final RubbleModule rubbleModule = new RubbleModule();
+        final TurtlePlacementModule turtlePlacementModule = new TurtlePlacementModule();
 
         // GLOBAL CONSTANTS
 
@@ -47,8 +50,7 @@ public class RobotArchon implements Robot {
         int guardsBuilt = 0;
         int scoutsBuilt = 0;
         int soldiersBuilt = 0;
-
-        MapLocation turtleLocation = null;
+        int turretsBuilt = 0;
 
         // ARCHON_RENDEZVOUS
 
@@ -94,7 +96,13 @@ public class RobotArchon implements Robot {
             // process communication
 
             communicationModule.processIncomingSignals(robotController);
-            communicationModule.verifyCommunicationsInformation(robotController, enemies, true);
+
+            final ArrayList<CommunicationModuleSignal> verifiedSignals = communicationModule.verifyCommunicationsInformation(robotController, enemies, true);
+            for (int i = 0; i < verifiedSignals.size(); i++) {
+
+                communicationModule.enqueueSignalForBroadcast(verifiedSignals.get(i));
+
+            }
 
             // check if we are done building a unit
 
@@ -251,14 +259,9 @@ public class RobotArchon implements Robot {
 
                 }
 
-            } else if (currentState == State.TURTLE) {
+            } else if (currentState == State.TURTLE_STAGING) {
 
-                if (turtleLocation == null) {
-
-                    turtleLocation = communicationModule.turtleLocation;
-
-                }
-                if (turtleLocation == null) {
+                if (!communicationModule.turtleInfo.hasLocation) {
 
                     // we need to find the best corner, otherwise we stay where we are
 
@@ -267,10 +270,10 @@ public class RobotArchon implements Robot {
                     final int westBoundary = mapInfoModule.westBoundaryValue;
                     final int southBoundary = mapInfoModule.southBoundaryValue;
 
-                    final MapLocation topLeftCorner     = (westBoundary != MapInfoModule.UnknownValue && northBoundary != MapInfoModule.UnknownValue) ? new MapLocation(westBoundary, northBoundary) : null;
-                    final MapLocation topRightCorner    = (eastBoundary != MapInfoModule.UnknownValue && northBoundary != MapInfoModule.UnknownValue) ? new MapLocation(eastBoundary, northBoundary) : null;
-                    final MapLocation bottomLeftCorner  = (westBoundary != MapInfoModule.UnknownValue && southBoundary != MapInfoModule.UnknownValue) ? new MapLocation(westBoundary, southBoundary) : null;
-                    final MapLocation bottomRightCorner = (eastBoundary != MapInfoModule.UnknownValue && southBoundary != MapInfoModule.UnknownValue) ? new MapLocation(eastBoundary, southBoundary) : null;
+                    final MapLocation topLeftCorner     = (westBoundary != MapInfoModule.UnknownValue && northBoundary != MapInfoModule.UnknownValue) ? new MapLocation(westBoundary + 1, northBoundary + 1) : null;
+                    final MapLocation topRightCorner    = (eastBoundary != MapInfoModule.UnknownValue && northBoundary != MapInfoModule.UnknownValue) ? new MapLocation(eastBoundary - 1, northBoundary + 1) : null;
+                    final MapLocation bottomLeftCorner  = (westBoundary != MapInfoModule.UnknownValue && southBoundary != MapInfoModule.UnknownValue) ? new MapLocation(westBoundary + 1, southBoundary - 1) : null;
+                    final MapLocation bottomRightCorner = (eastBoundary != MapInfoModule.UnknownValue && southBoundary != MapInfoModule.UnknownValue) ? new MapLocation(eastBoundary - 1, southBoundary - 1) : null;
 
                     MapLocation bestLocation = null;
                     int bestLocationDistance = Integer.MAX_VALUE;
@@ -323,18 +326,66 @@ public class RobotArchon implements Robot {
                         bestLocation = archonRendezvousLocation;
 
                     }
-                    turtleLocation = bestLocation;
+
+                    communicationModule.turtleInfo.hasLocation = true;
+                    communicationModule.turtleInfo.location = bestLocation;
 
                     final CommunicationModuleSignal signal = new CommunicationModuleSignal();
                     signal.action = CommunicationModuleSignal.ACTION_SEEN;
-                    signal.type = CommunicationModuleSignal.TYPE_TURTLE_LOCATION;
-                    signal.data = 0;
-                    signal.location = turtleLocation;
+                    signal.type = CommunicationModuleSignal.TYPE_TURTLE_INFO;
+                    signal.data = communicationModule.turtleInfo.serialize();
+                    signal.location = communicationModule.turtleInfo.location;
                     communicationModule.broadcastSignal(signal, robotController, CommunicationModule.maximumBroadcastRange(mapInfoModule));
 
                 }
 
-                desiredMovementDirection = currentLocation.directionTo(turtleLocation);
+                desiredMovementDirection = currentLocation.directionTo(communicationModule.turtleInfo.location);
+
+            } else if (currentState == State.TURTLE_BUILDING) {
+
+                // check if we need to expand the distance from the turtle location
+
+                final MapLocation bestTurretLocation = turtlePlacementModule.fetchBestTurretLocation(currentLocation, robotController, communicationModule.turtleInfo.location, communicationModule.turtleInfo, communicationModule.turtleInfo.distance);
+                if (bestTurretLocation == null) {
+
+                    communicationModule.turtleInfo.distance ++;
+
+                    final CommunicationModuleSignal signal = new CommunicationModuleSignal();
+                    signal.action = CommunicationModuleSignal.ACTION_SEEN;
+                    signal.type = CommunicationModuleSignal.TYPE_TURTLE_INFO;
+                    signal.data = communicationModule.turtleInfo.serialize();
+                    signal.location = communicationModule.turtleInfo.location;
+                    communicationModule.broadcastSignal(signal, robotController, CommunicationModule.maximumBroadcastRange(mapInfoModule));
+
+                }
+
+                // try to build a unit
+
+                final RobotType unitBuildType = RobotType.TURRET;
+                if (robotController.hasBuildRequirements(unitBuildType)) {
+
+                    Direction unitBuildDirection = directionModule.randomDirection();
+                    for (int i = 0; i < 8; i ++) {
+
+                        if (robotController.canBuild(unitBuildDirection, unitBuildType)) {
+
+                            desiredUnitBuildDirection = unitBuildDirection;
+                            desiredUnitBuildType = unitBuildType;
+                            break;
+
+                        }
+                        unitBuildDirection = unitBuildDirection.rotateRight();
+
+                    }
+
+                    if (desiredUnitBuildType == null) {
+
+                        desiredRubbleClearanceDirection = directionModule.randomDirection();
+                        canClearAnyRubbleDirection = true;
+
+                    }
+
+                }
 
             }
 
@@ -345,10 +396,11 @@ public class RobotArchon implements Robot {
             if (robotController.isCoreReady() && desiredMovementDirection != null) {
 
                 final Direction movementDirection = directionModule.recommendedMovementDirectionForDirection(desiredMovementDirection, robotController, false);
-                if (movementDirection != null) {
+                if (movementDirection != null && !movementModule.isMovementLocationRepetitive(currentLocation.add(movementDirection))) {
 
                     robotController.move(movementDirection);
                     currentLocation = robotController.getLocation();
+                    movementModule.addMovementLocation(currentLocation);
 
                 } else {
 
@@ -373,6 +425,10 @@ public class RobotArchon implements Robot {
                 } else if (desiredUnitBuildType == RobotType.SOLDIER) {
 
                     soldiersBuilt ++;
+
+                } else if (desiredUnitBuildType == RobotType.TURRET) {
+
+                    turretsBuilt ++;
 
                 }
 
@@ -418,11 +474,26 @@ public class RobotArchon implements Robot {
 
                 if (robotController.getRoundNum() >= RobotArchon.TurtleRoundNumber) {
 
-                    currentState = State.TURTLE;
+                    currentState = State.TURTLE_STAGING;
 
                 }
 
-            } else if (currentState == State.TURTLE) {
+            } else if (currentState == State.TURTLE_STAGING) {
+
+                final MapLocation turtleLocation = communicationModule.turtleInfo.location;
+                final Direction turtleLocationDirection = currentLocation.directionTo(turtleLocation);
+                if (robotController.canSenseLocation(turtleLocation)) {
+
+                    final RobotInfo turtleLocationRobot = robotController.senseRobotAtLocation(turtleLocation);
+                    if (turtleLocationRobot != null && currentLocation.add(turtleLocationDirection).equals(turtleLocation)) {
+
+                        currentState = State.TURTLE_BUILDING;
+
+                    }
+
+                }
+
+            } else if (currentState == State.TURTLE_BUILDING) {
 
                 ;
 
@@ -518,6 +589,18 @@ public class RobotArchon implements Robot {
             Clock.yield();
 
         }
+
+    }
+
+    /*
+    TURTLE STAGING
+     */
+
+    private ArrayList<MapLocation> fetchAvailabileTurtleMapLocations(final MapLocation turtleLocation, final int ring, final int[] xMultipliers, final int[] yMultipliers) {
+
+        final ArrayList<MapLocation> availableMapLocations = new ArrayList<MapLocation>();
+
+        return availableMapLocations;
 
     }
 

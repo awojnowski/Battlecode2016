@@ -32,12 +32,11 @@ public class RobotSoldier implements Robot {
         final RobotType currentType = robotController.getType();
 
         int consecutiveInvalidMovementTurns = 0;
+        int remainingTurnsUntilTurtle = 25;
 
         // GLOBAL FLAGS
 
         State currentState = State.UNKNOWN;
-
-        MapLocation turtleLocation = null;
 
         while (true) {
 
@@ -134,9 +133,9 @@ public class RobotSoldier implements Robot {
 
                 // try to go to the turtle location
 
-                if (currentLocation.distanceSquaredTo(turtleLocation) > 35) {
+                if (currentLocation.distanceSquaredTo(communicationModule.turtleInfo.location) > 35) {
 
-                    desiredMovementDirection = currentLocation.directionTo(turtleLocation);
+                    desiredMovementDirection = currentLocation.directionTo(communicationModule.turtleInfo.location);
 
                 }
 
@@ -157,10 +156,11 @@ public class RobotSoldier implements Robot {
             if (robotController.isCoreReady() && communicationModule.initialInformationReceived && desiredMovementDirection != null) {
 
                 Direction movementDirection = directionModule.recommendedMovementDirectionForDirection(desiredMovementDirection, robotController, false);
-                if (movementDirection != null) {
+                if (movementDirection != null && !movementModule.isMovementLocationRepetitive(currentLocation.add(movementDirection))) {
 
                     robotController.move(movementDirection);
                     currentLocation = robotController.getLocation();
+                    movementModule.addMovementLocation(currentLocation);
 
                     consecutiveInvalidMovementTurns = 0;
 
@@ -191,11 +191,14 @@ public class RobotSoldier implements Robot {
 
             if (currentState == State.SKIRMISH) {
 
-                turtleLocation = communicationModule.turtleLocation;
-                if (turtleLocation != null) {
+                if (communicationModule.turtleInfo.hasLocation) {
 
-                    turtleLocation = turtleLocation;
-                    currentState = State.TURTLE;
+                    remainingTurnsUntilTurtle --;
+                    if (remainingTurnsUntilTurtle == 0) {
+
+                        currentState = State.TURTLE;
+
+                    }
 
                 }
 

@@ -13,6 +13,7 @@ public class RobotScout implements Robot {
     enum State {
         UNKNOWN,
         INFO_GATHER,
+        TURTLE_STAGING,
         TURRET_VISION
     }
 
@@ -64,7 +65,13 @@ public class RobotScout implements Robot {
             // process communication
 
             communicationModule.processIncomingSignals(robotController);
-            communicationModule.verifyCommunicationsInformation(robotController, enemies, true);
+
+            final ArrayList<CommunicationModuleSignal> verifiedSignals = communicationModule.verifyCommunicationsInformation(robotController, enemies, true);
+            for (int i = 0; i < verifiedSignals.size(); i++) {
+
+                communicationModule.enqueueSignalForBroadcast(verifiedSignals.get(i));
+
+            }
 
             // check map boundaries
 
@@ -239,6 +246,10 @@ public class RobotScout implements Robot {
                     }
 
                 }
+
+            } else if (currentState == State.TURTLE_STAGING) {
+
+                ;
 
             } else if (currentState == State.TURRET_VISION) {
 

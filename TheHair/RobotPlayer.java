@@ -39,7 +39,7 @@ public class RobotPlayer {
 
             return new RobotSoldier();
 
-        } else if (type == RobotType.TURRET) {
+        } else if (type == RobotType.TURRET || type == RobotType.TTM) {
 
             return new RobotTurret();
 

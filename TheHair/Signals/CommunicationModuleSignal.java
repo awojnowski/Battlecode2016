@@ -19,7 +19,7 @@ public class CommunicationModuleSignal {
     public static final int TYPE_MAP_WALL_NORTH = 5;
     public static final int TYPE_MAP_WALL_WEST = 6;
     public static final int TYPE_MAP_WALL_SOUTH = 7;
-    public static final int TYPE_TURTLE_LOCATION = 8;
+    public static final int TYPE_TURTLE_INFO = 8;
 
     public int action = CommunicationModuleSignal.ACTION_NONE;
     public MapLocation location;
