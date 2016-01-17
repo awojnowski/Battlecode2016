@@ -129,7 +129,7 @@ public class RobotTurret implements Robot {
 
                     robotController.move(movementDirection);
                     currentLocation = robotController.getLocation();
-                    movementModule.addMovementLocation(currentLocation);
+                    movementModule.addMovementLocation(currentLocation, robotController);
 
                 }
 

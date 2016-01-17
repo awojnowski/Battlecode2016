@@ -8,6 +8,7 @@ import TheHair.Signals.*;
 import TheHair.Signals.CommunicationModule;
 import TheHair.Signals.CommunicationModuleSignal;
 import TheHair.Signals.CommunicationModuleSignalCollection;
+import TheHair.Turtle.TurtleInfo;
 import TheHair.Turtle.TurtlePlacementModule;
 import TheHair.ZombieSpawns.ZombieSpawnsModule;
 import battlecode.common.*;
@@ -22,6 +23,7 @@ public class RobotArchon implements Robot {
         UNKNOWN,
         ARCHON_RENDEZVOUS,
         INITIAL_UNIT_BUILD,
+        TURTLE_CLEARING,
         TURTLE_STAGING,
         TURTLE_BUILDING
     }
@@ -259,85 +261,11 @@ public class RobotArchon implements Robot {
 
                 }
 
+            } else if (currentState == State.TURTLE_CLEARING) {
+
+                desiredMovementDirection = currentLocation.directionTo(communicationModule.turtleInfo.location);
+
             } else if (currentState == State.TURTLE_STAGING) {
-
-                if (!communicationModule.turtleInfo.hasLocation) {
-
-                    // we need to find the best corner, otherwise we stay where we are
-
-                    final int eastBoundary = mapInfoModule.eastBoundaryValue;
-                    final int northBoundary = mapInfoModule.northBoundaryValue;
-                    final int westBoundary = mapInfoModule.westBoundaryValue;
-                    final int southBoundary = mapInfoModule.southBoundaryValue;
-
-                    final MapLocation topLeftCorner     = (westBoundary != MapInfoModule.UnknownValue && northBoundary != MapInfoModule.UnknownValue) ? new MapLocation(westBoundary + 1, northBoundary + 1) : null;
-                    final MapLocation topRightCorner    = (eastBoundary != MapInfoModule.UnknownValue && northBoundary != MapInfoModule.UnknownValue) ? new MapLocation(eastBoundary - 1, northBoundary + 1) : null;
-                    final MapLocation bottomLeftCorner  = (westBoundary != MapInfoModule.UnknownValue && southBoundary != MapInfoModule.UnknownValue) ? new MapLocation(westBoundary + 1, southBoundary - 1) : null;
-                    final MapLocation bottomRightCorner = (eastBoundary != MapInfoModule.UnknownValue && southBoundary != MapInfoModule.UnknownValue) ? new MapLocation(eastBoundary - 1, southBoundary - 1) : null;
-
-                    MapLocation bestLocation = null;
-                    int bestLocationDistance = Integer.MAX_VALUE;
-                    if (topLeftCorner != null) {
-
-                        final int distance = topLeftCorner.distanceSquaredTo(archonRendezvousLocation);
-                        if (distance < bestLocationDistance) {
-
-                            bestLocation = topLeftCorner;
-                            bestLocationDistance = distance;
-
-                        }
-
-                    }
-                    if (topRightCorner != null) {
-
-                        final int distance = topRightCorner.distanceSquaredTo(archonRendezvousLocation);
-                        if (distance < bestLocationDistance) {
-
-                            bestLocation = topRightCorner;
-                            bestLocationDistance = distance;
-
-                        }
-
-                    }
-                    if (bottomLeftCorner != null) {
-
-                        final int distance = bottomLeftCorner.distanceSquaredTo(archonRendezvousLocation);
-                        if (distance < bestLocationDistance) {
-
-                            bestLocation = bottomLeftCorner;
-                            bestLocationDistance = distance;
-
-                        }
-
-                    }
-                    if (bottomRightCorner != null) {
-
-                        final int distance = bottomRightCorner.distanceSquaredTo(archonRendezvousLocation);
-                        if (distance < bestLocationDistance) {
-
-                            bestLocation = bottomRightCorner;
-                            bestLocationDistance = distance;
-
-                        }
-
-                    }
-                    if (bestLocation == null) {
-
-                        bestLocation = archonRendezvousLocation;
-
-                    }
-
-                    communicationModule.turtleInfo.hasLocation = true;
-                    communicationModule.turtleInfo.location = bestLocation;
-
-                    final CommunicationModuleSignal signal = new CommunicationModuleSignal();
-                    signal.action = CommunicationModuleSignal.ACTION_SEEN;
-                    signal.type = CommunicationModuleSignal.TYPE_TURTLE_INFO;
-                    signal.data = communicationModule.turtleInfo.serialize();
-                    signal.location = communicationModule.turtleInfo.location;
-                    communicationModule.broadcastSignal(signal, robotController, CommunicationModule.maximumBroadcastRange(mapInfoModule));
-
-                }
 
                 desiredMovementDirection = currentLocation.directionTo(communicationModule.turtleInfo.location);
 
@@ -396,11 +324,11 @@ public class RobotArchon implements Robot {
             if (robotController.isCoreReady() && desiredMovementDirection != null) {
 
                 final Direction movementDirection = directionModule.recommendedMovementDirectionForDirection(desiredMovementDirection, robotController, false);
-                if (movementDirection != null && !movementModule.isMovementLocationRepetitive(currentLocation.add(movementDirection))) {
+                if (movementDirection != null && !movementModule.isMovementLocationRepetitive(currentLocation.add(movementDirection), robotController)) {
 
                     robotController.move(movementDirection);
                     currentLocation = robotController.getLocation();
-                    movementModule.addMovementLocation(currentLocation);
+                    movementModule.addMovementLocation(currentLocation, robotController);
 
                 } else {
 
@@ -474,7 +402,117 @@ public class RobotArchon implements Robot {
 
                 if (robotController.getRoundNum() >= RobotArchon.TurtleRoundNumber) {
 
+                    currentState = State.TURTLE_CLEARING;
+
+                    if (!communicationModule.turtleInfo.hasLocation) {
+
+                        // we need to find the best corner, otherwise we stay where we are
+
+                        final int eastBoundary = mapInfoModule.eastBoundaryValue;
+                        final int northBoundary = mapInfoModule.northBoundaryValue;
+                        final int westBoundary = mapInfoModule.westBoundaryValue;
+                        final int southBoundary = mapInfoModule.southBoundaryValue;
+
+                        final MapLocation topLeftCorner     = (westBoundary != MapInfoModule.UnknownValue && northBoundary != MapInfoModule.UnknownValue) ? new MapLocation(westBoundary + 1, northBoundary + 1) : null;
+                        final MapLocation topRightCorner    = (eastBoundary != MapInfoModule.UnknownValue && northBoundary != MapInfoModule.UnknownValue) ? new MapLocation(eastBoundary - 1, northBoundary + 1) : null;
+                        final MapLocation bottomLeftCorner  = (westBoundary != MapInfoModule.UnknownValue && southBoundary != MapInfoModule.UnknownValue) ? new MapLocation(westBoundary + 1, southBoundary - 1) : null;
+                        final MapLocation bottomRightCorner = (eastBoundary != MapInfoModule.UnknownValue && southBoundary != MapInfoModule.UnknownValue) ? new MapLocation(eastBoundary - 1, southBoundary - 1) : null;
+
+                        MapLocation bestLocation = null;
+                        int bestLocationDistance = Integer.MAX_VALUE;
+                        if (topLeftCorner != null) {
+
+                            final int distance = topLeftCorner.distanceSquaredTo(archonRendezvousLocation);
+                            if (distance < bestLocationDistance) {
+
+                                bestLocation = topLeftCorner;
+                                bestLocationDistance = distance;
+
+                            }
+
+                        }
+                        if (topRightCorner != null) {
+
+                            final int distance = topRightCorner.distanceSquaredTo(archonRendezvousLocation);
+                            if (distance < bestLocationDistance) {
+
+                                bestLocation = topRightCorner;
+                                bestLocationDistance = distance;
+
+                            }
+
+                        }
+                        if (bottomLeftCorner != null) {
+
+                            final int distance = bottomLeftCorner.distanceSquaredTo(archonRendezvousLocation);
+                            if (distance < bestLocationDistance) {
+
+                                bestLocation = bottomLeftCorner;
+                                bestLocationDistance = distance;
+
+                            }
+
+                        }
+                        if (bottomRightCorner != null) {
+
+                            final int distance = bottomRightCorner.distanceSquaredTo(archonRendezvousLocation);
+                            if (distance < bestLocationDistance) {
+
+                                bestLocation = bottomRightCorner;
+                                bestLocationDistance = distance;
+
+                            }
+
+                        }
+                        if (bestLocation == null) {
+
+                            bestLocation = archonRendezvousLocation;
+
+                        }
+
+                        communicationModule.turtleInfo.status = TurtleInfo.StatusSiteClearance;
+                        communicationModule.turtleInfo.hasLocation = true;
+                        communicationModule.turtleInfo.location = bestLocation;
+
+                        final CommunicationModuleSignal signal = new CommunicationModuleSignal();
+                        signal.action = CommunicationModuleSignal.ACTION_SEEN;
+                        signal.type = CommunicationModuleSignal.TYPE_TURTLE_INFO;
+                        signal.data = communicationModule.turtleInfo.serialize();
+                        signal.location = communicationModule.turtleInfo.location;
+                        communicationModule.broadcastSignal(signal, robotController, CommunicationModule.maximumBroadcastRange(mapInfoModule));
+
+                    }
+
+                }
+
+            } else if (currentState == State.TURTLE_CLEARING) {
+
+                if (communicationModule.turtleInfo.status == TurtleInfo.StatusSiteStaging) {
+
                     currentState = State.TURTLE_STAGING;
+
+                } else {
+
+                    final MapLocation turtleLocation = communicationModule.turtleInfo.location;
+                    if (robotController.canSenseLocation(turtleLocation)) {
+
+                        final RobotInfo robot = robotController.senseRobotAtLocation(turtleLocation);
+                        if (robot != null && robot.team == robotController.getTeam()) {
+
+                            currentState = State.TURTLE_STAGING;
+
+                            communicationModule.turtleInfo.status = TurtleInfo.StatusSiteStaging;
+
+                            final CommunicationModuleSignal signal = new CommunicationModuleSignal();
+                            signal.action = CommunicationModuleSignal.ACTION_SEEN;
+                            signal.type = CommunicationModuleSignal.TYPE_TURTLE_INFO;
+                            signal.data = communicationModule.turtleInfo.serialize();
+                            signal.location = communicationModule.turtleInfo.location;
+                            communicationModule.broadcastSignal(signal, robotController, CommunicationModule.maximumBroadcastRange(mapInfoModule));
+
+                        }
+
+                    }
 
                 }
 
@@ -583,6 +621,8 @@ public class RobotArchon implements Robot {
                 robotController.setIndicatorLine(currentLocation, currentLocation.add(Direction.SOUTH, 1000), 255, 125, 0);
 
             }
+
+            robotController.setIndicatorString(0, "State: " + currentState.name());
 
             // done!
 

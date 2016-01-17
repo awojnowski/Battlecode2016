@@ -6,18 +6,32 @@ import java.util.*;
 public class MovementModule {
 
     private ArrayList<MapLocation> previousMovementLocations = new ArrayList<MapLocation>();
+    private int lastMovementLocationTurnNumber = 0;
 
     /*
     MOVEMENT LOCATIONS
      */
 
-    public void addMovementLocation(final MapLocation location) {
+    public void addMovementLocation(final MapLocation location, final RobotController robotController) {
 
+        if (robotController.getRoundNum() - this.lastMovementLocationTurnNumber > 5) {
+
+            this.previousMovementLocations.clear();
+
+        }
+        this.lastMovementLocationTurnNumber = robotController.getRoundNum();
         this.previousMovementLocations.add(location);
 
     }
 
-    public boolean isMovementLocationRepetitive(final MapLocation location) {
+    public boolean isMovementLocationRepetitive(final MapLocation location, final RobotController robotController) {
+
+        if (robotController.getRoundNum() - this.lastMovementLocationTurnNumber > 5) {
+
+            this.previousMovementLocations.clear();
+            return false;
+
+        }
 
         final int size = this.previousMovementLocations.size();
         if (size < 2) {

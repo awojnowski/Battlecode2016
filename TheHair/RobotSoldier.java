@@ -5,6 +5,7 @@ import TheHair.Map.MapInfoModule;
 import TheHair.Movement.*;
 import TheHair.Signals.*;
 import TheHair.Rubble.*;
+import TheHair.Turtle.TurtleInfo;
 import battlecode.common.*;
 
 import java.util.*;
@@ -14,6 +15,8 @@ public class RobotSoldier implements Robot {
     enum State {
         UNKNOWN,
         SKIRMISH,
+        TURTLE_CLEARING,
+        TURTLE_STAGING,
         TURTLE
     }
 
@@ -32,7 +35,6 @@ public class RobotSoldier implements Robot {
         final RobotType currentType = robotController.getType();
 
         int consecutiveInvalidMovementTurns = 0;
-        int remainingTurnsUntilTurtle = 25;
 
         // GLOBAL FLAGS
 
@@ -124,6 +126,37 @@ public class RobotSoldier implements Robot {
                 final RobotInfo[] attackableEnemies = robotController.senseHostileRobots(currentLocation, currentType.attackRadiusSquared);
                 desiredAttackUnit = combatModule.bestEnemyToAttackFromEnemies(attackableEnemies);
 
+            } else if (currentState == State.TURTLE_CLEARING) {
+
+                // see if we can attack anything
+
+                final RobotInfo[] attackableEnemies = robotController.senseHostileRobots(currentLocation, currentType.attackRadiusSquared);
+                desiredAttackUnit = combatModule.bestEnemyToAttackFromEnemies(attackableEnemies);
+
+                // try to go to the turtle location
+
+                desiredMovementDirection = currentLocation.directionTo(communicationModule.turtleInfo.location);
+
+            } else if (currentState == State.TURTLE_STAGING) {
+
+                // see if we can attack anything
+
+                final RobotInfo[] attackableEnemies = robotController.senseHostileRobots(currentLocation, currentType.attackRadiusSquared);
+                desiredAttackUnit = combatModule.bestEnemyToAttackFromEnemies(attackableEnemies);
+
+                // give the turtle area some space
+
+                final Direction direction = currentLocation.directionTo(communicationModule.turtleInfo.location);
+                if (currentLocation.distanceSquaredTo(communicationModule.turtleInfo.location) < 64) {
+
+                    desiredMovementDirection = direction.opposite();
+
+                } else {
+
+                    desiredMovementDirection = directionModule.randomDirection();
+
+                }
+
             } else if (currentState == State.TURTLE) {
 
                 // see if we can attack anything
@@ -156,11 +189,11 @@ public class RobotSoldier implements Robot {
             if (robotController.isCoreReady() && communicationModule.initialInformationReceived && desiredMovementDirection != null) {
 
                 Direction movementDirection = directionModule.recommendedMovementDirectionForDirection(desiredMovementDirection, robotController, false);
-                if (movementDirection != null && !movementModule.isMovementLocationRepetitive(currentLocation.add(movementDirection))) {
+                if (movementDirection != null && !movementModule.isMovementLocationRepetitive(currentLocation.add(movementDirection), robotController)) {
 
                     robotController.move(movementDirection);
                     currentLocation = robotController.getLocation();
-                    movementModule.addMovementLocation(currentLocation);
+                    movementModule.addMovementLocation(currentLocation, robotController);
 
                     consecutiveInvalidMovementTurns = 0;
 
@@ -191,14 +224,37 @@ public class RobotSoldier implements Robot {
 
             if (currentState == State.SKIRMISH) {
 
-                if (communicationModule.turtleInfo.hasLocation) {
+                if (communicationModule.turtleInfo.status == TurtleInfo.StatusSiteClearance) {
 
-                    remainingTurnsUntilTurtle --;
-                    if (remainingTurnsUntilTurtle == 0) {
+                    currentState = State.TURTLE_CLEARING;
 
-                        currentState = State.TURTLE;
+                } else if (communicationModule.turtleInfo.status == TurtleInfo.StatusSiteStaging) {
 
-                    }
+                    currentState = State.TURTLE_STAGING;
+
+                } else if (communicationModule.turtleInfo.status == TurtleInfo.StatusSiteEstablished) {
+
+                    currentState = State.TURTLE;
+
+                }
+
+            } else if (currentState == State.TURTLE_CLEARING) {
+
+                if (communicationModule.turtleInfo.status == TurtleInfo.StatusSiteStaging) {
+
+                    currentState = State.TURTLE_STAGING;
+
+                } else if (communicationModule.turtleInfo.status == TurtleInfo.StatusSiteEstablished) {
+
+                    currentState = State.TURTLE;
+
+                }
+
+            } else if (currentState == State.TURTLE_STAGING) {
+
+                if (communicationModule.turtleInfo.status == TurtleInfo.StatusSiteEstablished) {
+
+                    currentState = State.TURTLE;
 
                 }
 
@@ -207,6 +263,8 @@ public class RobotSoldier implements Robot {
                 ;
 
             }
+
+            robotController.setIndicatorString(0, "State: " + currentState.name());
 
             Clock.yield();
 
