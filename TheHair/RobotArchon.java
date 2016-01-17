@@ -565,7 +565,11 @@ public class RobotArchon implements Robot {
             }
             if (injuredUnit != null) {
 
-                robotController.repair(injuredUnit.location);
+                if (robotController.senseRobotAtLocation(injuredUnit.location) != null) {
+
+                    robotController.repair(injuredUnit.location);
+
+                }
 
             }
 
