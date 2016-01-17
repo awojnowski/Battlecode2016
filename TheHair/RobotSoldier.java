@@ -188,7 +188,7 @@ public class RobotSoldier implements Robot {
 
             if (robotController.isCoreReady() && communicationModule.initialInformationReceived && desiredMovementDirection != null) {
 
-                Direction movementDirection = directionModule.recommendedMovementDirectionForDirection(desiredMovementDirection, robotController, false);
+                final Direction movementDirection = directionModule.recommendedMovementDirectionForDirection(desiredMovementDirection, robotController, false);
                 if (movementDirection != null && !movementModule.isMovementLocationRepetitive(currentLocation.add(movementDirection), robotController)) {
 
                     robotController.move(movementDirection);
@@ -200,6 +200,11 @@ public class RobotSoldier implements Robot {
                 } else {
 
                     desiredRubbleClearanceDirection = desiredMovementDirection;
+                    if (movementDirection != null) {
+
+                        movementModule.extendLocationInvalidationTurn(robotController);
+
+                    }
 
                     consecutiveInvalidMovementTurns ++;
 

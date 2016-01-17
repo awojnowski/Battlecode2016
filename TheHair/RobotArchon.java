@@ -332,6 +332,11 @@ public class RobotArchon implements Robot {
 
                 } else {
 
+                    if (movementDirection != null) {
+
+                        movementModule.extendLocationInvalidationTurn(robotController);
+
+                    }
                     desiredRubbleClearanceDirection = desiredMovementDirection;
 
                 }

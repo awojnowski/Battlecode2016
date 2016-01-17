@@ -14,7 +14,7 @@ public class MovementModule {
 
     public void addMovementLocation(final MapLocation location, final RobotController robotController) {
 
-        if (robotController.getRoundNum() - this.lastMovementLocationTurnNumber > 5) {
+        if (robotController.getRoundNum() - this.lastMovementLocationTurnNumber > 10) {
 
             this.previousMovementLocations.clear();
 
@@ -26,7 +26,7 @@ public class MovementModule {
 
     public boolean isMovementLocationRepetitive(final MapLocation location, final RobotController robotController) {
 
-        if (robotController.getRoundNum() - this.lastMovementLocationTurnNumber > 5) {
+        if (robotController.getRoundNum() - this.lastMovementLocationTurnNumber > 10) {
 
             this.previousMovementLocations.clear();
             return false;
@@ -40,6 +40,12 @@ public class MovementModule {
 
         }
         return this.previousMovementLocations.get(size - 2).equals(location);
+
+    }
+
+    public void extendLocationInvalidationTurn(final RobotController robotController) {
+
+        this.lastMovementLocationTurnNumber = robotController.getRoundNum();
 
     }
 
