@@ -265,7 +265,7 @@ public class RobotArchon implements Robot {
 
                 final MapLocation turtleLocation = communicationModule.turtleInfo.location;
 
-                desiredMovementDirection = currentLocation.directionTo(communicationModule.turtleInfo.location);
+                desiredMovementDirection = currentLocation.directionTo(turtleLocation);
 
             } else if (currentState == State.TURTLE_STAGING) {
 
@@ -504,7 +504,7 @@ public class RobotArchon implements Robot {
                     if (robotController.canSenseLocation(turtleLocation)) {
 
                         final RobotInfo robot = robotController.senseRobotAtLocation(turtleLocation);
-                        if (robot != null || robot.team == robotController.getTeam()) {
+                        if (robot == null || (robot != null && robot.team == robotController.getTeam())) {
 
                             currentState = State.TURTLE_STAGING;
 
