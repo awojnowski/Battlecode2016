@@ -97,7 +97,7 @@ public class RobotSoldier implements Robot, CommunicationModuleDelegate {
 
             // movement variables
 
-            boolean ableToMove = (bestEnemy == null || bestEnemy.type == RobotType.ZOMBIEDEN || bestEnemy.type == RobotType.TURRET);
+            boolean ableToMove = (bestEnemy == null || bestEnemy.type == RobotType.ZOMBIEDEN || bestEnemy.type == RobotType.TURRET || bestEnemy.type == RobotType.ARCHON || bestEnemy.type == RobotType.SCOUT);
             Direction targetRubbleClearanceDirection = null;
             Direction desiredMovementDirection = null;
 
@@ -176,6 +176,37 @@ public class RobotSoldier implements Robot, CommunicationModuleDelegate {
 
                                 minDistance = distance;
                                 closestLocation = currentSignal.getLocation();
+
+                            }
+
+                        }
+
+                        desiredMovementDirection = currentLocation.directionTo(closestLocation);
+
+                    }
+
+                }
+
+                // try move towards archon starting positions
+
+                if (desiredMovementDirection == null && ableToMove) {
+
+                    MapLocation[] locations = robotController.getInitialArchonLocations(robotController.getTeam().opponent());
+
+                    if (locations.length > 0) {
+
+                        int minDistance = Integer.MAX_VALUE;
+                        MapLocation closestLocation = null;
+
+                        for (int i = 0; i < locations.length; i++) {
+
+                            final MapLocation currentlocation = locations[i];
+                            final int distance = currentLocation.distanceSquaredTo(currentlocation);
+
+                            if (distance < minDistance) {
+
+                                minDistance = distance;
+                                closestLocation = currentlocation;
 
                             }
 
