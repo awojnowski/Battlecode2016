@@ -264,8 +264,12 @@ public class RobotArchon implements Robot {
             } else if (currentState == State.TURTLE_CLEARING) {
 
                 final MapLocation turtleLocation = communicationModule.turtleInfo.location;
+                final int distance = currentLocation.distanceSquaredTo(turtleLocation);
+                if (distance > 35) {
 
-                desiredMovementDirection = currentLocation.directionTo(turtleLocation);
+                    desiredMovementDirection = currentLocation.directionTo(turtleLocation);
+
+                }
 
             } else if (currentState == State.TURTLE_STAGING) {
 
@@ -526,13 +530,20 @@ public class RobotArchon implements Robot {
             } else if (currentState == State.TURTLE_STAGING) {
 
                 final MapLocation turtleLocation = communicationModule.turtleInfo.location;
-                final Direction turtleLocationDirection = currentLocation.directionTo(turtleLocation);
-                if (robotController.canSenseLocation(turtleLocation)) {
+                if (currentLocation.equals(turtleLocation) || currentLocation.distanceSquaredTo(turtleLocation) < 4) {
 
-                    final RobotInfo turtleLocationRobot = robotController.senseRobotAtLocation(turtleLocation);
-                    if (turtleLocationRobot != null && currentLocation.add(turtleLocationDirection).equals(turtleLocation)) {
+                    currentState = State.TURTLE_BUILDING;
 
-                        currentState = State.TURTLE_BUILDING;
+                    if (communicationModule.turtleInfo.status != TurtleInfo.StatusSiteEstablished) {
+
+                        communicationModule.turtleInfo.status = TurtleInfo.StatusSiteEstablished;
+
+                        final CommunicationModuleSignal signal = new CommunicationModuleSignal();
+                        signal.action = CommunicationModuleSignal.ACTION_SEEN;
+                        signal.type = CommunicationModuleSignal.TYPE_TURTLE_INFO;
+                        signal.data = communicationModule.turtleInfo.serialize();
+                        signal.location = communicationModule.turtleInfo.location;
+                        communicationModule.broadcastSignal(signal, robotController, CommunicationModule.maximumBroadcastRange(mapInfoModule));
 
                     }
 
