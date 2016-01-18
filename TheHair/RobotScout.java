@@ -213,7 +213,7 @@ public class RobotScout implements Robot {
 
                     } else {
 
-                        if (currentLocation.distanceSquaredTo(archonRendezvousLocation) > robotController.getRoundNum() * 2) {
+                        if (currentLocation.distanceSquaredTo(archonRendezvousLocation) > robotController.getRoundNum() * 5) {
 
                             returnToRendezvous = true;
 

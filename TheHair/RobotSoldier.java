@@ -56,6 +56,7 @@ public class RobotSoldier implements Robot {
             // ROUND CONSTANTS
 
             final RobotInfo[] enemies = robotController.senseHostileRobots(currentLocation, currentType.sensorRadiusSquared);
+            final RobotInfo[] enemyRobots = robotController.senseNearbyRobots(currentType.sensorRadiusSquared, robotController.getTeam().opponent());
 
             // begin...
 
@@ -86,7 +87,7 @@ public class RobotSoldier implements Robot {
 
                     final CommunicationModuleSignal signal = zombieDenCommunicationModuleSignals.nextElement();
                     final int distance = signal.location.distanceSquaredTo(currentLocation);
-                    if (distance < closestObjectiveLocationDistance) {
+                    if (distance < closestObjectiveLocationDistance && movementModule.isLocationOnOurSide(robotController, signal.location)) {
 
                         objectiveSignal = signal;
                         closestObjectiveLocationDistance = distance;
@@ -100,7 +101,7 @@ public class RobotSoldier implements Robot {
 
                     final CommunicationModuleSignal signal = enemyArchonCommunicationModuleSignals.nextElement();
                     final int distance = signal.location.distanceSquaredTo(currentLocation);
-                    if (distance < closestObjectiveLocationDistance) {
+                    if (distance < closestObjectiveLocationDistance && movementModule.isLocationOnOurSide(robotController, signal.location)) {
 
                         objectiveSignal = signal;
                         closestObjectiveLocationDistance = distance;
@@ -155,6 +156,15 @@ public class RobotSoldier implements Robot {
 
                     desiredMovementDirection = currentLocation.directionTo(desiredAttackUnit.location).opposite();
                     desiredAttackUnit = null;
+
+                }
+
+                // run away from enemies if there are lots
+
+                if (enemyRobots.length > 3) {
+
+                    desiredAttackUnit = null;
+                    desiredMovementDirection = directionModule.averageDirectionTowardRobots(robotController, enemyRobots).opposite();
 
                 }
 

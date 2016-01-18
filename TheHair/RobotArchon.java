@@ -8,6 +8,7 @@ import TheHair.Signals.*;
 import TheHair.Signals.CommunicationModule;
 import TheHair.Signals.CommunicationModuleSignal;
 import TheHair.Signals.CommunicationModuleSignalCollection;
+import TheHair.Combat.CombatModule;
 import TheHair.Turtle.TurtleInfo;
 import TheHair.Turtle.TurtlePlacementModule;
 import TheHair.ZombieSpawns.ZombieSpawnsModule;
@@ -33,6 +34,7 @@ public class RobotArchon implements Robot {
 
         final MapInfoModule mapInfoModule = new MapInfoModule();
         final CartographyModule cartographyModule = new CartographyModule();
+        final CombatModule combatModule = new CombatModule();
         final CommunicationModule communicationModule = new CommunicationModule(mapInfoModule);
         final DirectionModule directionModule = new DirectionModule(robotController.getID());
         final MovementModule movementModule = new MovementModule();
@@ -42,6 +44,7 @@ public class RobotArchon implements Robot {
         // GLOBAL CONSTANTS
 
         final RobotType currentType = robotController.getType();
+        final Team currentTeam = robotController.getTeam();
         final int totalArchons = robotController.getInitialArchonLocations(robotController.getTeam()).length;
 
         // GLOBAL FLAGS
@@ -220,9 +223,86 @@ public class RobotArchon implements Robot {
 
             if (currentState == State.ARCHON_RENDEZVOUS) {
 
-                desiredMovementDirection = currentLocation.directionTo(archonRendezvousLocation);
+                // run away from enemies
+
+                if (robotController.isCoreReady() && enemies.length > 0) {
+
+                    Direction towardsEnemiesAndWall = directionModule.averageDirectionTowardDangerousRobotsAndOuterBounds(robotController, enemies);
+                    if (towardsEnemiesAndWall != null) {
+
+                        desiredMovementDirection = towardsEnemiesAndWall.opposite();
+
+                    }
+
+                }
+
+                // try to stick around soldiers
+
+//                if (desiredMovementDirection == null) {
+//
+//                    RobotInfo[] closeAllies = robotController.senseNearbyRobots(3, currentTeam); // How close they stay to their team, lower means they'll stay closer
+//                    RobotInfo[] closeSoldiers = combatModule.robotsOfTypesFromRobots(closeAllies, new RobotType[]{RobotType.SOLDIER});
+//
+//                    if (closeSoldiers.length < 2) { // Move towards team if far away
+//
+//                        RobotInfo[] nearbyTeammates = robotController.senseNearbyRobots(-1, currentTeam);
+//                        RobotInfo[] nearbySoldiers = combatModule.robotsOfTypesFromRobots(nearbyTeammates, new RobotType[]{RobotType.SOLDIER});
+//
+//                        if (nearbySoldiers.length > 0) {
+//
+//                            desiredMovementDirection = directionModule.averageDirectionTowardRobots(robotController, nearbySoldiers);
+//
+//                        }
+//
+//                    }
+//
+//                }
+
+                // otherwise move to rendezvous
+
+                if (desiredMovementDirection == null) {
+
+                    desiredMovementDirection = currentLocation.directionTo(archonRendezvousLocation);
+
+                }
 
             } else if (currentState == State.INITIAL_UNIT_BUILD) {
+
+                // run away from enemies
+
+                if (robotController.isCoreReady() && enemies.length > 0) {
+
+                    Direction towardsEnemiesAndWall = directionModule.averageDirectionTowardDangerousRobotsAndOuterBounds(robotController, enemies);
+                    if (towardsEnemiesAndWall != null) {
+
+                        desiredMovementDirection = towardsEnemiesAndWall.opposite();
+
+                    }
+
+                }
+
+                // try to stick around soldiers
+
+//                if (desiredMovementDirection == null) {
+//
+//                    RobotInfo[] closeAllies = robotController.senseNearbyRobots(3, currentTeam); // How close they stay to their team, lower means they'll stay closer
+//                    RobotInfo[] closeSoldiers = combatModule.robotsOfTypesFromRobots(closeAllies, new RobotType[]{RobotType.SOLDIER});
+//
+//                    if (closeSoldiers.length < 2) { // Move towards team if far away
+//
+//                        RobotInfo[] nearbyTeammates = robotController.senseNearbyRobots(-1, currentTeam);
+//                        RobotInfo[] nearbySoldiers = combatModule.robotsOfTypesFromRobots(nearbyTeammates, new RobotType[]{RobotType.SOLDIER});
+//
+//                        if (nearbySoldiers.length > 0) {
+//
+//                            desiredMovementDirection = directionModule.averageDirectionTowardRobots(robotController, nearbySoldiers);
+//
+//                        }
+//
+//                    }
+//
+//                }
+
 
                 RobotType unitBuildType = null;
                 if (scoutsBuilt == 0) {

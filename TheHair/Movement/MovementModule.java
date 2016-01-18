@@ -83,4 +83,34 @@ public class MovementModule {
 
     }
 
+    /*
+    LOCATIONS / SIDES
+     */
+
+    public boolean isLocationOnOurSide(final RobotController robotController, final MapLocation denLocation) {
+
+        int totalDistanceToUs = 0;
+        int totalDistanceToThem = 0;
+
+        MapLocation[] friendlyArchonLocations = robotController.getInitialArchonLocations(robotController.getTeam());
+        MapLocation[] enemyArchonLocations = robotController.getInitialArchonLocations(robotController.getTeam().opponent());
+
+        for (int i = 0; i < friendlyArchonLocations.length; i++) {
+
+            totalDistanceToUs += friendlyArchonLocations[i].distanceSquaredTo(denLocation);
+
+        }
+
+        for (int i = 0; i < enemyArchonLocations.length; i++) {
+
+            totalDistanceToThem += enemyArchonLocations[i].distanceSquaredTo(denLocation);
+
+        }
+
+        robotController.setIndicatorString(1, totalDistanceToUs + " " + totalDistanceToThem);
+
+        return totalDistanceToUs * 2.5 < totalDistanceToThem;
+
+    }
+
 }
