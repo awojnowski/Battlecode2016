@@ -321,6 +321,10 @@ public class RobotArchon implements Robot {
 
                 }
 
+                // enable rubbling clearing too
+
+                clearRubbleIfPossible = true;
+
             }
 
             // process flags
@@ -563,7 +567,7 @@ public class RobotArchon implements Robot {
 
             } else if (currentState == State.TURTLE_BUILDING) {
 
-                clearRubbleIfPossible = true;
+                ;
 
             }
 

@@ -18,6 +18,12 @@ public class RubbleModule {
 
             for (int j = -1; j <= 1; j ++) {
 
+                if (i == 0 && j == 0) {
+
+                    continue;
+
+                }
+
                 final MapLocation checkLocation = new MapLocation(currentLocation.x + i, currentLocation.y + j);
                 if (!robotController.onTheMap(checkLocation)) {
 

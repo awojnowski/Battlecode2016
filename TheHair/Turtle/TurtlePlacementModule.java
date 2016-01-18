@@ -14,6 +14,12 @@ public class TurtlePlacementModule {
 
             for (int j = -scanDistance; j <= scanDistance; j++) {
 
+                if (i == 0 && j == 0) {
+
+                    continue;
+
+                }
+
                 final MapLocation location = new MapLocation(currentLocation.x + i, currentLocation.y + j);
                 if (!robotController.canSenseLocation(location)) {
 
