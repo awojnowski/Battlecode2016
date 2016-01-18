@@ -57,7 +57,7 @@ public class RobotArchon implements Robot {
 
         // ARCHON_RENDEZVOUS
 
-        final MapLocation archonRendezvousLocation = movementModule.getArchonRendezvousLocation(robotController.getLocation(), robotController.getInitialArchonLocations(robotController.getTeam()));
+        final MapLocation archonRendezvousLocation = movementModule.getArchonRendezvousLocation(robotController);
 
         // run
 

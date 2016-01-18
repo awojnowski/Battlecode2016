@@ -53,35 +53,33 @@ public class MovementModule {
     RENDEZVOUS
      */
 
-    public MapLocation getArchonRendezvousLocation(final MapLocation currentLocation, final MapLocation[] archonLocations) {
+    public MapLocation getArchonRendezvousLocation(final RobotController robotController) {
 
-        int nearestArchonDistance = Integer.MAX_VALUE;
-        MapLocation nearestArchonLocation = null;
+        int furthestArchonDistance = 0;
+        MapLocation furthestArchonLocation = null;
 
-        for (int i = 0; i < archonLocations.length; i++) {
+        MapLocation[] friendlyArchonLocation = robotController.getInitialArchonLocations(robotController.getTeam());
+        MapLocation[] enemyArchonLocation = robotController.getInitialArchonLocations(robotController.getTeam().opponent());
 
-            final MapLocation testLocation = archonLocations[i];
+        for (int i = 0; i < friendlyArchonLocation.length; i++) {
+
+            final MapLocation testLocation = friendlyArchonLocation[i];
             int distanceTotal = 0;
-            for (int j = 0; j < archonLocations.length; j++) {
+            for (int j = 0; j < enemyArchonLocation.length; j++) {
 
-                if (i == j) {
-
-                    continue;
-
-                }
-                distanceTotal += testLocation.distanceSquaredTo(archonLocations[j]);
+                distanceTotal += testLocation.distanceSquaredTo(enemyArchonLocation[j]);
 
             }
-            if (distanceTotal < nearestArchonDistance) {
+            if (distanceTotal > furthestArchonDistance) {
 
-                nearestArchonDistance = distanceTotal;
-                nearestArchonLocation = testLocation;
+                furthestArchonDistance = distanceTotal;
+                furthestArchonLocation = testLocation;
 
             }
 
         }
 
-        return nearestArchonLocation;
+        return furthestArchonLocation;
 
     }
 

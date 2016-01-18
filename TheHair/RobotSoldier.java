@@ -31,7 +31,7 @@ public class RobotSoldier implements Robot {
 
         // GLOBAL CONSTANTS
 
-        final MapLocation archonRendezvousLocation = movementModule.getArchonRendezvousLocation(robotController.getLocation(), robotController.getInitialArchonLocations(robotController.getTeam()));
+        final MapLocation archonRendezvousLocation = movementModule.getArchonRendezvousLocation(robotController);
         final RobotType currentType = robotController.getType();
 
         int consecutiveInvalidMovementTurns = 0;
