@@ -277,19 +277,25 @@ public class RobotArchon implements Robot {
 
             } else if (currentState == State.TURTLE_BUILDING) {
 
+                communicationModule.turtleInfo.distanceTurnLock --;
+
                 // check if we need to expand the distance from the turtle location
 
-                final MapLocation bestTurretLocation = turtlePlacementModule.fetchBestTurretLocation(currentLocation, robotController, communicationModule.turtleInfo.location, communicationModule.turtleInfo, communicationModule.turtleInfo.distance);
-                if (bestTurretLocation == null) {
+                if (communicationModule.turtleInfo.distanceTurnLock <= 0) {
 
-                    communicationModule.turtleInfo.distance ++;
+                    final MapLocation bestTurretLocation = turtlePlacementModule.fetchBestTurretLocation(currentLocation, robotController, communicationModule.turtleInfo.location, communicationModule.turtleInfo, Math.min(communicationModule.turtleInfo.distance, 4));
+                    if (bestTurretLocation == null) {
 
-                    final CommunicationModuleSignal signal = new CommunicationModuleSignal();
-                    signal.action = CommunicationModuleSignal.ACTION_SEEN;
-                    signal.type = CommunicationModuleSignal.TYPE_TURTLE_INFO;
-                    signal.data = communicationModule.turtleInfo.serialize();
-                    signal.location = communicationModule.turtleInfo.location;
-                    communicationModule.broadcastSignal(signal, robotController, RobotArchon.TurtleBroadcastRange);
+                        communicationModule.turtleInfo.distance ++;
+
+                        final CommunicationModuleSignal signal = new CommunicationModuleSignal();
+                        signal.action = CommunicationModuleSignal.ACTION_SEEN;
+                        signal.type = CommunicationModuleSignal.TYPE_TURTLE_INFO;
+                        signal.data = communicationModule.turtleInfo.serialize();
+                        signal.location = communicationModule.turtleInfo.location;
+                        communicationModule.broadcastSignal(signal, robotController, RobotArchon.TurtleBroadcastRange);
+
+                    }
 
                 }
 

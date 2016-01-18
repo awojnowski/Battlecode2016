@@ -140,7 +140,6 @@ public class RobotScout implements Robot {
                 for (int i = 0; i < enemies.length; i++) {
 
                     final RobotInfo enemy = enemies[i];
-
                     if (enemy.type == RobotType.ZOMBIEDEN) {
 
                         final CommunicationModuleSignal existingSignal = communicationModule.zombieDens.get(CommunicationModule.communicationsIndexFromLocation(enemy.location));

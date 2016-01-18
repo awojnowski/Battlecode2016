@@ -4,12 +4,15 @@ import battlecode.common.*;
 
 public class TurtleInfo {
 
+    public static int DistanceTurnChangeLockTurnsCount = 15;
+
     public static int StatusNone = 0;
     public static int StatusSiteClearance = 1;
     public static int StatusSiteStaging = 2;
     public static int StatusSiteEstablished = 3;
 
     public int distance = 1;
+    public int distanceTurnLock = TurtleInfo.DistanceTurnChangeLockTurnsCount;
     public MapLocation location = null;
     public boolean hasLocation = false;
     public int status = TurtleInfo.StatusNone;
@@ -33,7 +36,14 @@ public class TurtleInfo {
 
     public void fillFromSerializedData(final int serializedData) {
 
+        int distanceBefore = this.distance;
         this.distance = ((serializedData & 0x000000ff) >> 0); // [7-0]
+        if (this.distance != distanceBefore) {
+
+            this.distanceTurnLock = TurtleInfo.DistanceTurnChangeLockTurnsCount;
+
+        }
+
         this.hasLocation = ((serializedData & 0x00000100) >> 8) == 1; // [8-8]
         this.status = ((serializedData & 0x00000E00) >> 9); // [11-9]
 
