@@ -343,12 +343,35 @@ public class RobotArchon implements Robot {
 
                 final MapLocation turtleLocation = communicationModule.turtleInfo.location;
                 final int distance = currentLocation.distanceSquaredTo(turtleLocation);
-                if (distance > 35) {
+                if (distance > currentType.sensorRadiusSquared) {
 
                     desiredMovementDirection = currentLocation.directionTo(turtleLocation);
 
                 }
                 clearRubbleIfPossible = true;
+
+                if (robotController.canSenseLocation(turtleLocation)) {
+
+                    final RobotInfo robot = robotController.senseRobotAtLocation(turtleLocation);
+                    if (robot != null && robot.type == RobotType.ZOMBIEDEN && robotController.senseNearbyRobots(-1, currentTeam).length < 15) {
+
+                        desiredUnitBuildType = RobotType.SOLDIER;
+                        Direction unitBuildDirection = directionModule.randomDirection();
+                        for (int i = 0; i < 8; i ++) {
+
+                            if (robotController.canBuild(unitBuildDirection, desiredUnitBuildType)) {
+
+                                desiredUnitBuildDirection = unitBuildDirection;
+                                break;
+
+                            }
+                            unitBuildDirection = unitBuildDirection.rotateRight();
+
+                        }
+
+                    }
+
+                }
 
             } else if (currentState == State.TURTLE_STAGING) {
 

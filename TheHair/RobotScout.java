@@ -253,6 +253,12 @@ public class RobotScout implements Robot {
 
                 for (int i = 0; i < enemies.length; i++) {
 
+                    if (robotController.getMessageSignalCount() >= GameConstants.MESSAGE_SIGNALS_PER_TURN) {
+
+                        break;
+
+                    }
+
                     final RobotInfo enemy = enemies[i];
 
                     final ScoutCallout scoutCallout = new ScoutCallout();
