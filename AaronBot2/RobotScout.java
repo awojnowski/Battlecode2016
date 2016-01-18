@@ -25,9 +25,7 @@ public class RobotScout implements Robot {
         int cantSeeShitTurns = 0;
 
         while (true) {
-
-            robotController.setIndicatorString(1, "Maximum broadcast range: " + CommunicationModule.maximumBroadcastRange(mapInfoModule));
-
+            
             communicationModule.processIncomingSignals(robotController);
 
             // let's try to make sure we're safe and run from enemies
