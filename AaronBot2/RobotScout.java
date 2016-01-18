@@ -26,6 +26,8 @@ public class RobotScout implements Robot {
 
         while (true) {
 
+            robotController.setIndicatorString(1, "Maximum broadcast range: " + CommunicationModule.maximumBroadcastRange(mapInfoModule));
+
             communicationModule.processIncomingSignals(robotController);
 
             // let's try to make sure we're safe and run from enemies
@@ -121,6 +123,68 @@ public class RobotScout implements Robot {
 
             }
 
+            if (communicationModule.initialInformationReceived) {
+
+                if (!mapInfoModule.hasAllBoundaries()) {
+
+                    final boolean hasEast = mapInfoModule.eastBoundaryValue != MapInfoModule.UnknownValue;
+                    final boolean hasNorth = mapInfoModule.northBoundaryValue != MapInfoModule.UnknownValue;
+                    final boolean hasWest = mapInfoModule.westBoundaryValue != MapInfoModule.UnknownValue;
+                    final boolean hasSouth = mapInfoModule.southBoundaryValue != MapInfoModule.UnknownValue;
+
+                    cartographyModule.probeAndUpdateMapInfoModule(mapInfoModule, currentLocation, robotController);
+                    if (mapInfoModule.hasAllBoundaries()) {
+
+                        final CommunicationModuleSignal signal = new CommunicationModuleSignal();
+                        signal.action = CommunicationModuleSignal.ACTION_SEEN;
+                        mapInfoModule.fillCommunicationModuleSignalWithMapSizeData(signal);
+                        communicationModule.enqueueSignalForBroadcast(signal);
+
+                    } else {
+
+                        if (!hasEast && mapInfoModule.eastBoundaryValue != MapInfoModule.UnknownValue) {
+
+                            final CommunicationModuleSignal signal = new CommunicationModuleSignal();
+                            signal.action = CommunicationModuleSignal.ACTION_SEEN;
+                            signal.type = CommunicationModuleSignal.TYPE_MAP_WALL_EAST;
+                            signal.data = mapInfoModule.eastBoundaryValue;
+                            communicationModule.enqueueSignalForBroadcast(signal);
+
+                        }
+                        if (!hasNorth && mapInfoModule.northBoundaryValue != MapInfoModule.UnknownValue) {
+
+                            final CommunicationModuleSignal signal = new CommunicationModuleSignal();
+                            signal.action = CommunicationModuleSignal.ACTION_SEEN;
+                            signal.type = CommunicationModuleSignal.TYPE_MAP_WALL_NORTH;
+                            signal.data = mapInfoModule.northBoundaryValue;
+                            communicationModule.enqueueSignalForBroadcast(signal);
+
+                        }
+                        if (!hasWest && mapInfoModule.westBoundaryValue != MapInfoModule.UnknownValue) {
+
+                            final CommunicationModuleSignal signal = new CommunicationModuleSignal();
+                            signal.action = CommunicationModuleSignal.ACTION_SEEN;
+                            signal.type = CommunicationModuleSignal.TYPE_MAP_WALL_WEST;
+                            signal.data = mapInfoModule.westBoundaryValue;
+                            communicationModule.enqueueSignalForBroadcast(signal);
+
+                        }
+                        if (!hasSouth && mapInfoModule.southBoundaryValue != MapInfoModule.UnknownValue) {
+
+                            final CommunicationModuleSignal signal = new CommunicationModuleSignal();
+                            signal.action = CommunicationModuleSignal.ACTION_SEEN;
+                            signal.type = CommunicationModuleSignal.TYPE_MAP_WALL_SOUTH;
+                            signal.data = mapInfoModule.southBoundaryValue;
+                            communicationModule.enqueueSignalForBroadcast(signal);
+
+                        }
+
+                    }
+
+                }
+
+            }
+
             if (!mapInfoModule.hasAllBoundaries()) {
 
                 cartographyModule.probeAndUpdateMapInfoModule(mapInfoModule, currentLocation, robotController);
@@ -206,6 +270,29 @@ public class RobotScout implements Robot {
             } else {
 
                 cantSeeShitTurns = 0;
+
+            }
+
+            // update indicators
+
+            if (mapInfoModule.eastBoundaryValue != MapInfoModule.UnknownValue) {
+
+                robotController.setIndicatorLine(currentLocation, currentLocation.add(Direction.EAST, 1000), 255, 125, 0);
+
+            }
+            if (mapInfoModule.northBoundaryValue != MapInfoModule.UnknownValue) {
+
+                robotController.setIndicatorLine(currentLocation, currentLocation.add(Direction.NORTH, 1000), 255, 125, 0);
+
+            }
+            if (mapInfoModule.westBoundaryValue != MapInfoModule.UnknownValue) {
+
+                robotController.setIndicatorLine(currentLocation, currentLocation.add(Direction.WEST, 1000), 255, 125, 0);
+
+            }
+            if (mapInfoModule.southBoundaryValue != MapInfoModule.UnknownValue) {
+
+                robotController.setIndicatorLine(currentLocation, currentLocation.add(Direction.SOUTH, 1000), 255, 125, 0);
 
             }
 

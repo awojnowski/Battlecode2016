@@ -49,6 +49,22 @@ public class MapInfoModule {
             this.eastBoundaryValue = this.westBoundaryValue + mapWidth + 1;
             this.southBoundaryValue = this.northBoundaryValue + mapHeight + 1;
 
+        } else if (communicationModuleSignal.type == CommunicationModuleSignal.TYPE_MAP_WALL_EAST) {
+
+            this.eastBoundaryValue = communicationModuleSignal.data;
+
+        } else if (communicationModuleSignal.type == CommunicationModuleSignal.TYPE_MAP_WALL_NORTH) {
+
+            this.northBoundaryValue = communicationModuleSignal.data;
+
+        } else if (communicationModuleSignal.type == CommunicationModuleSignal.TYPE_MAP_WALL_WEST) {
+
+            this.westBoundaryValue = communicationModuleSignal.data;
+
+        } else if (communicationModuleSignal.type == CommunicationModuleSignal.TYPE_MAP_WALL_SOUTH) {
+
+            this.southBoundaryValue = communicationModuleSignal.data;
+
         }
 
     }
@@ -65,9 +81,21 @@ public class MapInfoModule {
 
     }
 
+    public boolean hasMapWidth() {
+
+        return this.westBoundaryValue != MapInfoModule.UnknownValue && this.eastBoundaryValue != MapInfoModule.UnknownValue;
+
+    }
+
     public int mapWidth() {
 
         return this.eastBoundaryValue - this.westBoundaryValue - 1;
+
+    }
+
+    public boolean hasMapHeight() {
+
+        return this.northBoundaryValue != MapInfoModule.UnknownValue && this.southBoundaryValue != MapInfoModule.UnknownValue;
 
     }
 

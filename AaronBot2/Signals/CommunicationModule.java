@@ -242,17 +242,9 @@ public class CommunicationModule implements CommunicationModuleDelegate {
 
     public static int maximumBroadcastRange(final MapInfoModule mapInfoModule) {
 
-        if (!mapInfoModule.hasAllBoundaries()) {
-
-            return 12800;
-
-        } else {
-
-            final int mapWidth = mapInfoModule.mapWidth();
-            final int mapHeight = mapInfoModule.mapHeight();
-            return mapWidth * mapWidth + mapHeight * mapHeight;
-
-        }
+        final int mapWidth = mapInfoModule.hasMapWidth() ? mapInfoModule.mapWidth() : 80;
+        final int mapHeight = mapInfoModule.hasMapHeight() ? mapInfoModule.mapHeight() : 80;
+        return mapWidth * mapWidth + mapHeight * mapHeight;
 
     }
 
@@ -310,7 +302,11 @@ public class CommunicationModule implements CommunicationModuleDelegate {
             return;
 
         }
-        if (communicationModuleSignal.type == CommunicationModuleSignal.TYPE_MAP_INFO) {
+        if (communicationModuleSignal.type == CommunicationModuleSignal.TYPE_MAP_INFO ||
+                communicationModuleSignal.type == CommunicationModuleSignal.TYPE_MAP_WALL_EAST ||
+                communicationModuleSignal.type == CommunicationModuleSignal.TYPE_MAP_WALL_NORTH ||
+                communicationModuleSignal.type == CommunicationModuleSignal.TYPE_MAP_WALL_WEST ||
+                communicationModuleSignal.type == CommunicationModuleSignal.TYPE_MAP_WALL_SOUTH) {
 
             this.mapInfoModule.fillDataFromCommunicationModuleSignal(communicationModuleSignal);
             return;
