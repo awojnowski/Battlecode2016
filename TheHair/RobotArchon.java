@@ -382,7 +382,24 @@ public class RobotArchon implements Robot {
 
                 // try to build a unit
 
-                final RobotType unitBuildType = RobotType.TURRET;
+                final RobotInfo[] nearbyUnits = robotController.senseNearbyRobots(-1, currentTeam);
+                int nearbyScouts = 0;
+                for (int i = 0; i < nearbyUnits.length; i++) {
+
+                    if (nearbyUnits[i].type == RobotType.SCOUT) {
+
+                        nearbyScouts ++;
+
+                    }
+
+                }
+
+                RobotType unitBuildType = RobotType.TURRET;
+                if (nearbyScouts < 2) {
+
+                    unitBuildType = RobotType.SCOUT;
+
+                }
                 if (robotController.hasBuildRequirements(unitBuildType)) {
 
                     Direction unitBuildDirection = directionModule.randomDirection();
@@ -506,7 +523,7 @@ public class RobotArchon implements Robot {
             if (currentState == State.ARCHON_RENDEZVOUS) {
 
                 final int distance = currentLocation.distanceSquaredTo(archonRendezvousLocation);
-                if (distance < 16 || robotController.getRoundNum() >= RobotArchon.TurtleRoundNumber) {
+                if (distance < 16 || communicationModule.turtleInfo.status != TurtleInfo.StatusNone) {
 
                     currentState = State.INITIAL_UNIT_BUILD;
 
@@ -514,7 +531,7 @@ public class RobotArchon implements Robot {
 
             } else if (currentState == State.INITIAL_UNIT_BUILD) {
 
-                if (robotController.getRoundNum() >= RobotArchon.TurtleRoundNumber) {
+                if (mapInfoModule.hasAnyCorner()) {
 
                     currentState = State.TURTLE_CLEARING;
 

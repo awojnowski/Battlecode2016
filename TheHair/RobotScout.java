@@ -43,6 +43,8 @@ public class RobotScout implements Robot {
 
         while (true) {
 
+            robotController.setIndicatorString(1, "");
+
             // ROUND FLAGS
 
             MapLocation currentLocation = robotController.getLocation();
@@ -269,19 +271,74 @@ public class RobotScout implements Robot {
 
                 }
 
-                if (desiredMovementDirection == null) {
+                final MapLocation turtleLocation = communicationModule.turtleInfo.location;
+                final int turtleDistance = communicationModule.turtleInfo.distance;
+                final int turtleBufferDistance = (int)Math.pow(Math.floor(Math.sqrt(turtleDistance)) + 2, 2);
+                final int distance = currentLocation.distanceSquaredTo(turtleLocation);
 
-                    final MapLocation turtleLocation = communicationModule.turtleInfo.location;
-                    final int turtleDistance = communicationModule.turtleInfo.distance;
-                    final int turtleBufferDistance = (int)Math.pow(Math.floor(Math.sqrt(turtleDistance)) + 2, 2);
-                    final int distance = currentLocation.distanceSquaredTo(turtleLocation);
-                    if (distance < turtleDistance) {
+                if (distance > turtleBufferDistance) {
 
-                        desiredMovementDirection = currentLocation.directionTo(turtleLocation).opposite();
+                    desiredMovementDirection = currentLocation.directionTo(turtleLocation);
+                    moveSafely = true;
 
-                    } else if (distance > turtleBufferDistance) {
+                } else {
 
-                        desiredMovementDirection = currentLocation.directionTo(turtleLocation);
+                    MapLocation bestMovementLocation = null;
+                    int furthestDistance = 0;
+
+                    for (int i = -1; i <= 1; i++) {
+
+                        for (int j = -1; j <= 1; j++) {
+
+                            final MapLocation checkLocation = new MapLocation(currentLocation.x + i, currentLocation.y + j);
+
+                            final int checkDistance = checkLocation.distanceSquaredTo(turtleLocation);
+                            if ((checkDistance < furthestDistance || (checkDistance == furthestDistance && i == 0 && j == 0)) || checkDistance >= turtleBufferDistance) {
+
+                                continue;
+
+                            }
+
+                            final Direction direction = currentLocation.directionTo(checkLocation);
+                            if (!robotController.canMove(direction)) {
+
+                                continue;
+
+                            }
+
+                            final RobotInfo[] nearbyRobots = robotController.senseNearbyRobots(checkLocation, 1, robotController.getTeam());
+                            int totalTurrets = 0;
+                            for (int k = 0; k < nearbyRobots.length; k++) {
+
+                                if (nearbyRobots[k].type != RobotType.TURRET) {
+
+                                    continue;
+
+                                }
+                                totalTurrets ++;
+
+                            }
+                            if (totalTurrets == 0) {
+
+                                continue;
+
+                            }
+
+                            furthestDistance = checkDistance;
+                            bestMovementLocation = checkLocation;
+
+                        }
+
+                    }
+
+                    if (bestMovementLocation != null) {
+
+                        final Direction direction = currentLocation.directionTo(bestMovementLocation);
+                        if (!direction.equals(Direction.OMNI)) {
+
+                            desiredMovementDirection = currentLocation.directionTo(bestMovementLocation);
+
+                        }
 
                     }
 

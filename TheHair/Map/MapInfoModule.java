@@ -35,6 +35,15 @@ public class MapInfoModule {
 
     }
 
+    public boolean hasAnyCorner() {
+
+        return (this.northBoundaryValue != MapInfoModule.UnknownValue && this.eastBoundaryValue != MapInfoModule.UnknownValue) ||
+                (this.northBoundaryValue != MapInfoModule.UnknownValue && this.westBoundaryValue != MapInfoModule.UnknownValue) ||
+                (this.southBoundaryValue != MapInfoModule.UnknownValue && this.eastBoundaryValue != MapInfoModule.UnknownValue) ||
+                (this.southBoundaryValue != MapInfoModule.UnknownValue && this.westBoundaryValue != MapInfoModule.UnknownValue);
+
+    }
+
     public void fillDataFromCommunicationModuleSignal(final CommunicationModuleSignal communicationModuleSignal) {
 
         if (communicationModuleSignal.type == CommunicationModuleSignal.TYPE_MAP_INFO) {
