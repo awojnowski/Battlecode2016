@@ -17,6 +17,7 @@ import java.util.*;
 public class RobotArchon implements Robot {
 
     private static int InitialMessageUpdateLength = 2;
+    private static int TurtleBroadcastRange = 1000;
     private static int TurtleRoundNumber = 300;
 
     enum State {
@@ -70,8 +71,9 @@ public class RobotArchon implements Robot {
             Direction desiredUnitBuildDirection = null;
             RobotType desiredUnitBuildType = null;
 
+            boolean clearRubbleIfPossible = false;
+            boolean clearRubbleInAnyDirection = false;
             Direction desiredRubbleClearanceDirection = null;
-            boolean canClearAnyRubbleDirection = false;
 
             // ROUND CONSTANTS
 
@@ -251,7 +253,7 @@ public class RobotArchon implements Robot {
                     if (desiredUnitBuildType == null) {
 
                         desiredRubbleClearanceDirection = directionModule.randomDirection();
-                        canClearAnyRubbleDirection = true;
+                        clearRubbleInAnyDirection = true;
 
                     }
 
@@ -266,10 +268,12 @@ public class RobotArchon implements Robot {
                     desiredMovementDirection = currentLocation.directionTo(turtleLocation);
 
                 }
+                clearRubbleIfPossible = true;
 
             } else if (currentState == State.TURTLE_STAGING) {
 
                 desiredMovementDirection = currentLocation.directionTo(communicationModule.turtleInfo.location);
+                clearRubbleIfPossible = true;
 
             } else if (currentState == State.TURTLE_BUILDING) {
 
@@ -285,7 +289,7 @@ public class RobotArchon implements Robot {
                     signal.type = CommunicationModuleSignal.TYPE_TURTLE_INFO;
                     signal.data = communicationModule.turtleInfo.serialize();
                     signal.location = communicationModule.turtleInfo.location;
-                    communicationModule.broadcastSignal(signal, robotController, CommunicationModule.maximumBroadcastRange(mapInfoModule));
+                    communicationModule.broadcastSignal(signal, robotController, RobotArchon.TurtleBroadcastRange);
 
                 }
 
@@ -311,7 +315,7 @@ public class RobotArchon implements Robot {
                     if (desiredUnitBuildType == null) {
 
                         desiredRubbleClearanceDirection = directionModule.randomDirection();
-                        canClearAnyRubbleDirection = true;
+                        clearRubbleInAnyDirection = true;
 
                     }
 
@@ -374,16 +378,28 @@ public class RobotArchon implements Robot {
 
             // check if we should clear rubble
 
-            if (robotController.isCoreReady() && desiredRubbleClearanceDirection != null) {
+            if (robotController.isCoreReady()) {
 
                 Direction rubbleClearanceDirection = null;
-                if (canClearAnyRubbleDirection) {
+                if (desiredRubbleClearanceDirection == null) {
 
-                    rubbleClearanceDirection = rubbleModule.getAnyRubbleClearanceDirectionFromDirection(desiredRubbleClearanceDirection, robotController);
+                    if (clearRubbleIfPossible) {
+
+                        rubbleClearanceDirection = rubbleModule.getOptimalRubbleClearanceDirection(robotController);
+
+                    }
 
                 } else {
 
-                    rubbleClearanceDirection = rubbleModule.getRubbleClearanceDirectionFromTargetDirection(desiredRubbleClearanceDirection, robotController);
+                    if (clearRubbleInAnyDirection) {
+
+                        rubbleClearanceDirection = rubbleModule.getAnyRubbleClearanceDirectionFromDirection(desiredRubbleClearanceDirection, robotController);
+
+                    } else {
+
+                        rubbleClearanceDirection = rubbleModule.getRubbleClearanceDirectionFromTargetDirection(desiredRubbleClearanceDirection, robotController);
+
+                    }
 
                 }
                 if (rubbleClearanceDirection != null) {
@@ -399,7 +415,7 @@ public class RobotArchon implements Robot {
             if (currentState == State.ARCHON_RENDEZVOUS) {
 
                 final int distance = currentLocation.distanceSquaredTo(archonRendezvousLocation);
-                if (distance < 16) {
+                if (distance < 16 || robotController.getRoundNum() >= RobotArchon.TurtleRoundNumber) {
 
                     currentState = State.INITIAL_UNIT_BUILD;
 
@@ -515,7 +531,7 @@ public class RobotArchon implements Robot {
                             signal.type = CommunicationModuleSignal.TYPE_TURTLE_INFO;
                             signal.data = communicationModule.turtleInfo.serialize();
                             signal.location = communicationModule.turtleInfo.location;
-                            communicationModule.broadcastSignal(signal, robotController, CommunicationModule.maximumBroadcastRange(mapInfoModule));
+                            communicationModule.broadcastSignal(signal, robotController, RobotArchon.TurtleBroadcastRange);
 
                         }
 
@@ -539,7 +555,7 @@ public class RobotArchon implements Robot {
                         signal.type = CommunicationModuleSignal.TYPE_TURTLE_INFO;
                         signal.data = communicationModule.turtleInfo.serialize();
                         signal.location = communicationModule.turtleInfo.location;
-                        communicationModule.broadcastSignal(signal, robotController, CommunicationModule.maximumBroadcastRange(mapInfoModule));
+                        communicationModule.broadcastSignal(signal, robotController, RobotArchon.TurtleBroadcastRange);
 
                     }
 
@@ -547,7 +563,7 @@ public class RobotArchon implements Robot {
 
             } else if (currentState == State.TURTLE_BUILDING) {
 
-                ;
+                clearRubbleIfPossible = true;
 
             }
 

@@ -49,6 +49,8 @@ public class RobotSoldier implements Robot {
             MapLocation currentLocation = robotController.getLocation();
             Direction desiredMovementDirection = null;
 
+            boolean clearRubbleIfPossible = false;
+            boolean clearRubbleInAnyDirection = false;
             Direction desiredRubbleClearanceDirection = null;
 
             // ROUND CONSTANTS
@@ -175,6 +177,10 @@ public class RobotSoldier implements Robot {
 
                 desiredMovementDirection = currentLocation.directionTo(communicationModule.turtleInfo.location);
 
+                // try to clear rubble
+
+                clearRubbleIfPossible = true;
+
             } else if (currentState == State.TURTLE_STAGING) {
 
                 // see if we can attack anything
@@ -194,6 +200,10 @@ public class RobotSoldier implements Robot {
                     desiredMovementDirection = directionModule.randomDirection();
 
                 }
+
+                // try to clear rubble
+
+                clearRubbleIfPossible = true;
 
             } else if (currentState == State.TURTLE) {
 
@@ -252,9 +262,30 @@ public class RobotSoldier implements Robot {
 
             // check if we should clear rubble
 
-            if (robotController.isCoreReady() && desiredRubbleClearanceDirection != null) {
+            if (robotController.isCoreReady()) {
 
-                Direction rubbleClearanceDirection = rubbleModule.getRubbleClearanceDirectionFromTargetDirection(desiredRubbleClearanceDirection, robotController);
+                Direction rubbleClearanceDirection = null;
+                if (desiredRubbleClearanceDirection == null) {
+
+                    if (clearRubbleIfPossible) {
+
+                        rubbleClearanceDirection = rubbleModule.getOptimalRubbleClearanceDirection(robotController);
+
+                    }
+
+                } else {
+
+                    if (clearRubbleInAnyDirection) {
+
+                        rubbleClearanceDirection = rubbleModule.getAnyRubbleClearanceDirectionFromDirection(desiredRubbleClearanceDirection, robotController);
+
+                    } else {
+
+                        rubbleClearanceDirection = rubbleModule.getRubbleClearanceDirectionFromTargetDirection(desiredRubbleClearanceDirection, robotController);
+
+                    }
+
+                }
                 if (rubbleClearanceDirection != null) {
 
                     robotController.clearRubble(rubbleClearanceDirection);

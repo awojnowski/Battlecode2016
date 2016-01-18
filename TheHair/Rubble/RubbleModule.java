@@ -4,6 +4,58 @@ import battlecode.common.*;
 
 public class RubbleModule {
 
+    public Direction getOptimalRubbleClearanceDirection(final RobotController robotController) throws GameActionException {
+
+        final MapLocation currentLocation = robotController.getLocation();
+
+        MapLocation bestRubbleLocation = null;
+        double bestRubbleDifference = Double.MAX_VALUE;
+
+        MapLocation lowestRubbleLocation = null;
+        double lowestRubbleTotal = Double.MAX_VALUE;
+
+        for (int i = -1; i <= 1; i ++) {
+
+            for (int j = -1; j <= 1; j ++) {
+
+                final MapLocation checkLocation = new MapLocation(currentLocation.x + i, currentLocation.y + j);
+                if (!robotController.onTheMap(checkLocation)) {
+
+                    continue;
+
+                }
+                final double checkLocationRubble = robotController.senseRubble(checkLocation);
+                if (checkLocationRubble < lowestRubbleTotal) {
+
+                    lowestRubbleLocation = checkLocation;
+                    lowestRubbleTotal = checkLocationRubble;
+
+                }
+                final double checkLocationRubbleDifference = checkLocationRubble - 50;
+                if (checkLocationRubbleDifference < bestRubbleDifference && checkLocationRubbleDifference >= 0) {
+
+                    bestRubbleLocation = checkLocation;
+                    bestRubbleDifference = checkLocationRubbleDifference;
+
+                }
+
+            }
+
+        }
+        if (bestRubbleLocation == null) {
+
+            bestRubbleLocation = lowestRubbleLocation;
+
+        }
+        if (bestRubbleLocation == null) {
+
+            return null;
+
+        }
+        return currentLocation.directionTo(bestRubbleLocation);
+
+    }
+
     public Direction getAnyRubbleClearanceDirectionFromDirection(final Direction direction, final RobotController robotController) throws GameActionException {
 
         boolean found = false;
