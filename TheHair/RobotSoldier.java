@@ -214,9 +214,15 @@ public class RobotSoldier implements Robot {
 
                 // try to go to the turtle location
 
-                if (currentLocation.distanceSquaredTo(communicationModule.turtleInfo.location) > 35) {
+                final int turtleDistance = communicationModule.turtleInfo.distance;
+                final int bufferDistance = (int)Math.pow(Math.floor(Math.sqrt(turtleDistance)) + 2, 2);
+                if (currentLocation.distanceSquaredTo(communicationModule.turtleInfo.location) > bufferDistance) {
 
                     desiredMovementDirection = currentLocation.directionTo(communicationModule.turtleInfo.location);
+
+                } else {
+
+                    desiredMovementDirection = currentLocation.directionTo(communicationModule.turtleInfo.location).opposite();
 
                 }
 
