@@ -501,4 +501,32 @@ public class CommunicationModule implements CommunicationModuleDelegate {
 
     }
 
+    /*
+    NOTIFICATIONS
+     */
+
+    public MapLocation closestNotificationLocation(final RobotController robotController) {
+
+        int minDistance = Integer.MAX_VALUE;
+        MapLocation closestLocation = null;
+        MapLocation currentLocation = robotController.getLocation();
+
+        for (int i = 0; i < notifications.size(); i++) {
+
+            final Signal currentSignal = notifications.get(i);
+            final int distance = currentLocation.distanceSquaredTo(currentSignal.getLocation());
+
+            if (distance < minDistance) {
+
+                minDistance = distance;
+                closestLocation = currentSignal.getLocation();
+
+            }
+
+        }
+
+        return closestLocation;
+
+    }
+
 }

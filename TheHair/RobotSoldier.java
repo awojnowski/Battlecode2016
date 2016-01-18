@@ -111,27 +111,65 @@ public class RobotSoldier implements Robot {
 
                     desiredMovementDirection = currentLocation.directionTo(objectiveSignal.location);
 
-                } else if (currentLocation.distanceSquaredTo(archonRendezvousLocation) < 64) {
-
-                    desiredMovementDirection = directionModule.randomDirection();
-
                 } else {
 
-                    desiredMovementDirection = currentLocation.directionTo(archonRendezvousLocation);
+                    MapLocation signalLocation = communicationModule.closestNotificationLocation(robotController);
+
+                    if (signalLocation != null) {
+
+                        desiredMovementDirection = currentLocation.directionTo(signalLocation);
+
+                    } else if (currentLocation.distanceSquaredTo(archonRendezvousLocation) < 64) {
+
+                        desiredMovementDirection = directionModule.randomDirection();
+
+                    } else {
+
+                        desiredMovementDirection = currentLocation.directionTo(archonRendezvousLocation);
+
+                    }
 
                 }
 
-                // see if we can attack anything
+                // see if we can kite or attack anything
 
-                final RobotInfo[] attackableEnemies = robotController.senseHostileRobots(currentLocation, currentType.attackRadiusSquared);
-                desiredAttackUnit = combatModule.bestEnemyToAttackFromEnemies(attackableEnemies);
+                final RobotInfo[] immediateEnemies = robotController.senseHostileRobots(currentLocation, 3);
+                final RobotInfo[] immediateKitableZombies = combatModule.robotsOfTypesFromRobots(immediateEnemies, new RobotType[]{RobotType.STANDARDZOMBIE, RobotType.BIGZOMBIE});
+
+                if (immediateKitableZombies.length > 0) {
+
+                    desiredAttackUnit = combatModule.lowestHealthEnemyFromEnemies(immediateKitableZombies);
+
+                } else {
+
+                    final RobotInfo[] attackableEnemies = robotController.senseHostileRobots(currentLocation, currentType.attackRadiusSquared);
+                    desiredAttackUnit = combatModule.lowestHealthEnemyFromEnemies(attackableEnemies);
+
+                }
+
+                // check if we should kite
+
+                if (robotController.getType() == RobotType.SOLDIER && desiredAttackUnit != null && (desiredAttackUnit.type == RobotType.STANDARDZOMBIE || desiredAttackUnit.type == RobotType.BIGZOMBIE) && currentLocation.distanceSquaredTo(desiredAttackUnit.location) <= desiredAttackUnit.type.attackRadiusSquared) {
+
+                    desiredMovementDirection = currentLocation.directionTo(desiredAttackUnit.location).opposite();
+                    desiredAttackUnit = null;
+
+                }
+
+                // broadcast if we're attacking
+
+                if (desiredAttackUnit != null) {
+
+                    communicationModule.broadcastSignal(robotController, CommunicationModule.maximumFreeBroadcastRangeForRobotType(robotController.getType()));
+
+                }
 
             } else if (currentState == State.TURTLE_CLEARING) {
 
                 // see if we can attack anything
 
                 final RobotInfo[] attackableEnemies = robotController.senseHostileRobots(currentLocation, currentType.attackRadiusSquared);
-                desiredAttackUnit = combatModule.bestEnemyToAttackFromEnemies(attackableEnemies);
+                desiredAttackUnit = combatModule.lowestHealthEnemyFromEnemies(attackableEnemies);
 
                 // try to go to the turtle location
 
@@ -142,7 +180,7 @@ public class RobotSoldier implements Robot {
                 // see if we can attack anything
 
                 final RobotInfo[] attackableEnemies = robotController.senseHostileRobots(currentLocation, currentType.attackRadiusSquared);
-                desiredAttackUnit = combatModule.bestEnemyToAttackFromEnemies(attackableEnemies);
+                desiredAttackUnit = combatModule.lowestHealthEnemyFromEnemies(attackableEnemies);
 
                 // give the turtle area some space
 
@@ -162,7 +200,7 @@ public class RobotSoldier implements Robot {
                 // see if we can attack anything
 
                 final RobotInfo[] attackableEnemies = robotController.senseHostileRobots(currentLocation, currentType.attackRadiusSquared);
-                desiredAttackUnit = combatModule.bestEnemyToAttackFromEnemies(attackableEnemies);
+                desiredAttackUnit = combatModule.lowestHealthEnemyFromEnemies(attackableEnemies);
 
                 // try to go to the turtle location
 

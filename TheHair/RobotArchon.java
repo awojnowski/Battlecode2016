@@ -227,10 +227,6 @@ public class RobotArchon implements Robot {
 
                     unitBuildType = RobotType.SCOUT;
 
-                } else if (guardsBuilt * 2 < soldiersBuilt) {
-
-                    unitBuildType = RobotType.GUARD;
-
                 } else {
 
                     unitBuildType = RobotType.SOLDIER;
