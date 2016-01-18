@@ -152,7 +152,7 @@ public class RobotSoldier implements Robot {
 
                 // check if we should kite
 
-                if (robotController.getType() == RobotType.SOLDIER && desiredAttackUnit != null && (desiredAttackUnit.type == RobotType.STANDARDZOMBIE || desiredAttackUnit.type == RobotType.BIGZOMBIE) && currentLocation.distanceSquaredTo(desiredAttackUnit.location) <= desiredAttackUnit.type.attackRadiusSquared) {
+                if (robotController.getType() == RobotType.SOLDIER && desiredAttackUnit != null && (desiredAttackUnit.type == RobotType.STANDARDZOMBIE || desiredAttackUnit.type == RobotType.BIGZOMBIE || desiredAttackUnit.type == RobotType.FASTZOMBIE) && currentLocation.distanceSquaredTo(desiredAttackUnit.location) <= desiredAttackUnit.type.attackRadiusSquared) {
 
                     desiredMovementDirection = currentLocation.directionTo(desiredAttackUnit.location).opposite();
                     desiredAttackUnit = null;
