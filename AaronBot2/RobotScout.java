@@ -33,6 +33,8 @@ public class RobotScout implements Robot {
             MapLocation currentLocation = robotController.getLocation();
             final RobotInfo[] enemies = robotController.senseHostileRobots(currentLocation, robotController.getType().sensorRadiusSquared);
 
+            robotController.setIndicatorString(1, "Signal distance: " + CommunicationModule.maximumBroadcastRange(mapInfoModule, currentLocation));
+
             if (robotController.isCoreReady() && communicationModule.initialInformationReceived && enemies.length > 0) {
 
                 final Direction fleeDirection = directionModule.averageDirectionTowardDangerousRobotsAndOuterBounds(robotController, enemies);
@@ -201,7 +203,7 @@ public class RobotScout implements Robot {
 
                 if (directionModule.isMapLocationSafe(currentLocation, enemies, 4)) {
 
-                    communicationModule.broadcastEnqueuedSignals(robotController, CommunicationModule.maximumBroadcastRange(mapInfoModule));
+                    communicationModule.broadcastEnqueuedSignals(robotController, CommunicationModule.maximumBroadcastRange(mapInfoModule, currentLocation));
 
                 }
 

@@ -240,11 +240,44 @@ public class CommunicationModule implements CommunicationModuleDelegate {
 
     }
 
-    public static int maximumBroadcastRange(final MapInfoModule mapInfoModule) {
+    public static int maximumBroadcastRange(final MapInfoModule mapInfoModule, final MapLocation currentLocation) {
 
         final int mapWidth = mapInfoModule.hasMapWidth() ? mapInfoModule.mapWidth() : 80;
         final int mapHeight = mapInfoModule.hasMapHeight() ? mapInfoModule.mapHeight() : 80;
-        return mapWidth * mapWidth + mapHeight * mapHeight;
+
+        int broadcastWidth = 0;
+        if (mapInfoModule.westBoundaryValue != MapInfoModule.UnknownValue) {
+
+            final int difference = currentLocation.x - mapInfoModule.westBoundaryValue;
+            broadcastWidth = Math.max(difference, mapWidth - difference);
+
+        } else if (mapInfoModule.eastBoundaryValue != MapInfoModule.UnknownValue) {
+
+            final int difference = mapInfoModule.eastBoundaryValue - currentLocation.x;
+            broadcastWidth = Math.max(difference, mapWidth - difference);
+
+        } else {
+
+            broadcastWidth = mapWidth;
+
+        }
+        int broadcastHeight = 0;
+        if (mapInfoModule.northBoundaryValue != MapInfoModule.UnknownValue) {
+
+            final int difference = currentLocation.y - mapInfoModule.northBoundaryValue;
+            broadcastHeight = Math.max(difference, mapHeight - difference);
+
+        } else if (mapInfoModule.southBoundaryValue != MapInfoModule.UnknownValue) {
+
+            final int difference = mapInfoModule.southBoundaryValue - currentLocation.y;
+            broadcastHeight = Math.max(difference, mapHeight - difference);
+
+        } else {
+
+            broadcastHeight = mapHeight;
+
+        }
+        return broadcastWidth * broadcastWidth + broadcastHeight * broadcastHeight;
 
     }
 

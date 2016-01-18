@@ -159,7 +159,7 @@ public class RobotArchon implements Robot {
 
                 if (directionModule.isMapLocationSafe(currentLocation, enemies, 4)) {
 
-                    communicationModule.broadcastEnqueuedSignals(robotController, CommunicationModule.maximumBroadcastRange(mapInfoModule));
+                    communicationModule.broadcastEnqueuedSignals(robotController, CommunicationModule.maximumBroadcastRange(mapInfoModule, currentLocation));
 
                 }
 
