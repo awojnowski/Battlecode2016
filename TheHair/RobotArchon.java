@@ -287,6 +287,7 @@ public class RobotArchon implements Robot {
                     if (bestTurretLocation == null) {
 
                         communicationModule.turtleInfo.distance ++;
+                        communicationModule.turtleInfo.lockDistanceTurns();
 
                         final CommunicationModuleSignal signal = new CommunicationModuleSignal();
                         signal.action = CommunicationModuleSignal.ACTION_SEEN;
@@ -666,7 +667,7 @@ public class RobotArchon implements Robot {
 
             }
 
-            robotController.setIndicatorString(0, "State: " + currentState.name());
+            robotController.setIndicatorString(0, "State: " + currentState.name() + " BD: " + communicationModule.turtleInfo.distance);
 
             // done!
 

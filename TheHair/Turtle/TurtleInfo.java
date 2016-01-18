@@ -28,7 +28,7 @@ public class TurtleInfo {
         result <<= 1;
         result += this.hasLocation ? 1 : 0; // 1 bit
         result <<= 8;
-        result += this.distance; // 8 bits
+        result += this.distance > 255 ? 255 : this.distance; // 8 bits
 
         return result;
 
@@ -36,16 +36,23 @@ public class TurtleInfo {
 
     public void fillFromSerializedData(final int serializedData) {
 
-        int distanceBefore = this.distance;
+        final int distanceBefore = this.distance;
+
         this.distance = ((serializedData & 0x000000ff) >> 0); // [7-0]
+        this.hasLocation = ((serializedData & 0x00000100) >> 8) == 1; // [8-8]
+        this.status = ((serializedData & 0x00000E00) >> 9); // [11-9]
+
         if (this.distance != distanceBefore) {
 
-            this.distanceTurnLock = TurtleInfo.DistanceTurnChangeLockTurnsCount;
+            this.lockDistanceTurns();
 
         }
 
-        this.hasLocation = ((serializedData & 0x00000100) >> 8) == 1; // [8-8]
-        this.status = ((serializedData & 0x00000E00) >> 9); // [11-9]
+    }
+
+    public void lockDistanceTurns() {
+
+        this.distanceTurnLock = TurtleInfo.DistanceTurnChangeLockTurnsCount;
 
     }
 
