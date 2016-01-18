@@ -22,6 +22,7 @@ public class RobotScout implements Robot {
         final Team team = robotController.getTeam();
 
         Direction movementDirection = null;
+        int cantSeeShitTurns = 0;
 
         while (true) {
 
@@ -85,6 +86,22 @@ public class RobotScout implements Robot {
                     communicationModule.enqueueSignalForBroadcast(signal);
 
                 } else if (enemy.type == RobotType.ARCHON) {
+
+                    final ArrayList<CommunicationModuleSignal> existingSignals = communicationModule.getCommunicationModuleSignalsNearbyLocation(communicationModule.enemyArchons, currentLocation, CommunicationModule.DefaultApproximateNearbyLocationRange);
+                    if (existingSignals.size() > 0) {
+
+                        continue;
+
+                    }
+
+                    final CommunicationModuleSignal signal = new CommunicationModuleSignal();
+                    signal.action = CommunicationModuleSignal.ACTION_SEEN;
+                    signal.location = enemy.location;
+                    signal.data = enemy.ID;
+                    signal.type = CommunicationModuleSignal.TYPE_ENEMY_ARCHON;
+                    communicationModule.enqueueSignalForBroadcast(signal);
+
+                } else if (cantSeeShitTurns > 100 && enemy.type != RobotType.SCOUT) {
 
                     final ArrayList<CommunicationModuleSignal> existingSignals = communicationModule.getCommunicationModuleSignalsNearbyLocation(communicationModule.enemyArchons, currentLocation, CommunicationModule.DefaultApproximateNearbyLocationRange);
                     if (existingSignals.size() > 0) {
@@ -177,6 +194,18 @@ public class RobotScout implements Robot {
 
                 }
                 robotController.setIndicatorLine(location, communicationModuleSignal.location, color[0], color[1], color[2]);
+
+            }
+
+            // check if we haven't been producing results
+
+            if (communicationModule.zombieDens.size() == 0 && communicationModule.enemyArchons.size() == 0) {
+
+                cantSeeShitTurns++;
+
+            } else {
+
+                cantSeeShitTurns = 0;
 
             }
 
