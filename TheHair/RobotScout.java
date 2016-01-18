@@ -1,10 +1,12 @@
 package TheHair;
 
 import TheHair.Cartography.*;
+import TheHair.Combat.*;
 import TheHair.Map.*;
 import TheHair.Movement.*;
 import TheHair.Rubble.RubbleModule;
 import TheHair.Signals.*;
+import TheHair.Turtle.*;
 import battlecode.common.*;
 import java.util.*;
 
@@ -13,7 +15,6 @@ public class RobotScout implements Robot {
     enum State {
         UNKNOWN,
         INFO_GATHER,
-        TURTLE_STAGING,
         TURRET_VISION
     }
 
@@ -246,13 +247,45 @@ public class RobotScout implements Robot {
 
                 }
 
-            } else if (currentState == State.TURTLE_STAGING) {
-
-                ;
-
             } else if (currentState == State.TURRET_VISION) {
 
-                ;
+                for (int i = 0; i < enemies.length; i++) {
+
+                    final RobotInfo enemy = enemies[i];
+
+                    final ScoutCallout scoutCallout = new ScoutCallout();
+                    scoutCallout.location = enemy.location;
+                    scoutCallout.remainingHealth = (int)enemy.health;
+                    scoutCallout.robotType = enemy.type;
+
+                    final CommunicationModuleSignal signal = new CommunicationModuleSignal();
+                    signal.action = CommunicationModuleSignal.ACTION_SEEN;
+                    signal.location = scoutCallout.location;
+                    signal.data = scoutCallout.serialize();
+                    signal.type = CommunicationModuleSignal.TYPE_SCOUT_CALLOUT;
+                    communicationModule.broadcastSignal(signal, robotController, CommunicationModule.maximumFreeBroadcastRangeForRobotType(currentType));
+
+                    robotController.setIndicatorLine(currentLocation, enemy.location, 128, 28, 255);
+
+                }
+
+                if (desiredMovementDirection == null) {
+
+                    final MapLocation turtleLocation = communicationModule.turtleInfo.location;
+                    final int turtleDistance = communicationModule.turtleInfo.distance;
+                    final int turtleBufferDistance = (int)Math.pow(Math.floor(Math.sqrt(turtleDistance)) + 2, 2);
+                    final int distance = currentLocation.distanceSquaredTo(turtleLocation);
+                    if (distance < turtleDistance) {
+
+                        desiredMovementDirection = currentLocation.directionTo(turtleLocation).opposite();
+
+                    } else if (distance > turtleBufferDistance) {
+
+                        desiredMovementDirection = currentLocation.directionTo(turtleLocation);
+
+                    }
+
+                }
 
             }
 
@@ -291,7 +324,11 @@ public class RobotScout implements Robot {
 
             if (currentState == State.INFO_GATHER) {
 
-                ;
+                if (communicationModule.turtleInfo.status == TurtleInfo.StatusSiteStaging || communicationModule.turtleInfo.status == TurtleInfo.StatusSiteEstablished) {
+
+                    currentState = State.TURRET_VISION;
+
+                }
 
             } else if (currentState == State.TURRET_VISION) {
 

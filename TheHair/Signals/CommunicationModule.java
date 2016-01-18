@@ -1,5 +1,6 @@
 package TheHair.Signals;
 
+import TheHair.Combat.*;
 import TheHair.Map.*;
 import TheHair.Turtle.TurtleInfo;
 import battlecode.common.*;
@@ -15,6 +16,7 @@ public class CommunicationModule implements CommunicationModuleDelegate {
     // the hashtables are indexed by an Integer which represents the location
     public final Hashtable<Integer, CommunicationModuleSignal> enemyArchons = new Hashtable<Integer, CommunicationModuleSignal>();
     public final Hashtable<Integer, CommunicationModuleSignal> zombieDens = new Hashtable<Integer, CommunicationModuleSignal>();
+    public final Hashtable<Integer, ScoutCallout> scoutCallouts = new Hashtable<Integer, ScoutCallout>(); // reset every turn
 
     // contains signals without a message associated with them, received last time the queue was cleared
     public final ArrayList<Signal> notifications = new ArrayList<Signal>();
@@ -264,6 +266,7 @@ public class CommunicationModule implements CommunicationModuleDelegate {
 
     public void processIncomingSignals(final RobotController robotController) {
 
+        this.scoutCallouts.clear();
         this.notifications.clear();
 
         final Signal[] signals = robotController.emptySignalQueue();
@@ -326,6 +329,16 @@ public class CommunicationModule implements CommunicationModuleDelegate {
 
             this.turtleInfo.location = communicationModuleSignal.location;
             this.turtleInfo.fillFromSerializedData(communicationModuleSignal.data);
+            return;
+
+        }
+        if (communicationModuleSignal.type == CommunicationModuleSignal.TYPE_SCOUT_CALLOUT) {
+
+            final ScoutCallout scoutCallout = new ScoutCallout();
+            scoutCallout.fillFromSerializedData(communicationModuleSignal.data);
+            scoutCallout.location = communicationModuleSignal.location;
+            this.scoutCallouts.put(communicationModuleSignal.serializedLocation(), scoutCallout);
+
             return;
 
         }

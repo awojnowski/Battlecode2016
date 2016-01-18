@@ -8,7 +8,7 @@ import TheHair.Rubble.*;
 import TheHair.Turtle.TurtleInfo;
 import TheHair.Turtle.TurtlePlacementModule;
 import battlecode.common.*;
-import java.util.Random;
+import java.util.*;
 
 public class RobotTurret implements Robot {
 
@@ -36,7 +36,7 @@ public class RobotTurret implements Robot {
 
             // ROUND FLAGS
 
-            RobotInfo desiredAttackUnit = null;
+            MapLocation desiredAttackLocation = null;
 
             MapLocation currentLocation = robotController.getLocation();
             Direction desiredMovementDirection = null;
@@ -69,14 +69,13 @@ public class RobotTurret implements Robot {
 
                     // see if we can attack anything
 
-                    final RobotInfo[] attackableEnemies = robotController.senseHostileRobots(currentLocation, currentType.attackRadiusSquared);
-                    desiredAttackUnit = this.bestEnemyToAttackFromEnemies(robotController, currentLocation, attackableEnemies);
+                    desiredAttackLocation = this.findAttackableEnemyLocationNearby(communicationModule, robotController, currentLocation);
 
                     // see if we need to expand to a further location
 
                     if (communicationModule.initialInformationReceived) {
 
-                        if (desiredAttackUnit == null) {
+                        if (desiredAttackLocation == null) {
 
                             final MapLocation bestTurretLocation = turtlePlacementModule.fetchBestTurretLocation(currentLocation, robotController, communicationModule.turtleInfo.location, communicationModule.turtleInfo, 1);
                             if (bestTurretLocation != null) {
@@ -114,9 +113,9 @@ public class RobotTurret implements Robot {
 
             // attempt to attack the enemy
 
-            if (robotController.isWeaponReady() && desiredAttackUnit != null) {
+            if (robotController.isWeaponReady() && desiredAttackLocation != null) {
 
-                robotController.attackLocation(desiredAttackUnit.location);
+                robotController.attackLocation(desiredAttackLocation);
 
             }
 
@@ -149,48 +148,107 @@ public class RobotTurret implements Robot {
 
     }
 
-    private RobotInfo bestEnemyToAttackFromEnemies(final RobotController robotController, final MapLocation currentLocation, final RobotInfo[] enemies) {
+    private MapLocation findAttackableEnemyLocationNearby(final CommunicationModule communicationModule, final RobotController robotController, final MapLocation currentLocation) {
 
-        RobotInfo bestEnemy = null;
-        double lowestHealth = Integer.MAX_VALUE;
+        final RobotInfo[] enemiesInSight = robotController.senseHostileRobots(currentLocation, robotController.getType().attackRadiusSquared);
+        final Enumeration<ScoutCallout> scoutCallouts = communicationModule.scoutCallouts.elements();
 
-        for (int i = 0; i < enemies.length; i++) {
+        MapLocation bestEnemyLocation = null;
+        double bestEnemyHealth = Double.MAX_VALUE;
+        RobotType bestEnemyType = null;
 
-            final RobotInfo enemy = enemies[i];
-            final int distance = enemy.location.distanceSquaredTo(currentLocation);
-            if (distance < GameConstants.TURRET_MINIMUM_RANGE) {
+        for (int i = 0; i < enemiesInSight.length; i++) {
 
-                continue;
-
-            }
-            if (bestEnemy == null) {
-
-                bestEnemy = enemy;
-                lowestHealth = enemy.health;
-                continue;
-
-            }
-            if (enemy.type != RobotType.BIGZOMBIE && bestEnemy.type == RobotType.BIGZOMBIE) {
+            final RobotInfo enemy = enemiesInSight[i];
+            if (!this.isEnemyAttackable(currentLocation, enemy.location)) {
 
                 continue;
 
             }
-            if (enemy.type == RobotType.BIGZOMBIE && bestEnemy.type != RobotType.BIGZOMBIE) {
+            if (bestEnemyType == null || this.isEnemyABetterThanEnemyB(enemy.type, enemy.health, bestEnemyType, bestEnemyHealth)) {
 
-                bestEnemy = enemy;
-                lowestHealth = bestEnemy.health;
-                continue;
-
-            }
-            if (enemy.health < lowestHealth) {
-
-                bestEnemy = enemy;
-                lowestHealth = enemy.health;
+                bestEnemyHealth = enemy.health;
+                bestEnemyLocation = enemy.location;
+                bestEnemyType = enemy.type;
 
             }
 
         }
-        return bestEnemy;
+        while (scoutCallouts.hasMoreElements()) {
+
+            final ScoutCallout scoutCallout = scoutCallouts.nextElement();
+            if (!this.isEnemyAttackable(currentLocation, scoutCallout.location)) {
+
+                continue;
+
+            }
+            if (bestEnemyType == null || this.isEnemyABetterThanEnemyB(scoutCallout.robotType, scoutCallout.remainingHealth, bestEnemyType, bestEnemyHealth)) {
+
+                bestEnemyHealth = scoutCallout.remainingHealth;
+                bestEnemyLocation = scoutCallout.location;
+                bestEnemyType = scoutCallout.robotType;
+
+            }
+
+        }
+
+        return bestEnemyLocation;
+
+    }
+
+    private boolean isEnemyAttackable(final MapLocation currentLocation, final MapLocation location) {
+
+        final int distance = currentLocation.distanceSquaredTo(location);
+        if (distance > RobotType.TURRET.attackRadiusSquared) {
+
+            return false;
+
+        }
+        if (distance < GameConstants.TURRET_MINIMUM_RANGE) {
+
+            return false;
+
+        }
+        return true;
+
+    }
+
+    private boolean isEnemyABetterThanEnemyB(final RobotType typeA, final double healthA, final RobotType typeB, final double healthB) {
+
+        final RobotType[] typeRankings = new RobotType[]{ RobotType.TURRET, RobotType.BIGZOMBIE, RobotType.SCOUT };
+
+        // calculate the type rankings
+
+        int typeRankingA = -1;
+        int typeRankingB = -1;
+        for (int i = 0; i < typeRankings.length; i++) {
+
+            if (typeA.equals(typeRankings[i])) {
+
+                typeRankingA = i;
+
+            }
+            if (typeB.equals(typeRankings[i])) {
+
+                typeRankingB = i;
+
+            }
+
+        }
+
+        // logic
+
+        if (typeRankingA > typeRankingB) {
+
+            return true;
+
+        }
+        if (typeRankingB > typeRankingA) {
+
+            return false;
+
+        }
+        return healthA < healthB;
 
     }
 
