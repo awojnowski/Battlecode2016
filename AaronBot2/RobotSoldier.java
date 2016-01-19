@@ -329,7 +329,7 @@ public class RobotSoldier implements Robot {
 
                 final CommunicationModuleSignal communicationModuleSignal = communicationModuleSignalCollection.nextElement();
                 int[] color = new int[]{255, 255, 255};
-                /*if (communicationModuleSignal.type == CommunicationModuleSignal.TYPE_ZOMBIEDEN) {
+                if (communicationModuleSignal.type == CommunicationModuleSignal.TYPE_ZOMBIEDEN) {
 
                     color = new int[]{50, 255, 50};
 
@@ -337,7 +337,7 @@ public class RobotSoldier implements Robot {
 
                     color = new int[]{255, 0, 0};
 
-                } else */if (communicationModuleSignal.type == CommunicationModuleSignal.TYPE_ENEMY_TURRET) {
+                } else if (communicationModuleSignal.type == CommunicationModuleSignal.TYPE_ENEMY_TURRET) {
 
                     color = new int[]{255, 50, 100};
 
@@ -346,7 +346,7 @@ public class RobotSoldier implements Robot {
                     continue;
 
                 }
-                robotController.setIndicatorLine(location, communicationModuleSignal.location, color[0], color[1], color[2]);
+                //robotController.setIndicatorLine(location, communicationModuleSignal.location, color[0], color[1], color[2]);
 
             }
 

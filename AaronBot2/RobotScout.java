@@ -228,7 +228,7 @@ public class RobotScout implements Robot {
 
             if (communicationModule.hasEnqueuedSignalsForBroadcast()) {
 
-                if (directionModule.isMapLocationSafe(currentLocation, enemies, 4)) {
+                if (directionModule.isMapLocationSafe(currentLocation, enemies, 4) || true) {
 
                     communicationModule.broadcastEnqueuedSignals(robotController, CommunicationModule.maximumBroadcastRange(mapInfoModule, currentLocation));
 

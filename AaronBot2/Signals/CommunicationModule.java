@@ -37,9 +37,20 @@ public class CommunicationModule {
 
     public void broadcastSignal(final CommunicationModuleSignal communicationModuleSignal, final RobotController robotController, final int broadcastRange) throws GameActionException {
 
+        this.broadcastSignal(communicationModuleSignal, robotController, broadcastRange, true);
+
+    }
+
+    public void broadcastSignal(final CommunicationModuleSignal communicationModuleSignal, final RobotController robotController, final int broadcastRange, boolean processSignal) throws GameActionException {
+
         final int[] message = communicationModuleSignal.serialize();
         robotController.broadcastMessageSignal(message[0], message[1], broadcastRange);
-        this.processSignal(communicationModuleSignal);
+
+        if (processSignal) {
+
+            this.processSignal(communicationModuleSignal);
+
+        }
 
     }
 
@@ -58,6 +69,7 @@ public class CommunicationModule {
     public void enqueueSignalForBroadcast(final CommunicationModuleSignal communicationModuleSignal) {
 
         this.communicationModuleSignalQueue.add(communicationModuleSignal);
+        this.processSignal(communicationModuleSignal);
 
     }
 
@@ -65,7 +77,7 @@ public class CommunicationModule {
 
         for (int i = 0; i < this.communicationModuleSignalQueue.size(); i++) {
 
-            this.broadcastSignal(this.communicationModuleSignalQueue.get(i), robotController, broadcastRange);
+            this.broadcastSignal(this.communicationModuleSignalQueue.get(i), robotController, broadcastRange, false);
 
         }
         this.communicationModuleSignalQueue.clear();
@@ -365,21 +377,9 @@ public class CommunicationModule {
 
         if (communicationModuleSignal.action == CommunicationModuleSignal.ACTION_DELETE) {
 
-            if (communicationModuleSignal.type == CommunicationModuleSignal.TYPE_ENEMY_TURRET) {
-
-                System.out.println("Clearing turret at location: " + communicationModuleSignal.location);
-
-            }
-
             this.clearSignal(communicationModuleSignal, hashtable);
 
         } else {
-
-            if (communicationModuleSignal.type == CommunicationModuleSignal.TYPE_ENEMY_TURRET) {
-
-                System.out.println("Writing turret at location: " + communicationModuleSignal.location);
-
-            }
 
             this.writeSignal(communicationModuleSignal, hashtable);
 
@@ -417,17 +417,6 @@ public class CommunicationModule {
     public void clearSignal(final CommunicationModuleSignal communicationModuleSignal, final Hashtable<Integer, CommunicationModuleSignal> hashtable) {
 
         hashtable.remove(communicationModuleSignal.serializedLocation());
-        for (int i = 0; i < this.communicationModuleSignalQueue.size(); i++) {
-
-            final CommunicationModuleSignal signal = this.communicationModuleSignalQueue.get(i);
-            if (signal.type == communicationModuleSignal.type && signal.location == communicationModuleSignal.location) {
-
-                this.communicationModuleSignalQueue.remove(i);
-                i--;
-
-            }
-
-        }
 
     }
 
