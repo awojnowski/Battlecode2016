@@ -288,6 +288,89 @@ public class DirectionModule {
 
     }
 
+    // same as above but 'subtracts' ally locations
+    public final Direction averageDirectionTowardDangerousRobotsAndOuterBoundsMinusAllies(final RobotController robotController) throws GameActionException {
+
+        final RobotInfo[] robots = robotController.senseNearbyRobots();
+        final MapLocation currentLocation = robotController.getLocation();
+        final Team currentTeam = robotController.getTeam();
+        int totalRobotX = 0;
+        int totalRobotY = 0;
+        int totalRobotsFound = 0;
+        int totalDangerousRobotsFound = 0;
+
+        if (robots == null || robots.length == 0) {
+
+            return null;
+
+        }
+
+        for (int i = 0; i < robots.length; i++) {
+
+            MapLocation location;
+            final RobotInfo robot = robots[i];
+
+            if (!this.isEnemyDangerous(robot, currentLocation, 1)) {
+
+                if (robot.team == currentTeam && robot.type != RobotType.ARCHON && robot.type != RobotType.SCOUT) {
+
+                    int x = currentLocation.x + (currentLocation.x - robot.location.x) * 3;
+                    int y = currentLocation.y + (currentLocation.y - robot.location.y) * 3;
+                    location = new MapLocation(x, y);
+
+                } else {
+
+                    continue;
+
+                }
+
+            } else {
+
+                location = robot.location;
+                totalDangerousRobotsFound ++;
+
+            }
+
+            totalRobotX += location.x;
+            totalRobotY += location.y;
+            totalRobotsFound ++;
+
+        }
+
+        if (totalDangerousRobotsFound == 0) {
+
+            return null;
+
+        }
+
+        for (int i = 0; i < directions.length; i += 2) {
+
+            final Direction direction = directions[i];
+            final int sightDistance = (int)Math.round(Math.sqrt((double)robotController.getType().sensorRadiusSquared)) - 1;
+
+            for (int j = 1; j <= sightDistance; j++) {
+
+                final MapLocation location = currentLocation.add(direction, j);
+                if (!robotController.onTheMap(location)) {
+
+                    totalRobotX += location.x;
+                    totalRobotY += location.y;
+                    totalRobotsFound ++;
+
+                }
+
+            }
+
+        }
+
+        final double averageRobotX = (double)totalRobotX / totalRobotsFound;
+        final double averageRobotY = (double)totalRobotY / totalRobotsFound;
+        final double dx = (double)(averageRobotX - currentLocation.x);
+        final double dy = (double)(averageRobotY - currentLocation.y);
+        return Math.abs(dx) >= 2.414D * Math.abs(dy)?(dx > 0.0D?Direction.EAST:(dx < 0.0D?Direction.WEST:Direction.OMNI)):(Math.abs(dy) >= 2.414D * Math.abs(dx)?(dy > 0.0D?Direction.SOUTH:Direction.NORTH):(dy > 0.0D?(dx > 0.0D?Direction.SOUTH_EAST:Direction.SOUTH_WEST):(dx > 0.0D?Direction.NORTH_EAST:Direction.NORTH_WEST)));
+
+    }
+
     public boolean isMapLocationSafe(final MapLocation mapLocation, final RobotInfo[] enemies, final double buffer) {
 
         return this.getEnemyInRangeOfMapLocation(mapLocation, enemies, buffer) == null;
