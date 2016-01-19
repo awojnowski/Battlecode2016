@@ -79,7 +79,7 @@ public class RobotSoldier implements Robot {
             // now let's see if we should kite or attack anything
 
             boolean attacked = false;
-            final RobotInfo[] immediateEnemies = robotController.senseHostileRobots(currentLocation, 3);
+            final RobotInfo[] immediateEnemies = robotController.senseHostileRobots(currentLocation, 8);
             final RobotInfo[] immediateKitableZombies = CombatModule.robotsOfTypesFromRobots(immediateEnemies, new RobotType[]{RobotType.STANDARDZOMBIE, RobotType.BIGZOMBIE});
             RobotInfo bestEnemy;
 
@@ -100,7 +100,7 @@ public class RobotSoldier implements Robot {
             Direction targetRubbleClearanceDirection = null;
             Direction desiredMovementDirection = null;
 
-            if (bestEnemy != null && (bestEnemy.type == RobotType.STANDARDZOMBIE || bestEnemy.type == RobotType.BIGZOMBIE) && currentLocation.distanceSquaredTo(bestEnemy.location) <= bestEnemy.type.attackRadiusSquared) {
+            if (bestEnemy != null && (bestEnemy.type == RobotType.STANDARDZOMBIE || bestEnemy.type == RobotType.BIGZOMBIE) && currentLocation.distanceSquaredTo(bestEnemy.location) <= 8) {
 
                 // should kite
 
