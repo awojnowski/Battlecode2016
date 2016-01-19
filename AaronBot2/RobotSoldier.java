@@ -346,7 +346,7 @@ public class RobotSoldier implements Robot {
                     continue;
 
                 }
-                //robotController.setIndicatorLine(location, communicationModuleSignal.location, color[0], color[1], color[2]);
+                robotController.setIndicatorLine(location, communicationModuleSignal.location, color[0], color[1], color[2]);
 
             }
 
