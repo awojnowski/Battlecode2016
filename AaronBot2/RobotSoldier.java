@@ -23,7 +23,6 @@ public class RobotSoldier implements Robot {
 
         final Team currentTeam = robotController.getTeam();
         int turnsStuck = 0;
-        boolean stop = false;
 
         final RobotType type = robotController.getType();
 
@@ -135,7 +134,7 @@ public class RobotSoldier implements Robot {
 
                 // either we attack the enemy or we can kite away from it
 
-                if (this.shouldKiteEnemy(bestEnemy) && currentLocation.distanceSquaredTo(bestEnemy.location) < 9) {
+                if (type == RobotType.SOLDIER && this.shouldKiteEnemy(bestEnemy) && currentLocation.distanceSquaredTo(bestEnemy.location) < 9) {
 
                     // we need to kite away from the enemy
                     desiredMovementDirection = currentLocation.directionTo(bestEnemy.location).opposite();

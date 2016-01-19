@@ -211,6 +211,55 @@ public class RobotArchon implements Robot {
             Direction targetRubbleClearanceDirection = null;
             if (robotController.isCoreReady()) {
 
+                MapLocation nearestNeutralLocation = null;
+
+                final RobotInfo[] neutrals = robotController.senseNearbyRobots(robotController.getType().sensorRadiusSquared, Team.NEUTRAL);
+                if (neutrals.length > 0) {
+
+                    double nearestNeutralRanking = 0;
+
+                    for (int i = 0; i < neutrals.length; i++) {
+
+                        final RobotInfo neutralRobot = neutrals[i];
+                        final MapLocation neutralLocation = neutralRobot.location;
+                        final double neutralValue = neutralRobot.maxHealth * neutralRobot.type.attackRadiusSquared;
+//                        final double rubbleTotal = Math.max(1, robotController.senseRubble(partsLocation));
+                        final int distance = neutralLocation.distanceSquaredTo(currentLocation);
+
+                        final double ranking = neutralValue / distance;
+                        if (ranking > nearestNeutralRanking) {
+
+                            nearestNeutralLocation = neutralLocation;
+                            nearestNeutralRanking = ranking;
+
+                        }
+
+                    }
+
+                }
+                if (nearestNeutralLocation != null) {
+
+                    final Direction nearestPartsDirection = currentLocation.directionTo(nearestNeutralLocation);
+                    final Direction nearestPartsMovementDirection = directionModule.recommendedSafeMovementDirectionForDirection(nearestPartsDirection, robotController, enemies, 1, true);
+                    if (nearestPartsMovementDirection != null) {
+
+                        robotController.move(nearestPartsMovementDirection);
+                        currentLocation = robotController.getLocation();
+
+                    } else {
+
+                        targetRubbleClearanceDirection = nearestPartsDirection;
+
+                    }
+
+                }
+
+            }
+
+            // try to move toward some spare parts
+
+            if (robotController.isCoreReady()) {
+
                 MapLocation nearestPartsLocation = null;
 
                 final MapLocation[] partsLocations = robotController.sensePartLocations(-1);
@@ -282,7 +331,7 @@ public class RobotArchon implements Robot {
                 Direction desiredMovementDirection = null;
 
                 RobotInfo[] closeAllies = robotController.senseNearbyRobots(3, currentTeam); // How close they stay to their team, lower means they'll stay closer
-                RobotInfo[] closeSoldiers = CombatModule.robotsOfTypesFromRobots(closeAllies, new RobotType[]{RobotType.SOLDIER});
+                RobotInfo[] closeSoldiers = CombatModule.robotsOfTypesFromRobots(closeAllies, new RobotType[]{RobotType.SOLDIER, RobotType.GUARD});
 
                 if (closeSoldiers.length < 2) { // Move towards team if far away
 
