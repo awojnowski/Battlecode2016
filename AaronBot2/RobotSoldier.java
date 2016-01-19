@@ -324,6 +324,10 @@ public class RobotSoldier implements Robot, CommunicationModuleDelegate {
 
                     color = new int[]{255, 0, 0};
 
+                } else {
+
+                    continue;
+
                 }
                 robotController.setIndicatorLine(location, communicationModuleSignal.location, color[0], color[1], color[2]);
 

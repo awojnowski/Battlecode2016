@@ -18,9 +18,11 @@ public class RobotScout implements Robot {
         final DirectionModule directionModule = new DirectionModule(robotController.getID());
         final MovementModule movementModule = new MovementModule();
 
+        final MapLocation spawnLocation = robotController.getLocation();
         final Random random = new Random(robotController.getID());
         final Team team = robotController.getTeam();
 
+        boolean returnToSpawnLocation = false;
         Direction movementDirection = null;
         int cantSeeShitTurns = 0;
 
@@ -213,22 +215,55 @@ public class RobotScout implements Robot {
 
             if (robotController.isCoreReady() && communicationModule.initialInformationReceived) {
 
-                // let's see if we have a movement direction before moving (if not, create one)
-                if (movementDirection == null || !robotController.onTheMap(currentLocation.add(movementDirection))) {
+                final int roundNumber = robotController.getRoundNum();
+                final int freedomRoundNumber = 300;
+                final int spawnDistance = currentLocation.distanceSquaredTo(spawnLocation);
+                if (roundNumber < freedomRoundNumber && spawnDistance > roundNumber * 1.5) {
 
-                    movementDirection = directionModule.randomDirection();
+                    if (movementDirection == null) {
+
+                        movementDirection = directionModule.randomDirection();
+
+                    }
+                    movementDirection = robotController.getID() % 2 == 0 ? movementDirection.rotateLeft().rotateLeft() : movementDirection.rotateRight().rotateRight();
+                    returnToSpawnLocation = true;
+
+                } else if (roundNumber >= freedomRoundNumber || spawnDistance < 64) {
+
+                    returnToSpawnLocation = false;
 
                 }
 
-                final Direction actualMovementDirection = directionModule.recommendedSafeMovementDirectionForDirection(movementDirection, robotController, enemies, 2, true);
-                if (actualMovementDirection != null) {
+                if (returnToSpawnLocation) {
 
-                    robotController.move(actualMovementDirection);
-                    currentLocation = robotController.getLocation();
+                    final Direction returnDirection = currentLocation.directionTo(spawnLocation);
+                    final Direction actualReturnDirection = directionModule.recommendedSafeMovementDirectionForDirection(returnDirection, robotController, enemies, 2, true);
+                    if (actualReturnDirection != null) {
+
+                        robotController.move(actualReturnDirection);
+
+                    }
 
                 } else {
 
-                    movementDirection = RobotScout.rotateDirection(movementDirection, currentLocation, robotController, mapInfoModule);
+                    // let's see if we have a movement direction before moving (if not, create one)
+                    if (movementDirection == null || !robotController.onTheMap(currentLocation.add(movementDirection))) {
+
+                        movementDirection = directionModule.randomDirection();
+
+                    }
+
+                    final Direction actualMovementDirection = directionModule.recommendedSafeMovementDirectionForDirection(movementDirection, robotController, enemies, 2, true);
+                    if (actualMovementDirection != null) {
+
+                        robotController.move(actualMovementDirection);
+                        currentLocation = robotController.getLocation();
+
+                    } else {
+
+                        movementDirection = RobotScout.rotateDirection(movementDirection, currentLocation, robotController, mapInfoModule);
+
+                    }
 
                 }
 
@@ -255,6 +290,10 @@ public class RobotScout implements Robot {
                 } else if (communicationModuleSignal.type == CommunicationModuleSignal.TYPE_ENEMY_ARCHON) {
 
                     color = new int[]{255, 0, 0};
+
+                } else {
+
+                    continue;
 
                 }
                 robotController.setIndicatorLine(location, communicationModuleSignal.location, color[0], color[1], color[2]);
