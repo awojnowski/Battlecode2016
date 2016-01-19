@@ -12,21 +12,21 @@ public class ZombieSpawnsModule {
 
             spawnSchedule = robotController.getZombieSpawnSchedule();
 
-            int[] rounds = spawnSchedule.getRounds();
-
-            for (int i = 0; i < rounds.length; i++) {
-
-                System.out.println("Round " + rounds[i] + "   Danger level: " + dangerLevelForSpawnAtRound(rounds[i], robotController));
-
-                ZombieCount[] counts = spawnSchedule.getScheduleForRound(rounds[i]);
-
-                for (int j = 0; j < counts.length; j++) {
-
-                    System.out.println(counts[j].getType() + ": " + counts[j].getCount());
-
-                }
-
-            }
+//            int[] rounds = spawnSchedule.getRounds();
+//
+//            for (int i = 0; i < rounds.length; i++) {
+//
+//                System.out.println("Round " + rounds[i] + "   Danger level: " + dangerLevelForSpawnAtRound(rounds[i], robotController));
+//
+//                ZombieCount[] counts = spawnSchedule.getScheduleForRound(rounds[i]);
+//
+//                for (int j = 0; j < counts.length; j++) {
+//
+//                    System.out.println(counts[j].getType() + ": " + counts[j].getCount());
+//
+//                }
+//
+//            }
 
         }
 

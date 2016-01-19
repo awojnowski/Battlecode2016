@@ -23,7 +23,6 @@ public class RobotSoldier implements Robot {
 
         final Team currentTeam = robotController.getTeam();
         int turnsStuck = 0;
-        boolean stop = false;
 
         final RobotType type = robotController.getType();
 
@@ -135,7 +134,7 @@ public class RobotSoldier implements Robot {
 
                 // either we attack the enemy or we can kite away from it
 
-                if (this.shouldKiteEnemy(bestEnemy) && currentLocation.distanceSquaredTo(bestEnemy.location) < 9) {
+                if (type == RobotType.SOLDIER && this.shouldKiteEnemy(bestEnemy) && currentLocation.distanceSquaredTo(bestEnemy.location) < 9) {
 
                     // we need to kite away from the enemy
                     desiredMovementDirection = currentLocation.directionTo(bestEnemy.location).opposite();
@@ -188,7 +187,7 @@ public class RobotSoldier implements Robot {
 
                 // try move towards archon starting positions
 
-                if (desiredMovementDirection == null) {
+                if (desiredMovementDirection == null && robotController.getRoundNum() > 200) {
 
                     int closestArchonDistance = Integer.MAX_VALUE;
                     MapLocation closestArchonLocation = null;
@@ -214,14 +213,36 @@ public class RobotSoldier implements Robot {
 
                 }
 
+                // move randomly nearby teammates
+
+                if (desiredMovementDirection == null) {
+
+                    desiredMovementDirection = directionModule.randomDirection();
+
+                    final RobotInfo[] closeTeammates = robotController.senseNearbyRobots(3, currentTeam);
+                    if (closeTeammates.length == 0) {
+
+                        final RobotInfo[] nearbyTeammates = robotController.senseNearbyRobots(robotController.getType().sensorRadiusSquared, currentTeam);
+                        if (nearbyTeammates.length > 0) {
+
+                            desiredMovementDirection = directionModule.averageDirectionTowardRobots(robotController, nearbyTeammates);
+
+                        }
+
+                    }
+
+                }
+
                 // process movement
 
                 if (desiredMovementDirection != null) {
 
                     final Direction recommendedMovementDirection = directionModule.recommendedMovementDirectionForDirection(desiredMovementDirection, robotController, false);
-                    if (recommendedMovementDirection != null) {
+                    final MapLocation recommendedMovementLocation = recommendedMovementDirection != null ? currentLocation.add(recommendedMovementDirection) : null;
+                    if (recommendedMovementDirection != null && !movementModule.isMovementLocationRepetitive(recommendedMovementLocation, robotController)) {
 
                         robotController.move(recommendedMovementDirection);
+                        movementModule.addMovementLocation(recommendedMovementLocation, robotController);
                         currentLocation = robotController.getLocation();
                         turnsStuck = 0;
 
@@ -244,20 +265,17 @@ public class RobotSoldier implements Robot {
                     final Direction rubbleClearanceDirection = rubbleModule.getRubbleClearanceDirectionFromTargetDirection(targetRubbleClearanceDirection, robotController);
                     if (rubbleClearanceDirection != null) {
 
+                        // clear the rubble
+
                         robotController.clearRubble(rubbleClearanceDirection);
-
-                        if (turnsStuck != 0) {
-
-                            turnsStuck = 0;
-
-                        }
-
-                        // otherwise they didn't move or clear rubble, check if they're stuck
+                        movementModule.extendLocationInvalidationTurn(robotController);
+                        turnsStuck = 0;
 
                     } else if (communicationModule.notifications.size() == 0 && objectiveSignal != null) {
 
-                        turnsStuck++;
+                        // otherwise they didn't move or clear rubble, check if they're stuck
 
+                        turnsStuck++;
                         if (turnsStuck > 5) {
 
                             communicationModule.clearSignal(objectiveSignal, communicationModule.enemyArchons);
@@ -266,7 +284,7 @@ public class RobotSoldier implements Robot {
 
                         }
 
-                    } else if (turnsStuck != 0) {
+                    } else if (turnsStuck > 0) {
 
                         turnsStuck = 0;
 
