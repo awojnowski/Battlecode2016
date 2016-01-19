@@ -8,6 +8,9 @@ public class DirectionModule {
 
     public static final Direction[] directions = { Direction.EAST, Direction.NORTH_EAST, Direction.NORTH, Direction.NORTH_WEST, Direction.WEST, Direction.SOUTH_WEST, Direction.SOUTH, Direction.SOUTH_EAST };
     private Random random = null;
+    private Direction lastRecommendedDirection = null;
+    private int backAndForthCount = 0;
+    private Direction blockedDirection = null;
 
     public DirectionModule(int randomSeed) {
 
@@ -21,55 +24,39 @@ public class DirectionModule {
 
     }
 
-    // checks D, D.L, D.R, D.LL, D.RR for availability
     public Direction recommendedMovementDirectionForDirection(final Direction direction, final RobotController robotController, boolean use90) {
 
-        if (robotController.canMove(direction)) {
+        Direction recommendedDirection = recommendedMovementDirectionForDirectionAux(direction, robotController, use90);
+        if (lastRecommendedDirection != null && recommendedDirection == lastRecommendedDirection.opposite()) {
 
-            return direction;
+            backAndForthCount++;
 
-        }
+        } else {
 
-        final boolean divisible = robotController.getID() % 2 == 0;
-        Direction movementDirection = divisible ? direction.rotateLeft() : direction.rotateRight();
-        if (robotController.canMove(movementDirection)) {
-
-            return movementDirection;
+            backAndForthCount = 0;
 
         }
-        movementDirection = divisible ? direction.rotateRight() : direction.rotateLeft();
-        if (robotController.canMove(movementDirection)) {
+        robotController.setIndicatorString(0, "B&F: " + backAndForthCount);
+        lastRecommendedDirection = recommendedDirection;
 
-            return movementDirection;
+        if (backAndForthCount < 5) {
 
-        }
-        if (use90) {
+            blockedDirection = null;
+            return recommendedDirection;
 
+        } else {
+
+            blockedDirection = recommendedDirection;
             return null;
 
         }
-        movementDirection = divisible ? direction.rotateLeft().rotateLeft() : direction.rotateRight().rotateRight();
-        if (robotController.canMove(movementDirection)) {
-
-            return movementDirection;
-
-        }
-        movementDirection = divisible ? direction.rotateRight().rotateRight() : direction.rotateLeft().rotateLeft();
-        if (robotController.canMove(movementDirection)) {
-
-            return movementDirection;
-
-        }
-        return null;
 
     }
 
-    // will do the same as recommendedMovementDirectionForDirection but will not move within 3 squares of a wall
-    public Direction recommendedFleeDirectionForDirection(final Direction direction, final RobotController robotController, boolean use90) throws GameActionException {
+    // checks D, D.L, D.R, D.LL, D.RR for availability
+    public Direction recommendedMovementDirectionForDirectionAux(final Direction direction, final RobotController robotController, boolean use90) {
 
-        final MapLocation currentLocation = robotController.getLocation();
-
-        if (robotController.canMove(direction) && robotController.onTheMap(currentLocation.add(direction, 3))) {
+        if (robotController.canMove(direction) && direction != blockedDirection) {
 
             return direction;
 
@@ -77,13 +64,13 @@ public class DirectionModule {
 
         final boolean divisible = robotController.getID() % 2 == 0;
         Direction movementDirection = divisible ? direction.rotateLeft() : direction.rotateRight();
-        if (robotController.canMove(movementDirection) && robotController.onTheMap(currentLocation.add(movementDirection, 3))) {
+        if (robotController.canMove(movementDirection) && movementDirection != blockedDirection) {
 
             return movementDirection;
 
         }
         movementDirection = divisible ? direction.rotateRight() : direction.rotateLeft();
-        if (robotController.canMove(movementDirection) && robotController.onTheMap(currentLocation.add(movementDirection, 3))) {
+        if (robotController.canMove(movementDirection) && movementDirection != blockedDirection) {
 
             return movementDirection;
 
@@ -94,13 +81,13 @@ public class DirectionModule {
 
         }
         movementDirection = divisible ? direction.rotateLeft().rotateLeft() : direction.rotateRight().rotateRight();
-        if (robotController.canMove(movementDirection) && robotController.onTheMap(currentLocation.add(movementDirection, 3))) {
+        if (robotController.canMove(movementDirection) && movementDirection != blockedDirection) {
 
             return movementDirection;
 
         }
         movementDirection = divisible ? direction.rotateRight().rotateRight() : direction.rotateLeft().rotateLeft();
-        if (robotController.canMove(movementDirection) && robotController.onTheMap(currentLocation.add(movementDirection, 3))) {
+        if (robotController.canMove(movementDirection) && movementDirection != blockedDirection) {
 
             return movementDirection;
 
