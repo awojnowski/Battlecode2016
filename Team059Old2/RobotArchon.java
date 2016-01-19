@@ -1,11 +1,11 @@
-package team059;
+package Team059Old2;
 
-import team059.Combat.CombatModule;
-import team059.Map.*;
-import team059.Movement.*;
-import team059.Rubble.RubbleModule;
-import team059.Signals.*;
-import team059.ZombieSpawns.ZombieSpawnsModule;
+import Team059Old2.Combat.CombatModule;
+import Team059Old2.Map.*;
+import Team059Old2.Movement.*;
+import Team059Old2.Rubble.RubbleModule;
+import Team059Old2.Signals.*;
+import Team059Old2.ZombieSpawns.ZombieSpawnsModule;
 import battlecode.common.*;
 import java.util.*;
 
@@ -100,14 +100,12 @@ public class RobotArchon implements Robot {
                     }
 
                     final CommunicationModuleSignal communicationModuleSignal = buildingUpdateSignalCollection.nextElement();
-                    if (!CommunicationRelayModule.shouldRelaySignalTypeToRobotType(communicationModuleSignal.type, buildingUnitType)) {
+                    if (this.shouldBroadcastCommunicationModuleSignalToRobotType(communicationModuleSignal.type, buildingUnitType)) {
 
-                        continue;
+                        communicationModule.broadcastSignal(communicationModuleSignal, robotController, RobotArchon.InitialMessageUpdateLength);
+                        totalSignalsSent ++;
 
                     }
-
-                    communicationModule.broadcastSignal(communicationModuleSignal, robotController, RobotArchon.InitialMessageUpdateLength);
-                    totalSignalsSent ++;
 
                 }
                 if (signalsSendingDone) {
@@ -161,7 +159,7 @@ public class RobotArchon implements Robot {
 
                 if (directionModule.isMapLocationSafe(currentLocation, enemies, 4)) {
 
-                    communicationModule.broadcastEnqueuedSignals(robotController, CommunicationModule.maximumBroadcastRange(mapInfoModule, currentLocation));
+                    communicationModule.broadcastEnqueuedSignals(robotController, CommunicationModule.maximumBroadcastRange(mapInfoModule));
 
                 }
 
@@ -353,14 +351,6 @@ public class RobotArchon implements Robot {
 
                     color = new int[]{255, 0, 0};
 
-                } else if (communicationModuleSignal.type == CommunicationModuleSignal.TYPE_ENEMY_TURRET) {
-
-                    color = new int[]{255, 50, 100};
-
-                } else {
-
-                    continue;
-
                 }
                 robotController.setIndicatorLine(location, communicationModuleSignal.location, color[0], color[1], color[2]);
 
@@ -369,6 +359,16 @@ public class RobotArchon implements Robot {
             Clock.yield();
 
         }
+
+    }
+
+    /*
+    SIGNALS
+     */
+
+    public boolean shouldBroadcastCommunicationModuleSignalToRobotType(final int broadcastType, final RobotType robotType) {
+
+        return true;
 
     }
 

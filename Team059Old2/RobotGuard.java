@@ -1,0 +1,17 @@
+package Team059Old2;
+
+import battlecode.common.*;
+
+public class RobotGuard implements Robot {
+
+    public void run(final RobotController robotController) throws GameActionException {
+
+        while (true) {
+
+            Clock.yield();
+
+        }
+
+    }
+
+}

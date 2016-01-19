@@ -1,4 +1,4 @@
-package team059.Signals;
+package Team059Old2.Signals;
 
 import battlecode.common.*;
 
@@ -11,17 +11,10 @@ public class CommunicationModuleSignal {
     public static final int ACTION_DELETE = 2;
     public static final int ACTION_INITIAL_UPDATE_COMPLETE = 3;
 
-    public static final int TYPE_NONE             = 0;
-    public static final int TYPE_ZOMBIEDEN        = 1;
-    public static final int TYPE_ENEMY_ARCHON     = 2;
-    public static final int TYPE_ENEMY_TURRET     = 3;
-    public static final int TYPE_NEUTRAL_ROBOT    = 4;
-    public static final int TYPE_SPARE_PARTS      = 5;
-    public static final int TYPE_MAP_INFO         = 6;
-    public static final int TYPE_MAP_WALL_EAST    = 7;
-    public static final int TYPE_MAP_WALL_NORTH   = 8;
-    public static final int TYPE_MAP_WALL_WEST    = 9;
-    public static final int TYPE_MAP_WALL_SOUTH   = 10;
+    public static final int TYPE_NONE = 0;
+    public static final int TYPE_ZOMBIEDEN = 1;
+    public static final int TYPE_ENEMY_ARCHON = 2;
+    public static final int TYPE_MAP_INFO = 3;
 
     public int action = CommunicationModuleSignal.ACTION_NONE;
     public MapLocation location;
@@ -76,12 +69,6 @@ public class CommunicationModuleSignal {
      */
 
     public static int serializeMapLocation(MapLocation mapLocation) {
-
-        if (mapLocation == null) {
-
-            return 0;
-
-        }
 
         int result = 0;
         result += mapLocation.x + CommunicationModuleSignal.LocationNormalizationIncrement; // 16 bits

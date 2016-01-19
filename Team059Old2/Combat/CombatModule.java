@@ -1,4 +1,4 @@
-package team059.Combat;
+package Team059Old2.Combat;
 
 import battlecode.common.*;
 
@@ -16,26 +16,6 @@ public class CombatModule {
 
                 bestEnemy = enemy;
                 lowestHealth = enemy.health;
-
-            }
-
-        }
-        return bestEnemy;
-
-    }
-
-    public RobotInfo lowestInfectionEnemyFromEnemies(RobotInfo[] enemies) {
-
-        RobotInfo bestEnemy = null;
-        double lowestInfection = Integer.MAX_VALUE;
-
-        for (int i = 0; i < enemies.length; i++) {
-
-            final RobotInfo enemy = enemies[i];
-            if (enemy.viperInfectedTurns < lowestInfection) {
-
-                bestEnemy = enemy;
-                lowestInfection = enemy.viperInfectedTurns;
 
             }
 

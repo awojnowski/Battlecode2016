@@ -1,4 +1,4 @@
-package team059.Movement;
+package Team059Old2.Movement;
 
 import battlecode.common.*;
 
@@ -8,9 +8,6 @@ public class DirectionModule {
 
     public static final Direction[] directions = { Direction.EAST, Direction.NORTH_EAST, Direction.NORTH, Direction.NORTH_WEST, Direction.WEST, Direction.SOUTH_WEST, Direction.SOUTH, Direction.SOUTH_EAST };
     private Random random = null;
-    private Direction lastRecommendedDirection = null;
-    private int backAndForthCount = 0;
-    private Direction blockedDirection = null;
 
     public DirectionModule(int randomSeed) {
 
@@ -24,39 +21,10 @@ public class DirectionModule {
 
     }
 
+    // checks D, D.L, D.R, D.LL, D.RR for availability
     public Direction recommendedMovementDirectionForDirection(final Direction direction, final RobotController robotController, boolean use90) {
 
-        Direction recommendedDirection = recommendedMovementDirectionForDirectionAux(direction, robotController, use90);
-        if (lastRecommendedDirection != null && recommendedDirection == lastRecommendedDirection.opposite()) {
-
-            backAndForthCount++;
-
-        } else {
-
-            backAndForthCount = 0;
-
-        }
-        robotController.setIndicatorString(0, "B&F: " + backAndForthCount);
-        lastRecommendedDirection = recommendedDirection;
-
-        if (backAndForthCount < 5) {
-
-            blockedDirection = null;
-            return recommendedDirection;
-
-        } else {
-
-            blockedDirection = recommendedDirection;
-            return null;
-
-        }
-
-    }
-
-    // checks D, D.L, D.R, D.LL, D.RR for availability
-    public Direction recommendedMovementDirectionForDirectionAux(final Direction direction, final RobotController robotController, boolean use90) {
-
-        if (robotController.canMove(direction) && direction != blockedDirection) {
+        if (robotController.canMove(direction)) {
 
             return direction;
 
@@ -64,13 +32,13 @@ public class DirectionModule {
 
         final boolean divisible = robotController.getID() % 2 == 0;
         Direction movementDirection = divisible ? direction.rotateLeft() : direction.rotateRight();
-        if (robotController.canMove(movementDirection) && movementDirection != blockedDirection) {
+        if (robotController.canMove(movementDirection)) {
 
             return movementDirection;
 
         }
         movementDirection = divisible ? direction.rotateRight() : direction.rotateLeft();
-        if (robotController.canMove(movementDirection) && movementDirection != blockedDirection) {
+        if (robotController.canMove(movementDirection)) {
 
             return movementDirection;
 
@@ -81,13 +49,58 @@ public class DirectionModule {
 
         }
         movementDirection = divisible ? direction.rotateLeft().rotateLeft() : direction.rotateRight().rotateRight();
-        if (robotController.canMove(movementDirection) && movementDirection != blockedDirection) {
+        if (robotController.canMove(movementDirection)) {
 
             return movementDirection;
 
         }
         movementDirection = divisible ? direction.rotateRight().rotateRight() : direction.rotateLeft().rotateLeft();
-        if (robotController.canMove(movementDirection) && movementDirection != blockedDirection) {
+        if (robotController.canMove(movementDirection)) {
+
+            return movementDirection;
+
+        }
+        return null;
+
+    }
+
+    // will do the same as recommendedMovementDirectionForDirection but will not move within 3 squares of a wall
+    public Direction recommendedFleeDirectionForDirection(final Direction direction, final RobotController robotController, boolean use90) throws GameActionException {
+
+        final MapLocation currentLocation = robotController.getLocation();
+
+        if (robotController.canMove(direction) && robotController.onTheMap(currentLocation.add(direction, 3))) {
+
+            return direction;
+
+        }
+
+        final boolean divisible = robotController.getID() % 2 == 0;
+        Direction movementDirection = divisible ? direction.rotateLeft() : direction.rotateRight();
+        if (robotController.canMove(movementDirection) && robotController.onTheMap(currentLocation.add(movementDirection, 3))) {
+
+            return movementDirection;
+
+        }
+        movementDirection = divisible ? direction.rotateRight() : direction.rotateLeft();
+        if (robotController.canMove(movementDirection) && robotController.onTheMap(currentLocation.add(movementDirection, 3))) {
+
+            return movementDirection;
+
+        }
+        if (use90) {
+
+            return null;
+
+        }
+        movementDirection = divisible ? direction.rotateLeft().rotateLeft() : direction.rotateRight().rotateRight();
+        if (robotController.canMove(movementDirection) && robotController.onTheMap(currentLocation.add(movementDirection, 3))) {
+
+            return movementDirection;
+
+        }
+        movementDirection = divisible ? direction.rotateRight().rotateRight() : direction.rotateLeft().rotateLeft();
+        if (robotController.canMove(movementDirection) && robotController.onTheMap(currentLocation.add(movementDirection, 3))) {
 
             return movementDirection;
 
@@ -242,89 +255,6 @@ public class DirectionModule {
         }
 
         if (totalRobotsFound == 0) {
-
-            return null;
-
-        }
-
-        for (int i = 0; i < directions.length; i += 2) {
-
-            final Direction direction = directions[i];
-            final int sightDistance = (int)Math.round(Math.sqrt((double)robotController.getType().sensorRadiusSquared)) - 1;
-
-            for (int j = 1; j <= sightDistance; j++) {
-
-                final MapLocation location = currentLocation.add(direction, j);
-                if (!robotController.onTheMap(location)) {
-
-                    totalRobotX += location.x;
-                    totalRobotY += location.y;
-                    totalRobotsFound ++;
-
-                }
-
-            }
-
-        }
-
-        final double averageRobotX = (double)totalRobotX / totalRobotsFound;
-        final double averageRobotY = (double)totalRobotY / totalRobotsFound;
-        final double dx = (double)(averageRobotX - currentLocation.x);
-        final double dy = (double)(averageRobotY - currentLocation.y);
-        return Math.abs(dx) >= 2.414D * Math.abs(dy)?(dx > 0.0D?Direction.EAST:(dx < 0.0D?Direction.WEST:Direction.OMNI)):(Math.abs(dy) >= 2.414D * Math.abs(dx)?(dy > 0.0D?Direction.SOUTH:Direction.NORTH):(dy > 0.0D?(dx > 0.0D?Direction.SOUTH_EAST:Direction.SOUTH_WEST):(dx > 0.0D?Direction.NORTH_EAST:Direction.NORTH_WEST)));
-
-    }
-
-    // same as above but 'subtracts' ally locations
-    public final Direction averageDirectionTowardDangerousRobotsAndOuterBoundsMinusAllies(final RobotController robotController) throws GameActionException {
-
-        final RobotInfo[] robots = robotController.senseNearbyRobots();
-        final MapLocation currentLocation = robotController.getLocation();
-        final Team currentTeam = robotController.getTeam();
-        int totalRobotX = 0;
-        int totalRobotY = 0;
-        int totalRobotsFound = 0;
-        int totalDangerousRobotsFound = 0;
-
-        if (robots == null || robots.length == 0) {
-
-            return null;
-
-        }
-
-        for (int i = 0; i < robots.length; i++) {
-
-            MapLocation location;
-            final RobotInfo robot = robots[i];
-
-            if (!this.isEnemyDangerous(robot, currentLocation, 1)) {
-
-                if (robot.team == currentTeam && robot.type != RobotType.ARCHON && robot.type != RobotType.SCOUT) {
-
-                    int x = currentLocation.x + (currentLocation.x - robot.location.x) * 3;
-                    int y = currentLocation.y + (currentLocation.y - robot.location.y) * 3;
-                    location = new MapLocation(x, y);
-
-                } else {
-
-                    continue;
-
-                }
-
-            } else {
-
-                location = robot.location;
-                totalDangerousRobotsFound ++;
-
-            }
-
-            totalRobotX += location.x;
-            totalRobotY += location.y;
-            totalRobotsFound ++;
-
-        }
-
-        if (totalDangerousRobotsFound == 0) {
 
             return null;
 

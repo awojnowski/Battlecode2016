@@ -1,10 +1,10 @@
-package team059.Signals;
+package Team059Old2.Signals;
 
-import team059.Map.*;
+import Team059Old2.Map.*;
 import battlecode.common.*;
 import java.util.*;
 
-public class CommunicationModule {
+public class CommunicationModule implements CommunicationModuleDelegate {
 
     public static final int DefaultApproximateNearbyLocationRange = 64;
     public static final int ApproximateNearbyPartsLocationRadius = 3;
@@ -13,7 +13,6 @@ public class CommunicationModule {
     // these are the hashtables managing the received communications
     // the hashtables are indexed by an Integer which represents the location
     public final Hashtable<Integer, CommunicationModuleSignal> enemyArchons = new Hashtable<Integer, CommunicationModuleSignal>();
-    public final Hashtable<Integer, CommunicationModuleSignal> enemyTurrets = new Hashtable<Integer, CommunicationModuleSignal>();
     public final Hashtable<Integer, CommunicationModuleSignal> zombieDens = new Hashtable<Integer, CommunicationModuleSignal>();
 
     // contains signals without a message associated with them, received last time the queue was cleared
@@ -23,6 +22,7 @@ public class CommunicationModule {
     public final ArrayList<CommunicationModuleSignal> communicationModuleSignalQueue = new ArrayList<CommunicationModuleSignal>();
 
     public MapInfoModule mapInfoModule = null;
+    public CommunicationModuleDelegate delegate = this;
     public boolean initialInformationReceived = false;
 
     public CommunicationModule(final MapInfoModule mapInfoModule) {
@@ -37,20 +37,9 @@ public class CommunicationModule {
 
     public void broadcastSignal(final CommunicationModuleSignal communicationModuleSignal, final RobotController robotController, final int broadcastRange) throws GameActionException {
 
-        this.broadcastSignal(communicationModuleSignal, robotController, broadcastRange, true);
-
-    }
-
-    public void broadcastSignal(final CommunicationModuleSignal communicationModuleSignal, final RobotController robotController, final int broadcastRange, boolean processSignal) throws GameActionException {
-
         final int[] message = communicationModuleSignal.serialize();
         robotController.broadcastMessageSignal(message[0], message[1], broadcastRange);
-
-        if (processSignal) {
-
-            this.processSignal(communicationModuleSignal);
-
-        }
+        this.processSignal(communicationModuleSignal);
 
     }
 
@@ -77,7 +66,7 @@ public class CommunicationModule {
 
         for (int i = 0; i < this.communicationModuleSignalQueue.size(); i++) {
 
-            this.broadcastSignal(this.communicationModuleSignalQueue.get(i), robotController, broadcastRange, false);
+            this.broadcastSignal(this.communicationModuleSignalQueue.get(i), robotController, broadcastRange);
 
         }
         this.communicationModuleSignalQueue.clear();
@@ -91,6 +80,16 @@ public class CommunicationModule {
     public static int communicationsIndexFromLocation(final MapLocation mapLocation) {
 
         return CommunicationModuleSignal.serializeMapLocation(mapLocation);
+
+    }
+
+    /*
+    DELEGATE
+     */
+
+    public boolean shouldProcessSignalType(final int signalType) {
+
+        return true;
 
     }
 
@@ -114,35 +113,18 @@ public class CommunicationModule {
         while (enemyArchons.hasMoreElements()) {
 
             final CommunicationModuleSignal communicationModuleSignal = enemyArchons.nextElement();
-            if (!this.verifyUnitRangeCommunicationModuleSignal(communicationModuleSignal, robotController, enemies)) {
+            if (!this.verifyEnemyArchonCommunicationModuleSignal(communicationModuleSignal, robotController, enemies)) {
 
                 if (broadcastInformation) {
 
                     communicationModuleSignal.action = CommunicationModuleSignal.ACTION_DELETE;
                     signals.add(communicationModuleSignal);
 
-                }
-                this.clearSignal(communicationModuleSignal, this.enemyArchons);
+                } else {
 
-            }
-
-        }
-
-        // verify the turrets
-
-        final Enumeration<CommunicationModuleSignal> enemyTurrets = this.enemyTurrets.elements();
-        while (enemyTurrets.hasMoreElements()) {
-
-            final CommunicationModuleSignal communicationModuleSignal = enemyTurrets.nextElement();
-            if (!this.verifyUnitRangeCommunicationModuleSignal(communicationModuleSignal, robotController, enemies)) {
-
-                if (broadcastInformation) {
-
-                    communicationModuleSignal.action = CommunicationModuleSignal.ACTION_DELETE;
-                    signals.add(communicationModuleSignal);
+                    this.clearSignal(communicationModuleSignal, this.enemyArchons);
 
                 }
-                this.clearSignal(communicationModuleSignal, this.enemyTurrets);
 
             }
 
@@ -161,8 +143,11 @@ public class CommunicationModule {
                     communicationModuleSignal.action = CommunicationModuleSignal.ACTION_DELETE;
                     signals.add(communicationModuleSignal);
 
+                } else {
+
+                    this.clearSignal(communicationModuleSignal, this.zombieDens);
+
                 }
-                this.clearSignal(communicationModuleSignal, this.zombieDens);
 
             }
 
@@ -215,7 +200,7 @@ public class CommunicationModule {
 
     }
 
-    public boolean verifyUnitRangeCommunicationModuleSignal(final CommunicationModuleSignal communicationModuleSignal, final RobotController robotController, final RobotInfo[] enemies) throws GameActionException {
+    public boolean verifyEnemyArchonCommunicationModuleSignal(final CommunicationModuleSignal communicationModuleSignal, final RobotController robotController, final RobotInfo[] enemies) throws GameActionException {
 
         if (robotController.getLocation().distanceSquaredTo(communicationModuleSignal.location) > robotController.getType().sensorRadiusSquared) {
 
@@ -262,44 +247,19 @@ public class CommunicationModule {
 
     }
 
-    public static int maximumBroadcastRange(final MapInfoModule mapInfoModule, final MapLocation currentLocation) {
+    public static int maximumBroadcastRange(final MapInfoModule mapInfoModule) {
 
-        final int mapWidth = mapInfoModule.hasMapWidth() ? mapInfoModule.mapWidth() : 80;
-        final int mapHeight = mapInfoModule.hasMapHeight() ? mapInfoModule.mapHeight() : 80;
+        if (!mapInfoModule.hasAllBoundaries()) {
 
-        int broadcastWidth = 0;
-        if (mapInfoModule.westBoundaryValue != MapInfoModule.UnknownValue) {
-
-            final int difference = currentLocation.x - mapInfoModule.westBoundaryValue;
-            broadcastWidth = Math.max(difference, mapWidth - difference);
-
-        } else if (mapInfoModule.eastBoundaryValue != MapInfoModule.UnknownValue) {
-
-            final int difference = mapInfoModule.eastBoundaryValue - currentLocation.x;
-            broadcastWidth = Math.max(difference, mapWidth - difference);
+            return 12800;
 
         } else {
 
-            broadcastWidth = mapWidth;
+            final int mapWidth = mapInfoModule.mapWidth();
+            final int mapHeight = mapInfoModule.mapHeight();
+            return mapWidth * mapWidth + mapHeight * mapHeight;
 
         }
-        int broadcastHeight = 0;
-        if (mapInfoModule.northBoundaryValue != MapInfoModule.UnknownValue) {
-
-            final int difference = currentLocation.y - mapInfoModule.northBoundaryValue;
-            broadcastHeight = Math.max(difference, mapHeight - difference);
-
-        } else if (mapInfoModule.southBoundaryValue != MapInfoModule.UnknownValue) {
-
-            final int difference = mapInfoModule.southBoundaryValue - currentLocation.y;
-            broadcastHeight = Math.max(difference, mapHeight - difference);
-
-        } else {
-
-            broadcastHeight = mapHeight;
-
-        }
-        return Math.min(12800 /*failsafe*/, broadcastWidth * broadcastWidth + broadcastHeight * broadcastHeight);
 
     }
 
@@ -338,7 +298,7 @@ public class CommunicationModule {
             }
 
             final CommunicationModuleSignal communicationModuleSignal = new CommunicationModuleSignal(message);
-            if (!CommunicationRelayModule.shouldRelaySignalTypeToRobotType(communicationModuleSignal.type, robotController.getType())) {
+            if (!this.delegate.shouldProcessSignalType(communicationModuleSignal.type)) {
 
                 continue;
 
@@ -357,11 +317,7 @@ public class CommunicationModule {
             return;
 
         }
-        if (communicationModuleSignal.type == CommunicationModuleSignal.TYPE_MAP_INFO ||
-                communicationModuleSignal.type == CommunicationModuleSignal.TYPE_MAP_WALL_EAST ||
-                communicationModuleSignal.type == CommunicationModuleSignal.TYPE_MAP_WALL_NORTH ||
-                communicationModuleSignal.type == CommunicationModuleSignal.TYPE_MAP_WALL_WEST ||
-                communicationModuleSignal.type == CommunicationModuleSignal.TYPE_MAP_WALL_SOUTH) {
+        if (communicationModuleSignal.type == CommunicationModuleSignal.TYPE_MAP_INFO) {
 
             this.mapInfoModule.fillDataFromCommunicationModuleSignal(communicationModuleSignal);
             return;
@@ -394,11 +350,6 @@ public class CommunicationModule {
             return this.enemyArchons;
 
         }
-        if (signalType == CommunicationModuleSignal.TYPE_ENEMY_TURRET) {
-
-            return this.enemyTurrets;
-
-        }
         if (signalType == CommunicationModuleSignal.TYPE_ZOMBIEDEN) {
 
             return this.zombieDens;
@@ -417,6 +368,17 @@ public class CommunicationModule {
     public void clearSignal(final CommunicationModuleSignal communicationModuleSignal, final Hashtable<Integer, CommunicationModuleSignal> hashtable) {
 
         hashtable.remove(communicationModuleSignal.serializedLocation());
+        for (int i = 0; i < this.communicationModuleSignalQueue.size(); i++) {
+
+            final CommunicationModuleSignal signal = this.communicationModuleSignalQueue.get(i);
+            if (signal.type == communicationModuleSignal.type && signal.location == communicationModuleSignal.location) {
+
+                this.communicationModuleSignalQueue.remove(i);
+                i--;
+
+            }
+
+        }
 
     }
 
@@ -427,71 +389,16 @@ public class CommunicationModule {
     public CommunicationModuleSignalCollection allCommunicationModuleSignals() {
 
         final CommunicationModuleSignalCollection communicationModuleSignalCollection = new CommunicationModuleSignalCollection();
+        if (this.delegate.shouldProcessSignalType(CommunicationModuleSignal.TYPE_ENEMY_ARCHON)) {
 
-        // archons
-
-        communicationModuleSignalCollection.addEnumeration(this.enemyArchons.elements());
-
-        // turrets
-
-        communicationModuleSignalCollection.addEnumeration(this.enemyTurrets.elements());
-
-        // zombies
-
-        communicationModuleSignalCollection.addEnumeration(this.zombieDens.elements());
-
-        // map info
-
-        final ArrayList<CommunicationModuleSignal> mapInfoSignals = new ArrayList<CommunicationModuleSignal>();
-        if (this.mapInfoModule.hasAllBoundaries()) {
-
-            final CommunicationModuleSignal signal = new CommunicationModuleSignal();
-            signal.action = CommunicationModuleSignal.ACTION_SEEN;
-            this.mapInfoModule.fillCommunicationModuleSignalWithMapSizeData(signal);
-            mapInfoSignals.add(signal);
-
-        } else {
-
-            if (this.mapInfoModule.eastBoundaryValue != MapInfoModule.UnknownValue) {
-
-                final CommunicationModuleSignal signal = new CommunicationModuleSignal();
-                signal.action = CommunicationModuleSignal.ACTION_SEEN;
-                signal.type = CommunicationModuleSignal.TYPE_MAP_WALL_EAST;
-                signal.data = this.mapInfoModule.eastBoundaryValue;
-                mapInfoSignals.add(signal);
-
-            }
-            if (this.mapInfoModule.northBoundaryValue != MapInfoModule.UnknownValue) {
-
-                final CommunicationModuleSignal signal = new CommunicationModuleSignal();
-                signal.action = CommunicationModuleSignal.ACTION_SEEN;
-                signal.type = CommunicationModuleSignal.TYPE_MAP_WALL_NORTH;
-                signal.data = this.mapInfoModule.northBoundaryValue;
-                mapInfoSignals.add(signal);
-
-            }
-            if (this.mapInfoModule.westBoundaryValue != MapInfoModule.UnknownValue) {
-
-                final CommunicationModuleSignal signal = new CommunicationModuleSignal();
-                signal.action = CommunicationModuleSignal.ACTION_SEEN;
-                signal.type = CommunicationModuleSignal.TYPE_MAP_WALL_WEST;
-                signal.data = this.mapInfoModule.westBoundaryValue;
-                mapInfoSignals.add(signal);
-
-            }
-            if (this.mapInfoModule.southBoundaryValue != MapInfoModule.UnknownValue) {
-
-                final CommunicationModuleSignal signal = new CommunicationModuleSignal();
-                signal.action = CommunicationModuleSignal.ACTION_SEEN;
-                signal.type = CommunicationModuleSignal.TYPE_MAP_WALL_SOUTH;
-                signal.data = this.mapInfoModule.southBoundaryValue;
-                mapInfoSignals.add(signal);
-
-            }
+            communicationModuleSignalCollection.addEnumeration(this.enemyArchons.elements());
 
         }
-        communicationModuleSignalCollection.addEnumeration(Collections.enumeration(mapInfoSignals));
+        if (this.delegate.shouldProcessSignalType(CommunicationModuleSignal.TYPE_ZOMBIEDEN)) {
 
+            communicationModuleSignalCollection.addEnumeration(this.zombieDens.elements());
+
+        }
         return communicationModuleSignalCollection;
 
     }
