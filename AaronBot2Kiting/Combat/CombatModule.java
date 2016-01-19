@@ -1,4 +1,4 @@
-package AaronBot2.Combat;
+package AaronBot2Kiting.Combat;
 
 import battlecode.common.*;
 

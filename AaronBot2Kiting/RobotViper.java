@@ -1,13 +1,13 @@
-package AaronBot2;
+package AaronBot2Kiting;
 
-import AaronBot2.Combat.CombatModule;
-import AaronBot2.Map.MapInfoModule;
-import AaronBot2.Movement.DirectionModule;
-import AaronBot2.Movement.MovementModule;
-import AaronBot2.Rubble.RubbleModule;
-import AaronBot2.Signals.CommunicationModule;
-import AaronBot2.Signals.CommunicationModuleSignal;
-import AaronBot2.Signals.CommunicationModuleSignalCollection;
+import AaronBot2Kiting.Combat.CombatModule;
+import AaronBot2Kiting.Map.MapInfoModule;
+import AaronBot2Kiting.Movement.DirectionModule;
+import AaronBot2Kiting.Movement.MovementModule;
+import AaronBot2Kiting.Rubble.RubbleModule;
+import AaronBot2Kiting.Signals.CommunicationModule;
+import AaronBot2Kiting.Signals.CommunicationModuleSignal;
+import AaronBot2Kiting.Signals.CommunicationModuleSignalCollection;
 import battlecode.common.*;
 
 import java.util.ArrayList;
@@ -143,27 +143,6 @@ public class RobotViper implements Robot {
                         if (directionTowardsZombies != null) {
 
                             desiredMovementDirection = directionTowardsZombies.opposite();
-
-                        }
-
-                    }
-
-                }
-
-                // now check if we have an objective
-
-                if (desiredMovementDirection == null && ableToMove) {
-
-                    if (objectiveSignal != null) {
-
-                        final MapLocation objectiveLocation = objectiveSignal.location;
-                        if (objectiveLocation.distanceSquaredTo(currentLocation) >= 8) {
-
-                            desiredMovementDirection = currentLocation.directionTo(objectiveLocation);
-
-                        } else {
-
-                            ableToMove = false;
 
                         }
 

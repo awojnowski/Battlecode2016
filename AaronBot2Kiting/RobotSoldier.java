@@ -1,19 +1,15 @@
-package AaronBot2;
+package AaronBot2Kiting;
 
-import AaronBot2.Combat.CombatModule;
-import AaronBot2.Map.MapInfoModule;
-import AaronBot2.Movement.DirectionModule;
-import AaronBot2.Movement.MovementModule;
-import AaronBot2.Rubble.RubbleModule;
-import AaronBot2.Signals.CommunicationModule;
-import AaronBot2.Signals.CommunicationModuleSignal;
-import AaronBot2.Signals.CommunicationModuleSignalCollection;
+import AaronBot2Kiting.Combat.*;
+import AaronBot2Kiting.Map.MapInfoModule;
+import AaronBot2Kiting.Movement.*;
+import AaronBot2Kiting.Signals.*;
+import AaronBot2Kiting.Rubble.*;
 import battlecode.common.*;
 
-import java.util.ArrayList;
-import java.util.Enumeration;
+import java.util.*;
 
-public class RobotViper implements Robot {
+public class RobotSoldier implements Robot {
 
     public void run(final RobotController robotController) throws GameActionException {
 
@@ -52,11 +48,25 @@ public class RobotViper implements Robot {
             CommunicationModuleSignal objectiveSignal = null;
             int closestObjectiveLocationDistance = Integer.MAX_VALUE;
 
+            final Enumeration<CommunicationModuleSignal> zombieDenCommunicationModuleSignals = communicationModule.zombieDens.elements();
+            while (zombieDenCommunicationModuleSignals.hasMoreElements()) {
+
+                final CommunicationModuleSignal signal = zombieDenCommunicationModuleSignals.nextElement();
+                final int distance = signal.location.distanceSquaredTo(currentLocation);
+                if (distance < closestObjectiveLocationDistance) {
+
+                    objectiveSignal = signal;
+                    closestObjectiveLocationDistance = distance;
+
+                }
+
+            }
+
             final Enumeration<CommunicationModuleSignal> enemyArchonCommunicationModuleSignals = communicationModule.enemyArchons.elements();
             while (enemyArchonCommunicationModuleSignals.hasMoreElements()) {
 
                 final CommunicationModuleSignal signal = enemyArchonCommunicationModuleSignals.nextElement();
-                final int distance = signal.location.distanceSquaredTo(currentLocation);
+                final int distance = signal.location.distanceSquaredTo(currentLocation) * 6; // multiplying by 6 to prioritize the dens
                 if (distance < closestObjectiveLocationDistance) {
 
                     objectiveSignal = signal;
@@ -69,38 +79,33 @@ public class RobotViper implements Robot {
             // now let's see if we should kite or attack anything
 
             boolean attacked = false;
-            final RobotInfo[] immediateEnemies = robotController.senseNearbyRobots(13, currentTeam.opponent());
-//            final RobotInfo[] immediateKitableEnemies = CombatModule.robotsOfTypesFromRobots(immediateEnemies, new RobotType[]{RobotType.SOLDIER, RobotType.GUARD, RobotType.RANGEDZOMBIE, RobotType.STANDARDZOMBIE, RobotType.BIGZOMBIE});
+            final RobotInfo[] immediateEnemies = robotController.senseHostileRobots(currentLocation, 8);
+            final RobotInfo[] immediateKitableZombies = CombatModule.robotsOfTypesFromRobots(immediateEnemies, new RobotType[]{RobotType.STANDARDZOMBIE, RobotType.BIGZOMBIE});
             RobotInfo bestEnemy;
 
-            if (immediateEnemies.length > 0) {
+            if (immediateKitableZombies.length > 0) {
 
-                bestEnemy = combatModule.lowestInfectionEnemyFromEnemies(immediateEnemies);
+                bestEnemy = combatModule.lowestHealthEnemyFromEnemies(immediateKitableZombies);
 
             } else {
 
-                final RobotInfo[] enemies = robotController.senseNearbyRobots(type.attackRadiusSquared, currentTeam.opponent());
-                bestEnemy = combatModule.lowestInfectionEnemyFromEnemies(enemies);
+                final RobotInfo[] enemies = robotController.senseHostileRobots(currentLocation, type.attackRadiusSquared);
+                bestEnemy = combatModule.lowestHealthEnemyFromEnemies(enemies);
 
             }
 
             // movement variables
 
-            boolean ableToMove = true;
+            boolean ableToMove = (bestEnemy == null || bestEnemy.type == RobotType.ZOMBIEDEN || bestEnemy.type == RobotType.TURRET || bestEnemy.type == RobotType.ARCHON || bestEnemy.type == RobotType.SCOUT);
             Direction targetRubbleClearanceDirection = null;
             Direction desiredMovementDirection = null;
 
-            if (bestEnemy != null && currentLocation.distanceSquaredTo(bestEnemy.location) <= bestEnemy.type.attackRadiusSquared) {
+            if (bestEnemy != null && (bestEnemy.type == RobotType.STANDARDZOMBIE || bestEnemy.type == RobotType.BIGZOMBIE) && currentLocation.distanceSquaredTo(bestEnemy.location) <= 8) {
 
                 // should kite
 
-                Direction directionowardsEnemy = directionModule.averageDirectionTowardRobots(robotController, immediateEnemies);
-                if (directionowardsEnemy != null) {
-
-                    ableToMove = true;
-                    desiredMovementDirection = directionowardsEnemy.opposite();
-
-                }
+                ableToMove = true;
+                desiredMovementDirection = currentLocation.directionTo(bestEnemy.location).opposite();
 
             } else if (robotController.isWeaponReady()) {
 
@@ -129,27 +134,6 @@ public class RobotViper implements Robot {
 
             if (robotController.isCoreReady() && communicationModule.initialInformationReceived && ableToMove) {
 
-                RobotInfo[] zombies = robotController.senseNearbyRobots(type.sensorRadiusSquared, Team.ZOMBIE);
-                RobotInfo[] enemies = robotController.senseHostileRobots(currentLocation, type.sensorRadiusSquared);
-
-                // run away from zombies
-
-                if (ableToMove) {
-
-                    if (zombies.length > 0) {
-
-                        Direction directionTowardsZombies = directionModule.averageDirectionTowardDangerousRobotsAndOuterBounds(robotController, zombies);
-
-                        if (directionTowardsZombies != null) {
-
-                            desiredMovementDirection = directionTowardsZombies.opposite();
-
-                        }
-
-                    }
-
-                }
-
                 // now check if we have an objective
 
                 if (desiredMovementDirection == null && ableToMove) {
@@ -166,6 +150,37 @@ public class RobotViper implements Robot {
                             ableToMove = false;
 
                         }
+
+                    }
+
+                }
+
+                // otherwise check if there are nearby signals
+
+                if (desiredMovementDirection == null && ableToMove) {
+
+                    ArrayList<Signal> signals = communicationModule.notifications;
+
+                    if (signals.size() > 0) {
+
+                        int minDistance = Integer.MAX_VALUE;
+                        MapLocation closestLocation = null;
+
+                        for (int i = 0; i < signals.size(); i++) {
+
+                            final Signal currentSignal = signals.get(i);
+                            final int distance = currentLocation.distanceSquaredTo(currentSignal.getLocation());
+
+                            if (distance < minDistance) {
+
+                                minDistance = distance;
+                                closestLocation = currentSignal.getLocation();
+
+                            }
+
+                        }
+
+                        desiredMovementDirection = currentLocation.directionTo(closestLocation);
 
                     }
 
@@ -202,18 +217,33 @@ public class RobotViper implements Robot {
 
                 }
 
+                // if those fail we can move randomly near our teammates
+
+                if (desiredMovementDirection == null && ableToMove) {
+
+                    desiredMovementDirection = directionModule.randomDirection();
+
+                    RobotInfo[] closeTeammates = robotController.senseNearbyRobots(3, currentTeam); // How close they stay to their team, lower means they'll stay closer
+
+                    if (closeTeammates.length == 0) { // Move towards team if far away
+
+                        RobotInfo[] nearbyTeammates = robotController.senseNearbyRobots(24, currentTeam);
+
+                        if (nearbyTeammates.length > 0) {
+
+                            desiredMovementDirection = directionModule.averageDirectionTowardRobots(robotController, nearbyTeammates);
+
+                        }
+
+                    }
+
+                }
+
                 // process movement
 
                 if (desiredMovementDirection != null) {
 
-                    Direction recommendedMovementDirection = directionModule.recommendedSafeMovementDirectionForDirection(desiredMovementDirection, robotController, enemies, 0, false);
-
-                    if (recommendedMovementDirection == null) {
-
-                        recommendedMovementDirection = directionModule.recommendedMovementDirectionForDirection(desiredMovementDirection, robotController, true);
-
-                    }
-
+                    final Direction recommendedMovementDirection = directionModule.recommendedMovementDirectionForDirection(desiredMovementDirection, robotController, false);
                     if (recommendedMovementDirection != null) {
 
                         robotController.move(recommendedMovementDirection);
@@ -279,24 +309,28 @@ public class RobotViper implements Robot {
 
             // finish up
 
-//            final CommunicationModuleSignalCollection communicationModuleSignalCollection = communicationModule.allCommunicationModuleSignals();
-//            final MapLocation location = robotController.getLocation();
-//            while (communicationModuleSignalCollection.hasMoreElements()) {
-//
-//                final CommunicationModuleSignal communicationModuleSignal = communicationModuleSignalCollection.nextElement();
-//                int[] color = new int[]{255, 255, 255};
-//                if (communicationModuleSignal.type == CommunicationModuleSignal.TYPE_ZOMBIEDEN) {
-//
-//                    color = new int[]{50, 255, 50};
-//
-//                } else if (communicationModuleSignal.type == CommunicationModuleSignal.TYPE_ENEMY_ARCHON) {
-//
-//                    color = new int[]{255, 0, 0};
-//
-//                }
-//                robotController.setIndicatorLine(location, communicationModuleSignal.location, color[0], color[1], color[2]);
-//
-//            }
+            final CommunicationModuleSignalCollection communicationModuleSignalCollection = communicationModule.allCommunicationModuleSignals();
+            final MapLocation location = robotController.getLocation();
+            while (communicationModuleSignalCollection.hasMoreElements()) {
+
+                final CommunicationModuleSignal communicationModuleSignal = communicationModuleSignalCollection.nextElement();
+                int[] color = new int[]{255, 255, 255};
+                if (communicationModuleSignal.type == CommunicationModuleSignal.TYPE_ZOMBIEDEN) {
+
+                    color = new int[]{50, 255, 50};
+
+                } else if (communicationModuleSignal.type == CommunicationModuleSignal.TYPE_ENEMY_ARCHON) {
+
+                    color = new int[]{255, 0, 0};
+
+                } else {
+
+                    continue;
+
+                }
+                robotController.setIndicatorLine(location, communicationModuleSignal.location, color[0], color[1], color[2]);
+
+            }
 
             if (objectiveSignal != null) {
 
