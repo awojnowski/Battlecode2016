@@ -20,18 +20,14 @@ public class RobotSoldier implements Robot {
         final DirectionModule directionModule = new DirectionModule(robotController.getID());
         final MovementModule movementModule = new MovementModule();
         final RubbleModule rubbleModule = new RubbleModule();
+
         final Team currentTeam = robotController.getTeam();
         int turnsStuck = 0;
-        double lastHealth = robotController.getHealth();
-        Direction lastDirection = Direction.NONE;
         boolean stop = false;
 
         final RobotType type = robotController.getType();
 
         while (true) {
-
-            boolean lostHealth = (lastHealth != robotController.getHealth());
-            lastHealth = robotController.getHealth();
 
             MapLocation currentLocation = robotController.getLocation();
 
@@ -90,67 +86,92 @@ public class RobotSoldier implements Robot {
 
             }
 
-            // now let's see if we should kite or attack anything
+            // let's prepare our actions for this turn
 
-            boolean attacked = false;
-            final RobotInfo[] immediateEnemies = robotController.senseHostileRobots(currentLocation, 8);
-            final RobotInfo[] immediateKitableZombies = CombatModule.robotsOfTypesFromRobots(immediateEnemies, new RobotType[]{RobotType.STANDARDZOMBIE, RobotType.BIGZOMBIE});
-            RobotInfo bestEnemy;
+            final RobotInfo[] enemies = robotController.senseHostileRobots(currentLocation, robotController.getType().attackRadiusSquared);
 
-            if (immediateKitableZombies.length > 0) {
-
-                bestEnemy = combatModule.lowestHealthEnemyFromEnemies(immediateKitableZombies);
-
-            } else {
-
-                final RobotInfo[] enemies = robotController.senseHostileRobots(currentLocation, type.attackRadiusSquared);
-                bestEnemy = combatModule.lowestHealthEnemyFromEnemies(enemies);
-
-            }
-
-            // movement variables
-
-            boolean ableToMove = (bestEnemy == null || bestEnemy.type == RobotType.ZOMBIEDEN || bestEnemy.type == RobotType.TURRET || bestEnemy.type == RobotType.ARCHON || bestEnemy.type == RobotType.SCOUT);
-            Direction targetRubbleClearanceDirection = null;
+            RobotInfo bestEnemy = this.getBestEnemyToAttackFromEnemies(enemies);
+            boolean shouldMove = true;
             Direction desiredMovementDirection = null;
+            Direction targetRubbleClearanceDirection = null;
 
-            if (bestEnemy != null && (bestEnemy.type == RobotType.STANDARDZOMBIE || bestEnemy.type == RobotType.BIGZOMBIE) && currentLocation.distanceSquaredTo(bestEnemy.location) <= 8) {
+            // check if there are nearby signals
 
-                // should kite
+            if (desiredMovementDirection == null) {
 
-                ableToMove = true;
-                desiredMovementDirection = currentLocation.directionTo(bestEnemy.location).opposite();
+                int closestSignalDistance = Integer.MAX_VALUE;
+                MapLocation closestSignalLocation = null;
 
-            } else if (robotController.isWeaponReady()) {
+                final ArrayList<Signal> notifications = communicationModule.notifications;
+                for (int i = 0; i < notifications.size(); i++) {
 
-                if (bestEnemy != null) {
+                    final Signal signal = notifications.get(i);
+                    final int distance = currentLocation.distanceSquaredTo(signal.getLocation());
+                    if (distance < closestSignalDistance) {
 
-                    robotController.attackLocation(bestEnemy.location);
-                    attacked = true;
-                    communicationModule.broadcastSignal(robotController, CommunicationModule.maximumFreeBroadcastRangeForRobotType(robotController.getType()));
+                        closestSignalDistance = distance;
+                        closestSignalLocation = signal.getLocation();
+
+                    }
+
+                }
+                if (closestSignalLocation != null) {
+
+                    desiredMovementDirection = currentLocation.directionTo(closestSignalLocation);
 
                 }
 
             }
 
-            // check if they're getting hit by turrets
+            if (bestEnemy != null && bestEnemy.type == RobotType.ZOMBIEDEN && desiredMovementDirection != null) {
 
-//            if (bestEnemy == null && lostHealth) {
-//
-//                desiredMovementDirection = lastDirection.opposite();
-//                stop = true;
-//
-//            }
-//
-//            ableToMove = !stop;
+                bestEnemy = null;
+
+            }
+
+            // handle attacking
+
+            if (bestEnemy != null) {
+
+                // either we attack the enemy or we can kite away from it
+
+                if (this.shouldKiteEnemy(bestEnemy) && currentLocation.distanceSquaredTo(bestEnemy.location) < 9) {
+
+                    // we need to kite away from the enemy
+                    desiredMovementDirection = currentLocation.directionTo(bestEnemy.location).opposite();
+
+                } else {
+
+                    if (robotController.isWeaponReady()) {
+
+                        // we can attack the enemy
+
+                        robotController.attackLocation(bestEnemy.location);
+                        if (bestEnemy.type != RobotType.ZOMBIEDEN) {
+
+                            communicationModule.broadcastSignal(robotController, CommunicationModule.maximumFreeBroadcastRangeForRobotType(robotController.getType()));
+
+                        }
+
+                    }
+
+                    if (!this.shouldMoveTowardsEnemy(bestEnemy, currentLocation)) {
+
+                        shouldMove = false;
+
+                    }
+
+                }
+
+            }
 
             // now let's try move toward an assignment
 
-            if (robotController.isCoreReady() && communicationModule.initialInformationReceived && ableToMove) {
+            if (robotController.isCoreReady() && communicationModule.initialInformationReceived && shouldMove) {
 
-                // now check if we have an objective
+                // check if we have an objective
 
-                if (desiredMovementDirection == null && ableToMove) {
+                if (desiredMovementDirection == null) {
 
                     if (objectiveSignal != null) {
 
@@ -159,42 +180,7 @@ public class RobotSoldier implements Robot {
 
                             desiredMovementDirection = currentLocation.directionTo(objectiveLocation);
 
-                        } else {
-
-                            ableToMove = false;
-
                         }
-
-                    }
-
-                }
-
-                // otherwise check if there are nearby signals
-
-                if (desiredMovementDirection == null && ableToMove) {
-
-                    ArrayList<Signal> signals = communicationModule.notifications;
-
-                    if (signals.size() > 0) {
-
-                        int minDistance = Integer.MAX_VALUE;
-                        MapLocation closestLocation = null;
-
-                        for (int i = 0; i < signals.size(); i++) {
-
-                            final Signal currentSignal = signals.get(i);
-                            final int distance = currentLocation.distanceSquaredTo(currentSignal.getLocation());
-
-                            if (distance < minDistance) {
-
-                                minDistance = distance;
-                                closestLocation = currentSignal.getLocation();
-
-                            }
-
-                        }
-
-                        desiredMovementDirection = currentLocation.directionTo(closestLocation);
 
                     }
 
@@ -202,52 +188,27 @@ public class RobotSoldier implements Robot {
 
                 // try move towards archon starting positions
 
-                if (desiredMovementDirection == null && ableToMove) {
+                if (desiredMovementDirection == null) {
 
-                    MapLocation[] locations = robotController.getInitialArchonLocations(robotController.getTeam().opponent());
+                    int closestArchonDistance = Integer.MAX_VALUE;
+                    MapLocation closestArchonLocation = null;
 
-                    if (locations.length > 0) {
+                    final MapLocation[] archonLocations = robotController.getInitialArchonLocations(robotController.getTeam().opponent());
+                    for (int i = 0; i < archonLocations.length; i++) {
 
-                        int minDistance = Integer.MAX_VALUE;
-                        MapLocation closestLocation = null;
+                        final MapLocation location = archonLocations[i];
+                        final int distance = currentLocation.distanceSquaredTo(location);
+                        if (distance < closestArchonDistance) {
 
-                        for (int i = 0; i < locations.length; i++) {
-
-                            final MapLocation currentlocation = locations[i];
-                            final int distance = currentLocation.distanceSquaredTo(currentlocation);
-
-                            if (distance < minDistance) {
-
-                                minDistance = distance;
-                                closestLocation = currentlocation;
-
-                            }
+                            closestArchonDistance = distance;
+                            closestArchonLocation = location;
 
                         }
-
-                        desiredMovementDirection = currentLocation.directionTo(closestLocation);
 
                     }
+                    if (closestArchonLocation != null) {
 
-                }
-
-                // if those fail we can move randomly near our teammates
-
-                if (desiredMovementDirection == null && ableToMove) {
-
-                    desiredMovementDirection = directionModule.randomDirection();
-
-                    RobotInfo[] closeTeammates = robotController.senseNearbyRobots(3, currentTeam); // How close they stay to their team, lower means they'll stay closer
-
-                    if (closeTeammates.length == 0) { // Move towards team if far away
-
-                        RobotInfo[] nearbyTeammates = robotController.senseNearbyRobots(24, currentTeam);
-
-                        if (nearbyTeammates.length > 0) {
-
-                            desiredMovementDirection = directionModule.averageDirectionTowardRobots(robotController, nearbyTeammates);
-
-                        }
+                        desiredMovementDirection = currentLocation.directionTo(closestArchonLocation);
 
                     }
 
@@ -261,14 +222,8 @@ public class RobotSoldier implements Robot {
                     if (recommendedMovementDirection != null) {
 
                         robotController.move(recommendedMovementDirection);
-                        lastDirection = recommendedMovementDirection;
                         currentLocation = robotController.getLocation();
-
-                        if (turnsStuck != 0) {
-
-                            turnsStuck = 0;
-
-                        }
+                        turnsStuck = 0;
 
                     } else {
 
@@ -359,6 +314,72 @@ public class RobotSoldier implements Robot {
             Clock.yield();
 
         }
+
+    }
+
+    /*
+    COMBAT
+     */
+
+    private RobotInfo getBestEnemyToAttackFromEnemies(final RobotInfo[] enemies) {
+
+        RobotInfo bestEnemy = null;
+        for (int i = 0; i < enemies.length; i++) {
+
+            final RobotInfo enemy = enemies[i];
+            if (bestEnemy == null) {
+
+                bestEnemy = enemy;
+                continue;
+
+            }
+            if (enemy.type != RobotType.ZOMBIEDEN && bestEnemy.type == RobotType.ZOMBIEDEN) {
+
+                bestEnemy = enemy;
+                continue;
+
+            }
+            if (enemy.type == RobotType.ZOMBIEDEN && bestEnemy.type != RobotType.ZOMBIEDEN) {
+
+                continue;
+
+            }
+            if (enemy.health < bestEnemy.health) {
+
+                bestEnemy = enemy;
+                continue;
+
+            }
+
+        }
+        return bestEnemy;
+
+    }
+
+    private boolean shouldKiteEnemy(final RobotInfo enemy) {
+
+        return enemy.type == RobotType.BIGZOMBIE || enemy.type == RobotType.STANDARDZOMBIE;
+
+    }
+
+    private boolean shouldMoveTowardsEnemy(final RobotInfo enemy, final MapLocation currentLocation) {
+
+        if (enemy.type == RobotType.TURRET || enemy.type == RobotType.ARCHON || enemy.type == RobotType.SCOUT) {
+
+            return true;
+
+        }
+        if (enemy.type == RobotType.ZOMBIEDEN) {
+
+            final int distance = currentLocation.distanceSquaredTo(enemy.location);
+            if (distance > 8) {
+
+                return true;
+
+            }
+
+        }
+        return false;
 
     }
 

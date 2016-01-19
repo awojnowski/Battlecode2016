@@ -299,7 +299,7 @@ public class CommunicationModule {
             broadcastHeight = mapHeight;
 
         }
-        return broadcastWidth * broadcastWidth + broadcastHeight * broadcastHeight;
+        return Math.min(12800 /*failsafe*/, broadcastWidth * broadcastWidth + broadcastHeight * broadcastHeight);
 
     }
 
