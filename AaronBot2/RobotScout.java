@@ -35,28 +35,7 @@ public class RobotScout implements Robot {
             MapLocation currentLocation = robotController.getLocation();
             final RobotInfo[] enemies = robotController.senseHostileRobots(currentLocation, robotController.getType().sensorRadiusSquared);
 
-            robotController.setIndicatorString(1, "Signal distance: " + CommunicationModule.maximumBroadcastRange(mapInfoModule, currentLocation));
-
-            if (robotController.isCoreReady() && communicationModule.initialInformationReceived && enemies.length > 0) {
-
-                final Direction fleeDirection = directionModule.averageDirectionTowardDangerousRobotsAndOuterBounds(robotController, enemies);
-                if (fleeDirection != null) {
-                    final Direction fleeMovementDirection = directionModule.recommendedMovementDirectionForDirection(fleeDirection.opposite(), robotController, false);
-                    if (fleeMovementDirection != null) {
-
-                        robotController.move(fleeMovementDirection);
-                        currentLocation = robotController.getLocation();
-                        if (movementDirection != null) {
-
-                            movementDirection = RobotScout.rotateDirection(movementDirection, currentLocation, robotController, mapInfoModule);
-
-                        }
-
-                    }
-
-                }
-
-            }
+            robotController.setIndicatorString(1, "Signal distance: " + CommunicationModule.maximumBroadcastRange(mapInfoModule, currentLocation) + "; Queue size: " + communicationModule.communicationModuleSignalQueue.size());
 
             // let's check up on existing communications to verify the information, if we can
 
@@ -72,7 +51,6 @@ public class RobotScout implements Robot {
             for (int i = 0; i < enemies.length; i++) {
 
                 final RobotInfo enemy = enemies[i];
-
                 if (enemy.type == RobotType.ZOMBIEDEN) {
 
                     final CommunicationModuleSignal existingSignal = communicationModule.zombieDens.get(CommunicationModule.communicationsIndexFromLocation(enemy.location));
@@ -105,9 +83,9 @@ public class RobotScout implements Robot {
                     signal.type = CommunicationModuleSignal.TYPE_ENEMY_ARCHON;
                     communicationModule.enqueueSignalForBroadcast(signal);
 
-                } else if (cantSeeShitTurns > 100 && enemy.type != RobotType.SCOUT) {
+                } else if (enemy.type == RobotType.TURRET) {
 
-                    final ArrayList<CommunicationModuleSignal> existingSignals = communicationModule.getCommunicationModuleSignalsNearbyLocation(communicationModule.enemyArchons, currentLocation, CommunicationModule.DefaultApproximateNearbyLocationRange);
+                    final ArrayList<CommunicationModuleSignal> existingSignals = communicationModule.getCommunicationModuleSignalsNearbyLocation(communicationModule.enemyTurrets, currentLocation, CommunicationModule.DefaultApproximateNearbyLocationRange);
                     if (existingSignals.size() > 0) {
 
                         continue;
@@ -118,8 +96,30 @@ public class RobotScout implements Robot {
                     signal.action = CommunicationModuleSignal.ACTION_SEEN;
                     signal.location = enemy.location;
                     signal.data = enemy.ID;
-                    signal.type = CommunicationModuleSignal.TYPE_ENEMY_ARCHON;
+                    signal.type = CommunicationModuleSignal.TYPE_ENEMY_TURRET;
                     communicationModule.enqueueSignalForBroadcast(signal);
+
+                    robotController.setIndicatorLine(currentLocation, signal.location, 0, 255, 255);
+
+                } else {
+
+                    if (enemy.type != RobotType.SCOUT && cantSeeShitTurns > 100) {
+
+                        final ArrayList<CommunicationModuleSignal> existingSignals = communicationModule.getCommunicationModuleSignalsNearbyLocation(communicationModule.enemyArchons, currentLocation, CommunicationModule.DefaultApproximateNearbyLocationRange);
+                        if (existingSignals.size() > 0) {
+
+                            continue;
+
+                        }
+
+                        final CommunicationModuleSignal signal = new CommunicationModuleSignal();
+                        signal.action = CommunicationModuleSignal.ACTION_SEEN;
+                        signal.location = enemy.location;
+                        signal.data = enemy.ID;
+                        signal.type = CommunicationModuleSignal.TYPE_ENEMY_ARCHON;
+                        communicationModule.enqueueSignalForBroadcast(signal);
+
+                    }
 
                 }
 
@@ -200,6 +200,31 @@ public class RobotScout implements Robot {
                 }
 
             }
+
+            // let's try to flee if we aren't safe
+
+            if (robotController.isCoreReady() && communicationModule.initialInformationReceived && enemies.length > 0) {
+
+                final Direction fleeDirection = directionModule.averageDirectionTowardDangerousRobotsAndOuterBounds(robotController, enemies);
+                if (fleeDirection != null) {
+                    final Direction fleeMovementDirection = directionModule.recommendedMovementDirectionForDirection(fleeDirection.opposite(), robotController, false);
+                    if (fleeMovementDirection != null) {
+
+                        robotController.move(fleeMovementDirection);
+                        currentLocation = robotController.getLocation();
+                        if (movementDirection != null) {
+
+                            movementDirection = RobotScout.rotateDirection(movementDirection, currentLocation, robotController, mapInfoModule);
+
+                        }
+
+                    }
+
+                }
+
+            }
+
+            // now let's see if we should send our signals
 
             if (communicationModule.hasEnqueuedSignalsForBroadcast()) {
 
@@ -290,6 +315,10 @@ public class RobotScout implements Robot {
                 } else if (communicationModuleSignal.type == CommunicationModuleSignal.TYPE_ENEMY_ARCHON) {
 
                     color = new int[]{255, 0, 0};
+
+                } else if (communicationModuleSignal.type == CommunicationModuleSignal.TYPE_ENEMY_TURRET) {
+
+                    color = new int[]{255, 50, 100};
 
                 } else {
 

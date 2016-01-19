@@ -76,6 +76,20 @@ public class RobotSoldier implements Robot {
 
             }
 
+            final Enumeration<CommunicationModuleSignal> enemyTurretCommunicationModuleSignals = communicationModule.enemyTurrets.elements();
+            while (enemyTurretCommunicationModuleSignals.hasMoreElements()) {
+
+                final CommunicationModuleSignal signal = enemyTurretCommunicationModuleSignals.nextElement();
+                final int distance = signal.location.distanceSquaredTo(currentLocation) * 20;
+                if (distance < closestObjectiveLocationDistance) {
+
+                    objectiveSignal = signal;
+                    closestObjectiveLocationDistance = distance;
+
+                }
+
+            }
+
             // now let's see if we should kite or attack anything
 
             boolean attacked = false;
@@ -315,13 +329,17 @@ public class RobotSoldier implements Robot {
 
                 final CommunicationModuleSignal communicationModuleSignal = communicationModuleSignalCollection.nextElement();
                 int[] color = new int[]{255, 255, 255};
-                if (communicationModuleSignal.type == CommunicationModuleSignal.TYPE_ZOMBIEDEN) {
+                /*if (communicationModuleSignal.type == CommunicationModuleSignal.TYPE_ZOMBIEDEN) {
 
                     color = new int[]{50, 255, 50};
 
                 } else if (communicationModuleSignal.type == CommunicationModuleSignal.TYPE_ENEMY_ARCHON) {
 
                     color = new int[]{255, 0, 0};
+
+                } else */if (communicationModuleSignal.type == CommunicationModuleSignal.TYPE_ENEMY_TURRET) {
+
+                    color = new int[]{255, 50, 100};
 
                 } else {
 
@@ -334,7 +352,7 @@ public class RobotSoldier implements Robot {
 
             if (objectiveSignal != null) {
 
-                robotController.setIndicatorLine(objectiveSignal.location, robotController.getLocation(), 255, 0, 0);
+                robotController.setIndicatorLine(objectiveSignal.location, robotController.getLocation(), 125, 0, 0);
 
             }
 

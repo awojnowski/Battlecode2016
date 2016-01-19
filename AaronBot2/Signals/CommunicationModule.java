@@ -13,6 +13,7 @@ public class CommunicationModule {
     // these are the hashtables managing the received communications
     // the hashtables are indexed by an Integer which represents the location
     public final Hashtable<Integer, CommunicationModuleSignal> enemyArchons = new Hashtable<Integer, CommunicationModuleSignal>();
+    public final Hashtable<Integer, CommunicationModuleSignal> enemyTurrets = new Hashtable<Integer, CommunicationModuleSignal>();
     public final Hashtable<Integer, CommunicationModuleSignal> zombieDens = new Hashtable<Integer, CommunicationModuleSignal>();
 
     // contains signals without a message associated with them, received last time the queue was cleared
@@ -101,7 +102,7 @@ public class CommunicationModule {
         while (enemyArchons.hasMoreElements()) {
 
             final CommunicationModuleSignal communicationModuleSignal = enemyArchons.nextElement();
-            if (!this.verifyEnemyArchonCommunicationModuleSignal(communicationModuleSignal, robotController, enemies)) {
+            if (!this.verifyUnitRangeCommunicationModuleSignal(communicationModuleSignal, robotController, enemies)) {
 
                 if (broadcastInformation) {
 
@@ -110,6 +111,26 @@ public class CommunicationModule {
 
                 }
                 this.clearSignal(communicationModuleSignal, this.enemyArchons);
+
+            }
+
+        }
+
+        // verify the turrets
+
+        final Enumeration<CommunicationModuleSignal> enemyTurrets = this.enemyTurrets.elements();
+        while (enemyTurrets.hasMoreElements()) {
+
+            final CommunicationModuleSignal communicationModuleSignal = enemyTurrets.nextElement();
+            if (!this.verifyUnitRangeCommunicationModuleSignal(communicationModuleSignal, robotController, enemies)) {
+
+                if (broadcastInformation) {
+
+                    communicationModuleSignal.action = CommunicationModuleSignal.ACTION_DELETE;
+                    signals.add(communicationModuleSignal);
+
+                }
+                this.clearSignal(communicationModuleSignal, this.enemyTurrets);
 
             }
 
@@ -182,7 +203,7 @@ public class CommunicationModule {
 
     }
 
-    public boolean verifyEnemyArchonCommunicationModuleSignal(final CommunicationModuleSignal communicationModuleSignal, final RobotController robotController, final RobotInfo[] enemies) throws GameActionException {
+    public boolean verifyUnitRangeCommunicationModuleSignal(final CommunicationModuleSignal communicationModuleSignal, final RobotController robotController, final RobotInfo[] enemies) throws GameActionException {
 
         if (robotController.getLocation().distanceSquaredTo(communicationModuleSignal.location) > robotController.getType().sensorRadiusSquared) {
 
@@ -319,7 +340,7 @@ public class CommunicationModule {
     public void processSignal(final CommunicationModuleSignal communicationModuleSignal) {
 
         if (communicationModuleSignal.action == CommunicationModuleSignal.ACTION_INITIAL_UPDATE_COMPLETE) {
-            
+
             this.initialInformationReceived = true;
             return;
 
@@ -344,9 +365,21 @@ public class CommunicationModule {
 
         if (communicationModuleSignal.action == CommunicationModuleSignal.ACTION_DELETE) {
 
+            if (communicationModuleSignal.type == CommunicationModuleSignal.TYPE_ENEMY_TURRET) {
+
+                System.out.println("Clearing turret at location: " + communicationModuleSignal.location);
+
+            }
+
             this.clearSignal(communicationModuleSignal, hashtable);
 
         } else {
+
+            if (communicationModuleSignal.type == CommunicationModuleSignal.TYPE_ENEMY_TURRET) {
+
+                System.out.println("Writing turret at location: " + communicationModuleSignal.location);
+
+            }
 
             this.writeSignal(communicationModuleSignal, hashtable);
 
@@ -359,6 +392,11 @@ public class CommunicationModule {
         if (signalType == CommunicationModuleSignal.TYPE_ENEMY_ARCHON) {
 
             return this.enemyArchons;
+
+        }
+        if (signalType == CommunicationModuleSignal.TYPE_ENEMY_TURRET) {
+
+            return this.enemyTurrets;
 
         }
         if (signalType == CommunicationModuleSignal.TYPE_ZOMBIEDEN) {
@@ -404,6 +442,10 @@ public class CommunicationModule {
         // archons
 
         communicationModuleSignalCollection.addEnumeration(this.enemyArchons.elements());
+
+        // turrets
+
+        communicationModuleSignalCollection.addEnumeration(this.enemyTurrets.elements());
 
         // zombies
 

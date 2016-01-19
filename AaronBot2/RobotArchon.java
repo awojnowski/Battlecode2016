@@ -353,6 +353,10 @@ public class RobotArchon implements Robot {
 
                     color = new int[]{255, 0, 0};
 
+                } else if (communicationModuleSignal.type == CommunicationModuleSignal.TYPE_ENEMY_TURRET) {
+
+                    color = new int[]{255, 50, 100};
+
                 } else {
 
                     continue;
