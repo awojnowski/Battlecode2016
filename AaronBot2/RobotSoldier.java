@@ -187,7 +187,7 @@ public class RobotSoldier implements Robot {
 
                 // try move towards archon starting positions
 
-                if (desiredMovementDirection == null) {
+                if (desiredMovementDirection == null && robotController.getRoundNum() > 200) {
 
                     int closestArchonDistance = Integer.MAX_VALUE;
                     MapLocation closestArchonLocation = null;
@@ -208,6 +208,26 @@ public class RobotSoldier implements Robot {
                     if (closestArchonLocation != null) {
 
                         desiredMovementDirection = currentLocation.directionTo(closestArchonLocation);
+
+                    }
+
+                }
+
+                // move randomly nearby teammates
+
+                if (desiredMovementDirection == null) {
+
+                    desiredMovementDirection = directionModule.randomDirection();
+
+                    final RobotInfo[] closeTeammates = robotController.senseNearbyRobots(3, currentTeam);
+                    if (closeTeammates.length == 0) {
+
+                        final RobotInfo[] nearbyTeammates = robotController.senseNearbyRobots(robotController.getType().sensorRadiusSquared, currentTeam);
+                        if (nearbyTeammates.length > 0) {
+
+                            desiredMovementDirection = directionModule.averageDirectionTowardRobots(robotController, nearbyTeammates);
+
+                        }
 
                     }
 
