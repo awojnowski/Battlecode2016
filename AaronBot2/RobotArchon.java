@@ -22,6 +22,7 @@ public class RobotArchon implements Robot {
 
         final CommunicationModule communicationModule = new CommunicationModule(mapInfoModule);
         final DirectionModule directionModule = new DirectionModule(robotController.getID());
+        final MovementModule movementModule = new MovementModule();
         final RubbleModule rubbleModule = new RubbleModule();
 
         // unit building
@@ -239,9 +240,11 @@ public class RobotArchon implements Robot {
 
                     final Direction nearestPartsDirection = currentLocation.directionTo(nearestPartsLocation);
                     final Direction nearestPartsMovementDirection = directionModule.recommendedSafeMovementDirectionForDirection(nearestPartsDirection, robotController, enemies, 1, true);
-                    if (nearestPartsMovementDirection != null) {
+                    final MapLocation nearestPartsMovementLocation = nearestPartsMovementDirection != null ? currentLocation.add(nearestPartsMovementDirection) : null;
+                    if (nearestPartsMovementDirection != null && !movementModule.isMovementLocationRepetitive(nearestPartsMovementLocation, robotController)) {
 
                         robotController.move(nearestPartsMovementDirection);
+                        movementModule.addMovementLocation(nearestPartsMovementLocation, robotController);
                         currentLocation = robotController.getLocation();
 
                     } else {
@@ -264,6 +267,7 @@ public class RobotArchon implements Robot {
                     if (rubbleClearanceDirection != null) {
 
                         robotController.clearRubble(rubbleClearanceDirection);
+                        movementModule.extendLocationInvalidationTurn(robotController);
 
                     }
 
@@ -294,10 +298,12 @@ public class RobotArchon implements Robot {
 
                 if (desiredMovementDirection != null) {
 
-                    final Direction movementDirection = directionModule.recommendedSafeMovementDirectionForDirection(desiredMovementDirection, robotController, enemies, 1, true);
-                    if (movementDirection != null) {
+                    final Direction recommendedMovementDirection = directionModule.recommendedSafeMovementDirectionForDirection(desiredMovementDirection, robotController, enemies, 1, true);
+                    final MapLocation recommendedMovementLocation = recommendedMovementDirection != null ? currentLocation.add(recommendedMovementDirection) : null;
+                    if (recommendedMovementDirection != null && !movementModule.isMovementLocationRepetitive(recommendedMovementLocation, robotController)) {
 
-                        robotController.move(movementDirection);
+                        robotController.move(recommendedMovementDirection);
+                        movementModule.addMovementLocation(recommendedMovementLocation, robotController);
                         currentLocation = robotController.getLocation();
 
                     } else {

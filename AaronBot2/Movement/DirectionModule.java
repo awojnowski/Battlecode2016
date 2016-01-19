@@ -8,9 +8,6 @@ public class DirectionModule {
 
     public static final Direction[] directions = { Direction.EAST, Direction.NORTH_EAST, Direction.NORTH, Direction.NORTH_WEST, Direction.WEST, Direction.SOUTH_WEST, Direction.SOUTH, Direction.SOUTH_EAST };
     private Random random = null;
-    private Direction lastRecommendedDirection = null;
-    private int backAndForthCount = 0;
-    private Direction blockedDirection = null;
 
     public DirectionModule(int randomSeed) {
 
@@ -24,39 +21,10 @@ public class DirectionModule {
 
     }
 
+    // checks D, D.L, D.R, D.LL, D.RR for availability
     public Direction recommendedMovementDirectionForDirection(final Direction direction, final RobotController robotController, boolean use90) {
 
-        Direction recommendedDirection = recommendedMovementDirectionForDirectionAux(direction, robotController, use90);
-        if (lastRecommendedDirection != null && recommendedDirection == lastRecommendedDirection.opposite()) {
-
-            backAndForthCount++;
-
-        } else {
-
-            backAndForthCount = 0;
-
-        }
-        robotController.setIndicatorString(0, "B&F: " + backAndForthCount);
-        lastRecommendedDirection = recommendedDirection;
-
-        if (backAndForthCount < 5) {
-
-            blockedDirection = null;
-            return recommendedDirection;
-
-        } else {
-
-            blockedDirection = recommendedDirection;
-            return null;
-
-        }
-
-    }
-
-    // checks D, D.L, D.R, D.LL, D.RR for availability
-    public Direction recommendedMovementDirectionForDirectionAux(final Direction direction, final RobotController robotController, boolean use90) {
-
-        if (robotController.canMove(direction) && direction != blockedDirection) {
+        if (robotController.canMove(direction)) {
 
             return direction;
 
@@ -64,13 +32,13 @@ public class DirectionModule {
 
         final boolean divisible = robotController.getID() % 2 == 0;
         Direction movementDirection = divisible ? direction.rotateLeft() : direction.rotateRight();
-        if (robotController.canMove(movementDirection) && movementDirection != blockedDirection) {
+        if (robotController.canMove(movementDirection)) {
 
             return movementDirection;
 
         }
         movementDirection = divisible ? direction.rotateRight() : direction.rotateLeft();
-        if (robotController.canMove(movementDirection) && movementDirection != blockedDirection) {
+        if (robotController.canMove(movementDirection)) {
 
             return movementDirection;
 
@@ -81,13 +49,13 @@ public class DirectionModule {
 
         }
         movementDirection = divisible ? direction.rotateLeft().rotateLeft() : direction.rotateRight().rotateRight();
-        if (robotController.canMove(movementDirection) && movementDirection != blockedDirection) {
+        if (robotController.canMove(movementDirection)) {
 
             return movementDirection;
 
         }
         movementDirection = divisible ? direction.rotateRight().rotateRight() : direction.rotateLeft().rotateLeft();
-        if (robotController.canMove(movementDirection) && movementDirection != blockedDirection) {
+        if (robotController.canMove(movementDirection)) {
 
             return movementDirection;
 

@@ -219,9 +219,11 @@ public class RobotSoldier implements Robot {
                 if (desiredMovementDirection != null) {
 
                     final Direction recommendedMovementDirection = directionModule.recommendedMovementDirectionForDirection(desiredMovementDirection, robotController, false);
-                    if (recommendedMovementDirection != null) {
+                    final MapLocation recommendedMovementLocation = recommendedMovementDirection != null ? currentLocation.add(recommendedMovementDirection) : null;
+                    if (recommendedMovementDirection != null && !movementModule.isMovementLocationRepetitive(recommendedMovementLocation, robotController)) {
 
                         robotController.move(recommendedMovementDirection);
+                        movementModule.addMovementLocation(recommendedMovementLocation, robotController);
                         currentLocation = robotController.getLocation();
                         turnsStuck = 0;
 
@@ -244,20 +246,17 @@ public class RobotSoldier implements Robot {
                     final Direction rubbleClearanceDirection = rubbleModule.getRubbleClearanceDirectionFromTargetDirection(targetRubbleClearanceDirection, robotController);
                     if (rubbleClearanceDirection != null) {
 
+                        // clear the rubble
+
                         robotController.clearRubble(rubbleClearanceDirection);
-
-                        if (turnsStuck != 0) {
-
-                            turnsStuck = 0;
-
-                        }
-
-                        // otherwise they didn't move or clear rubble, check if they're stuck
+                        movementModule.extendLocationInvalidationTurn(robotController);
+                        turnsStuck = 0;
 
                     } else if (communicationModule.notifications.size() == 0 && objectiveSignal != null) {
 
-                        turnsStuck++;
+                        // otherwise they didn't move or clear rubble, check if they're stuck
 
+                        turnsStuck++;
                         if (turnsStuck > 5) {
 
                             communicationModule.clearSignal(objectiveSignal, communicationModule.enemyArchons);
@@ -266,7 +265,7 @@ public class RobotSoldier implements Robot {
 
                         }
 
-                    } else if (turnsStuck != 0) {
+                    } else if (turnsStuck > 0) {
 
                         turnsStuck = 0;
 
