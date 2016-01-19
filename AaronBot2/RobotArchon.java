@@ -100,12 +100,14 @@ public class RobotArchon implements Robot {
                     }
 
                     final CommunicationModuleSignal communicationModuleSignal = buildingUpdateSignalCollection.nextElement();
-                    if (this.shouldBroadcastCommunicationModuleSignalToRobotType(communicationModuleSignal.type, buildingUnitType)) {
+                    if (!CommunicationRelayModule.shouldRelaySignalTypeToRobotType(communicationModuleSignal.type, buildingUnitType)) {
 
-                        communicationModule.broadcastSignal(communicationModuleSignal, robotController, RobotArchon.InitialMessageUpdateLength);
-                        totalSignalsSent ++;
+                        continue;
 
                     }
+
+                    communicationModule.broadcastSignal(communicationModuleSignal, robotController, RobotArchon.InitialMessageUpdateLength);
+                    totalSignalsSent ++;
 
                 }
                 if (signalsSendingDone) {
@@ -363,16 +365,6 @@ public class RobotArchon implements Robot {
             Clock.yield();
 
         }
-
-    }
-
-    /*
-    SIGNALS
-     */
-
-    public boolean shouldBroadcastCommunicationModuleSignalToRobotType(final int broadcastType, final RobotType robotType) {
-
-        return true;
 
     }
 

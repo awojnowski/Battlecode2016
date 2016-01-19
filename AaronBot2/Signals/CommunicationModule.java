@@ -4,7 +4,7 @@ import AaronBot2.Map.*;
 import battlecode.common.*;
 import java.util.*;
 
-public class CommunicationModule implements CommunicationModuleDelegate {
+public class CommunicationModule {
 
     public static final int DefaultApproximateNearbyLocationRange = 64;
     public static final int ApproximateNearbyPartsLocationRadius = 3;
@@ -22,7 +22,6 @@ public class CommunicationModule implements CommunicationModuleDelegate {
     public final ArrayList<CommunicationModuleSignal> communicationModuleSignalQueue = new ArrayList<CommunicationModuleSignal>();
 
     public MapInfoModule mapInfoModule = null;
-    public CommunicationModuleDelegate delegate = this;
     public boolean initialInformationReceived = false;
 
     public CommunicationModule(final MapInfoModule mapInfoModule) {
@@ -79,16 +78,6 @@ public class CommunicationModule implements CommunicationModuleDelegate {
     public static int communicationsIndexFromLocation(final MapLocation mapLocation) {
 
         return CommunicationModuleSignal.serializeMapLocation(mapLocation);
-
-    }
-
-    /*
-    DELEGATE
-     */
-
-    public boolean shouldProcessSignalType(final int signalType) {
-
-        return true;
 
     }
 
@@ -316,7 +305,7 @@ public class CommunicationModule implements CommunicationModuleDelegate {
             }
 
             final CommunicationModuleSignal communicationModuleSignal = new CommunicationModuleSignal(message);
-            if (!this.delegate.shouldProcessSignalType(communicationModuleSignal.type)) {
+            if (!CommunicationRelayModule.shouldRelaySignalTypeToRobotType(communicationModuleSignal.type, robotController.getType())) {
 
                 continue;
 
@@ -330,7 +319,7 @@ public class CommunicationModule implements CommunicationModuleDelegate {
     public void processSignal(final CommunicationModuleSignal communicationModuleSignal) {
 
         if (communicationModuleSignal.action == CommunicationModuleSignal.ACTION_INITIAL_UPDATE_COMPLETE) {
-
+            
             this.initialInformationReceived = true;
             return;
 
@@ -410,22 +399,15 @@ public class CommunicationModule implements CommunicationModuleDelegate {
 
     public CommunicationModuleSignalCollection allCommunicationModuleSignals() {
 
+        final CommunicationModuleSignalCollection communicationModuleSignalCollection = new CommunicationModuleSignalCollection();
+
         // archons
 
-        final CommunicationModuleSignalCollection communicationModuleSignalCollection = new CommunicationModuleSignalCollection();
-        if (this.delegate.shouldProcessSignalType(CommunicationModuleSignal.TYPE_ENEMY_ARCHON)) {
-
-            communicationModuleSignalCollection.addEnumeration(this.enemyArchons.elements());
-
-        }
+        communicationModuleSignalCollection.addEnumeration(this.enemyArchons.elements());
 
         // zombies
 
-        if (this.delegate.shouldProcessSignalType(CommunicationModuleSignal.TYPE_ZOMBIEDEN)) {
-
-            communicationModuleSignalCollection.addEnumeration(this.zombieDens.elements());
-
-        }
+        communicationModuleSignalCollection.addEnumeration(this.zombieDens.elements());
 
         // map info
 

@@ -9,7 +9,7 @@ import battlecode.common.*;
 
 import java.util.*;
 
-public class RobotSoldier implements Robot, CommunicationModuleDelegate {
+public class RobotSoldier implements Robot {
 
     public void run(final RobotController robotController) throws GameActionException {
 
@@ -17,7 +17,6 @@ public class RobotSoldier implements Robot, CommunicationModuleDelegate {
 
         final CombatModule combatModule = new CombatModule();
         final CommunicationModule communicationModule = new CommunicationModule(mapInfoModule);
-        communicationModule.delegate = this;
         final DirectionModule directionModule = new DirectionModule(robotController.getID());
         final MovementModule movementModule = new MovementModule();
         final RubbleModule rubbleModule = new RubbleModule();
@@ -342,16 +341,6 @@ public class RobotSoldier implements Robot, CommunicationModuleDelegate {
             Clock.yield();
 
         }
-
-    }
-
-    /*
-    COMMUNICATION MODULE DELEGATE
-    */
-
-    public boolean shouldProcessSignalType(final int signalType) {
-
-        return true;
 
     }
 
