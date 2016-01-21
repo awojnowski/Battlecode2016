@@ -13,7 +13,8 @@ Post-Sprint Thoughts:
 Post-Seeding:
 
 - Try to move soldiers in clumps?
-- Have injured units go back to archons to get healed
+- Prioritize dens based on which ones are closer to us than the enemy
+- Have injured units go back to archons to get healed (would need to have friendly archon locations in communication as well)
 - Have turrets follow around soldiers then have the soldiers kite back into the turrets
 - Have better awareness of where the enemy is (don’t just run to enemy spawn)
 - Kite guards with soldiers
@@ -21,3 +22,4 @@ Post-Seeding:
 - Spawn vipers if we’re outnumbered late game
 - Possibly activate neutrals before building robots? (and count them as built units)
 - Have archons and soldiers play safer if we’re outnumbered (game against hungry games where we got ridiculously lucky lol)
+- Make archons flee towards our soldiers for safety (would need to have our soldier clumps in communication as well)
