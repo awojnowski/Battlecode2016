@@ -1,17 +1,23 @@
 Battlecode TODO:
 
-- If a unit (like an Archon) is right beside a patch of parts with rubble on it, it will just go around the rubble infinitely instead of trying to clear the rubble (because it can always move left or right around it).
-- Drones should have a list of communications that they want to send out, and should only send it out when it's safe.
 - Archons should only spawn units if they’re near other units (when they get parts they should grab them then run back)
 
 Post-Sprint Thoughts:
 
-- Kite zombies with soldiers (and guards?)
 - Read the zombie schedule to figure out best plan of action
 - Possibly use guards as a front line against zombies to do damage and take damage
-- Find a way to path around rubble or have units work together to clear it (only clear even spaces or something, look ahead to see if it’s a thick or thin wall)
-- Mark neutrals on the broadcasting system (and actually use them)
+- Mark neutrals and part clumps on the broadcasting system
 - Some kind of anti-funnel strategy (would be really tricky)
-- Anti turret strategy
 - Don’t make our archons try to get unsafe ore!
-- Look out for going back and forth when we bug around rubble (farm)
+
+Post-Seeding:
+
+- Try to move soldiers in clumps?
+- Have injured units go back to archons to get healed
+- Have turrets follow around soldiers then have the soldiers kite back into the turrets
+- Have better awareness of where the enemy is (don’t just run to enemy spawn)
+- Kite guards with soldiers
+- Try to kite other soldiers (wait for them to come to us)
+- Spawn vipers if we’re outnumbered late game
+- Possibly activate neutrals before building robots? (and count them as built units)
+- Have archons and soldiers play safer if we’re outnumbered (game against hungry games where we got ridiculously lucky lol)
