@@ -21,8 +21,8 @@ public class RobotArchon implements Robot {
         mapInfoModule.detectWhetherToThrowGame(robotController);
 
         final CommunicationModule communicationModule = new CommunicationModule(mapInfoModule);
-        final DirectionModule directionModule = new DirectionModule(robotController.getID());
         final MovementModule movementModule = new MovementModule();
+        final Random random = new Random(robotController.getID());
         final RubbleModule rubbleModule = new RubbleModule();
 
         // unit building
@@ -131,17 +131,26 @@ public class RobotArchon implements Robot {
             MapLocation currentLocation = robotController.getLocation();
             final RobotInfo[] enemies = robotController.senseHostileRobots(currentLocation, robotController.getType().sensorRadiusSquared);
 
+            final DirectionController directionController = new DirectionController(robotController);
+            directionController.currentLocation = currentLocation;
+            directionController.enemyBufferDistance = 2;
+            directionController.nearbyEnemies = enemies;
+            directionController.random = random;
+            directionController.shouldAvoidEnemies = true;
+
             if (robotController.isCoreReady() && enemies.length > 0) {
 
-                final Direction fleeDirection = directionModule.averageDirectionTowardDangerousRobotsAndOuterBounds(robotController, enemies);
-                if (fleeDirection != null) {
+                final Direction enemiesDirection = directionController.getAverageDirectionTowardsEnemies(enemies, true);
+                if (enemiesDirection != null) {
 
-                    final Direction fleeMovementDirection = directionModule.recommendedMovementDirectionForDirection(fleeDirection.opposite(), robotController, false);
-                    if (fleeMovementDirection != null) {
+                    directionController.shouldAvoidEnemies = false;
+                    final DirectionController.Result enemiesMovementResult = directionController.getDirectionResultFromDirection(enemiesDirection.opposite(), DirectionController.ADJUSTMENT_THRESHOLD_MEDIUM);
+                    directionController.shouldAvoidEnemies = true;
 
-                        robotController.move(fleeMovementDirection);
+                    if (enemiesMovementResult.direction != null) {
+
+                        robotController.move(enemiesMovementResult.direction);
                         currentLocation = robotController.getLocation();
-                        robotController.setIndicatorString(1, fleeDirection.name() + " " + fleeMovementDirection.name());
 
                     }
 
@@ -160,11 +169,7 @@ public class RobotArchon implements Robot {
 
             if (communicationModule.hasEnqueuedSignalsForBroadcast()) {
 
-                if (directionModule.isMapLocationSafe(currentLocation, enemies, 4)) {
-
-                    communicationModule.broadcastEnqueuedSignals(robotController, CommunicationModule.maximumBroadcastRange(mapInfoModule, currentLocation));
-
-                }
+                communicationModule.broadcastEnqueuedSignals(robotController, CommunicationModule.maximumBroadcastRange(mapInfoModule, currentLocation));
 
             }
 
@@ -180,9 +185,9 @@ public class RobotArchon implements Robot {
                 }
                 if (robotController.getTeamParts() >= typeToBuild.partCost) {
 
-                    for (int i = 0; i < directionModule.directions.length; i++) {
+                    for (int i = 0; i < DirectionController.DIRECTIONS.length; i++) {
 
-                        if (robotController.canBuild(directionModule.directions[i], typeToBuild)) {
+                        if (robotController.canBuild(DirectionController.DIRECTIONS[i], typeToBuild)) {
 
                             buildingUnitType = typeToBuild;
                             if (typeToBuild == RobotType.SCOUT) {
@@ -195,7 +200,7 @@ public class RobotArchon implements Robot {
                                 soldiersBuilt ++;
 
                             }
-                            robotController.build(directionModule.directions[i], typeToBuild);
+                            robotController.build(DirectionController.DIRECTIONS[i], typeToBuild);
                             break;
 
                         }
@@ -206,7 +211,7 @@ public class RobotArchon implements Robot {
 
             }
 
-            // try to move toward some spare parts
+            // try to move toward neutral robots
 
             Direction targetRubbleClearanceDirection = null;
             if (robotController.isCoreReady()) {
@@ -223,7 +228,6 @@ public class RobotArchon implements Robot {
                         final RobotInfo neutralRobot = neutrals[i];
                         final MapLocation neutralLocation = neutralRobot.location;
                         final double neutralValue = neutralRobot.maxHealth * neutralRobot.type.attackRadiusSquared;
-//                        final double rubbleTotal = Math.max(1, robotController.senseRubble(partsLocation));
                         final int distance = neutralLocation.distanceSquaredTo(currentLocation);
 
                         final double ranking = neutralValue / distance;
@@ -239,16 +243,17 @@ public class RobotArchon implements Robot {
                 }
                 if (nearestNeutralLocation != null) {
 
-                    final Direction nearestPartsDirection = currentLocation.directionTo(nearestNeutralLocation);
-                    final Direction nearestPartsMovementDirection = directionModule.recommendedSafeMovementDirectionForDirection(nearestPartsDirection, robotController, enemies, 1, true);
-                    if (nearestPartsMovementDirection != null) {
+                    final Direction nearestNeutralDirection = currentLocation.directionTo(nearestNeutralLocation);
+                    final DirectionController.Result nearestNeutralMovementResult = directionController.getDirectionResultFromDirection(nearestNeutralDirection, DirectionController.ADJUSTMENT_THRESHOLD_MEDIUM);
+                    if (nearestNeutralMovementResult.direction != null && !movementModule.isMovementLocationRepetitive(currentLocation.add(nearestNeutralMovementResult.direction), robotController)) {
 
-                        robotController.move(nearestPartsMovementDirection);
+                        robotController.move(nearestNeutralMovementResult.direction);
                         currentLocation = robotController.getLocation();
+                        movementModule.addMovementLocation(currentLocation, robotController);
 
                     } else {
 
-                        targetRubbleClearanceDirection = nearestPartsDirection;
+                        targetRubbleClearanceDirection = nearestNeutralDirection;
 
                     }
 
@@ -288,13 +293,12 @@ public class RobotArchon implements Robot {
                 if (nearestPartsLocation != null) {
 
                     final Direction nearestPartsDirection = currentLocation.directionTo(nearestPartsLocation);
-                    final Direction nearestPartsMovementDirection = directionModule.recommendedSafeMovementDirectionForDirection(nearestPartsDirection, robotController, enemies, 1, true);
-                    final MapLocation nearestPartsMovementLocation = nearestPartsMovementDirection != null ? currentLocation.add(nearestPartsMovementDirection) : null;
-                    if (nearestPartsMovementDirection != null && !movementModule.isMovementLocationRepetitive(nearestPartsMovementLocation, robotController)) {
+                    final DirectionController.Result nearestPartsMovementResult = directionController.getDirectionResultFromDirection(nearestPartsDirection, DirectionController.ADJUSTMENT_THRESHOLD_MEDIUM);
+                    if (nearestPartsMovementResult.direction != null && !movementModule.isMovementLocationRepetitive(currentLocation.add(nearestPartsMovementResult.direction), robotController)) {
 
-                        robotController.move(nearestPartsMovementDirection);
-                        movementModule.addMovementLocation(nearestPartsMovementLocation, robotController);
+                        robotController.move(nearestPartsMovementResult.direction);
                         currentLocation = robotController.getLocation();
+                        movementModule.addMovementLocation(currentLocation, robotController);
 
                     } else {
 
@@ -328,36 +332,34 @@ public class RobotArchon implements Robot {
 
             if (robotController.isCoreReady()) {
 
-                Direction desiredMovementDirection = null;
+                Direction nearestFriendliesDirection = null;
 
                 RobotInfo[] closeAllies = robotController.senseNearbyRobots(3, currentTeam); // How close they stay to their team, lower means they'll stay closer
                 RobotInfo[] closeSoldiers = CombatModule.robotsOfTypesFromRobots(closeAllies, new RobotType[]{RobotType.SOLDIER, RobotType.GUARD});
 
                 if (closeSoldiers.length < 2) { // Move towards team if far away
 
-                    RobotInfo[] nearbyTeammates = robotController.senseNearbyRobots(-1, currentTeam);
+                    final RobotInfo[] nearbyFriendlies = robotController.senseNearbyRobots(-1, currentTeam);
+                    if (nearbyFriendlies.length > 0) {
 
-                    if (nearbyTeammates.length > 0) {
-
-                        desiredMovementDirection = directionModule.averageDirectionTowardRobots(robotController, nearbyTeammates);
+                        nearestFriendliesDirection = directionController.getAverageDirectionTowardFriendlies(nearbyFriendlies, false);
 
                     }
 
                 }
 
-                if (desiredMovementDirection != null) {
+                if (nearestFriendliesDirection != null) {
 
-                    final Direction recommendedMovementDirection = directionModule.recommendedSafeMovementDirectionForDirection(desiredMovementDirection, robotController, enemies, 1, true);
-                    final MapLocation recommendedMovementLocation = recommendedMovementDirection != null ? currentLocation.add(recommendedMovementDirection) : null;
-                    if (recommendedMovementDirection != null && !movementModule.isMovementLocationRepetitive(recommendedMovementLocation, robotController)) {
+                    final DirectionController.Result nearestFriendliesMovementResult = directionController.getDirectionResultFromDirection(nearestFriendliesDirection, DirectionController.ADJUSTMENT_THRESHOLD_MEDIUM);
+                    if (nearestFriendliesMovementResult.direction != null && !movementModule.isMovementLocationRepetitive(currentLocation.add(nearestFriendliesMovementResult.direction), robotController)) {
 
-                        robotController.move(recommendedMovementDirection);
-                        movementModule.addMovementLocation(recommendedMovementLocation, robotController);
+                        robotController.move(nearestFriendliesMovementResult.direction);
                         currentLocation = robotController.getLocation();
+                        movementModule.addMovementLocation(currentLocation, robotController);
 
                     } else {
 
-                        targetRubbleClearanceDirection = desiredMovementDirection;
+                        targetRubbleClearanceDirection = nearestFriendliesDirection;
 
                     }
 

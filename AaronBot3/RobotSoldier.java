@@ -14,11 +14,10 @@ public class RobotSoldier implements Robot {
     public void run(final RobotController robotController) throws GameActionException {
 
         final MapInfoModule mapInfoModule = new MapInfoModule();
-
         final CombatModule combatModule = new CombatModule();
         final CommunicationModule communicationModule = new CommunicationModule(mapInfoModule);
-        final DirectionModule directionModule = new DirectionModule(robotController.getID());
         final MovementModule movementModule = new MovementModule();
+        final Random random = new Random(robotController.getID());
         final RubbleModule rubbleModule = new RubbleModule();
 
         final Team currentTeam = robotController.getTeam();
@@ -87,9 +86,9 @@ public class RobotSoldier implements Robot {
 
             // let's prepare our actions for this turn
 
-            final RobotInfo[] enemies = robotController.senseHostileRobots(currentLocation, robotController.getType().attackRadiusSquared);
+            final RobotInfo[] nearbyAttackableEnemies = robotController.senseHostileRobots(currentLocation, robotController.getType().attackRadiusSquared);
 
-            RobotInfo bestEnemy = this.getBestEnemyToAttackFromEnemies(enemies);
+            RobotInfo bestEnemy = this.getBestEnemyToAttackFromEnemies(nearbyAttackableEnemies);
             boolean shouldMove = true;
             Direction desiredMovementDirection = null;
             Direction targetRubbleClearanceDirection = null;
@@ -168,6 +167,10 @@ public class RobotSoldier implements Robot {
 
             if (robotController.isCoreReady() && communicationModule.initialInformationReceived && shouldMove) {
 
+                final DirectionController directionController = new DirectionController(robotController);
+                directionController.currentLocation = currentLocation;
+                directionController.random = random;
+
                 // check if we have an objective
 
                 if (desiredMovementDirection == null) {
@@ -217,17 +220,13 @@ public class RobotSoldier implements Robot {
 
                 if (desiredMovementDirection == null) {
 
-                    desiredMovementDirection = directionModule.randomDirection();
+                    desiredMovementDirection = directionController.getRandomDirection();
 
                     final RobotInfo[] closeTeammates = robotController.senseNearbyRobots(3, currentTeam);
                     if (closeTeammates.length == 0) {
 
-                        final RobotInfo[] nearbyTeammates = robotController.senseNearbyRobots(robotController.getType().sensorRadiusSquared, currentTeam);
-                        if (nearbyTeammates.length > 0) {
-
-                            desiredMovementDirection = directionModule.averageDirectionTowardRobots(robotController, nearbyTeammates);
-
-                        }
+                        final RobotInfo[] nearbyFriendlies = robotController.senseNearbyRobots(robotController.getType().sensorRadiusSquared, currentTeam);
+                        desiredMovementDirection = directionController.getAverageDirectionTowardFriendlies(nearbyFriendlies, false);
 
                     }
 
@@ -237,13 +236,13 @@ public class RobotSoldier implements Robot {
 
                 if (desiredMovementDirection != null) {
 
-                    final Direction recommendedMovementDirection = directionModule.recommendedMovementDirectionForDirection(desiredMovementDirection, robotController, false);
-                    final MapLocation recommendedMovementLocation = recommendedMovementDirection != null ? currentLocation.add(recommendedMovementDirection) : null;
-                    if (recommendedMovementDirection != null && !movementModule.isMovementLocationRepetitive(recommendedMovementLocation, robotController)) {
+                    final DirectionController.Result directionResult = directionController.getDirectionResultFromDirection(desiredMovementDirection, DirectionController.ADJUSTMENT_THRESHOLD_LOW);
+                    if (directionResult.direction != null && !movementModule.isMovementLocationRepetitive(currentLocation.add(directionResult.direction), robotController)) {
 
-                        robotController.move(recommendedMovementDirection);
-                        movementModule.addMovementLocation(recommendedMovementLocation, robotController);
+                        robotController.move(directionResult.direction);
                         currentLocation = robotController.getLocation();
+                        movementModule.addMovementLocation(currentLocation, robotController);
+
                         turnsStuck = 0;
 
                     } else {

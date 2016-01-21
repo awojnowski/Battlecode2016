@@ -2,17 +2,12 @@ package AaronBot3;
 
 import AaronBot3.Combat.CombatModule;
 import AaronBot3.Map.MapInfoModule;
-import AaronBot3.Movement.DirectionModule;
-import AaronBot3.Movement.MovementModule;
+import AaronBot3.Movement.*;
 import AaronBot3.Rubble.RubbleModule;
 import AaronBot3.Signals.CommunicationModule;
 import AaronBot3.Signals.CommunicationModuleSignal;
-import AaronBot3.Signals.CommunicationModuleSignalCollection;
 import battlecode.common.*;
-
-import java.util.ArrayList;
-import java.util.Enumeration;
-import java.util.Random;
+import java.util.*;
 
 public class RobotTurret implements Robot {
 
@@ -22,8 +17,8 @@ public class RobotTurret implements Robot {
 
         final CombatModule combatModule = new CombatModule();
         final CommunicationModule communicationModule = new CommunicationModule(mapInfoModule);
-        final DirectionModule directionModule = new DirectionModule(robotController.getID());
         final MovementModule movementModule = new MovementModule();
+        final Random random = new Random(robotController.getID());
         final RubbleModule rubbleModule = new RubbleModule();
 
         final Team currentTeam = robotController.getTeam();
@@ -93,63 +88,70 @@ public class RobotTurret implements Robot {
 
                 }
 
-                boolean shouldMove = true;
-                Direction desiredMovementDirection = null;
-                Direction targetRubbleClearanceDirection = null;
+                // process movement
 
-                // check to make sure we are safe
+                if (robotController.isCoreReady()) {
 
-                final RobotInfo[] enemies = robotController.senseHostileRobots(currentLocation, robotController.getType().sensorRadiusSquared);
+                    Direction desiredMovementDirection = null;
 
-                if (robotController.isCoreReady() && enemies.length > 0) {
+                    final DirectionController directionController = new DirectionController(robotController);
+                    directionController.currentLocation = currentLocation;
+                    directionController.enemyBufferDistance = 2;
+                    directionController.random = random;
+                    directionController.shouldAvoidEnemies = true;
 
-                    final Direction fleeDirection = directionModule.averageDirectionTowardDangerousRobotsAndOuterBounds(robotController, enemies);
-                    if (fleeDirection != null) {
+                    final RobotInfo[] enemies = robotController.senseHostileRobots(currentLocation, robotController.getType().sensorRadiusSquared);
+                    directionController.nearbyEnemies = enemies;
 
-                        final Direction fleeMovementDirection = directionModule.recommendedMovementDirectionForDirection(fleeDirection.opposite(), robotController, false);
-                        if (fleeMovementDirection != null) {
+                    // run away from nearby enemies
 
-                            robotController.move(fleeMovementDirection);
-                            currentLocation = robotController.getLocation();
-                            robotController.setIndicatorString(1, fleeDirection.name() + " " + fleeMovementDirection.name());
+                    if (desiredMovementDirection == null && enemies.length > 0) {
 
-                        }
+                        final Direction enemiesDirection = directionController.getAverageDirectionTowardsEnemies(enemies, true);
+                        if (enemiesDirection != null) {
 
-                    }
+                            directionController.shouldAvoidEnemies = false;
+                            final DirectionController.Result enemiesMovementResult = directionController.getDirectionResultFromDirection(enemiesDirection.opposite(), DirectionController.ADJUSTMENT_THRESHOLD_MEDIUM);
+                            directionController.shouldAvoidEnemies = true;
 
-                }
+                            if (enemiesMovementResult.direction != null) {
 
-                // check if there are nearby signals
+                                robotController.move(enemiesMovementResult.direction);
+                                currentLocation = robotController.getLocation();
 
-                if (desiredMovementDirection == null) {
-
-                    int closestSignalDistance = Integer.MAX_VALUE;
-                    MapLocation closestSignalLocation = null;
-
-                    final ArrayList<Signal> notifications = communicationModule.notifications;
-                    for (int i = 0; i < notifications.size(); i++) {
-
-                        final Signal signal = notifications.get(i);
-                        final int distance = currentLocation.distanceSquaredTo(signal.getLocation());
-                        if (distance < closestSignalDistance) {
-
-                            closestSignalDistance = distance;
-                            closestSignalLocation = signal.getLocation();
+                            }
 
                         }
 
                     }
-                    if (closestSignalLocation != null) {
 
-                        desiredMovementDirection = currentLocation.directionTo(closestSignalLocation);
+                    // check nearby signals
+
+                    if (desiredMovementDirection == null) {
+
+                        int closestSignalDistance = Integer.MAX_VALUE;
+                        MapLocation closestSignalLocation = null;
+
+                        final ArrayList<Signal> notifications = communicationModule.notifications;
+                        for (int i = 0; i < notifications.size(); i++) {
+
+                            final Signal signal = notifications.get(i);
+                            final int distance = currentLocation.distanceSquaredTo(signal.getLocation());
+                            if (distance < closestSignalDistance) {
+
+                                closestSignalDistance = distance;
+                                closestSignalLocation = signal.getLocation();
+
+                            }
+
+                        }
+                        if (closestSignalLocation != null) {
+
+                            desiredMovementDirection = currentLocation.directionTo(closestSignalLocation);
+
+                        }
 
                     }
-
-                }
-
-                // now let's try move toward an assignment
-
-                if (robotController.isCoreReady() && communicationModule.initialInformationReceived && shouldMove) {
 
                     // check if we have an objective
 
@@ -200,14 +202,12 @@ public class RobotTurret implements Robot {
 
                     if (desiredMovementDirection != null) {
 
-                        final Direction recommendedMovementDirection = directionModule.recommendedMovementDirectionForDirection(desiredMovementDirection, robotController, false);
-                        final MapLocation recommendedMovementLocation = recommendedMovementDirection != null ? currentLocation.add(recommendedMovementDirection) : null;
-                        if (recommendedMovementDirection != null && !movementModule.isMovementLocationRepetitive(recommendedMovementLocation, robotController)) {
+                        final DirectionController.Result directionResult = directionController.getDirectionResultFromDirection(desiredMovementDirection, DirectionController.ADJUSTMENT_THRESHOLD_LOW);
+                        if (directionResult.direction != null && !movementModule.isMovementLocationRepetitive(currentLocation.add(directionResult.direction), robotController)) {
 
-                            robotController.move(recommendedMovementDirection);
-                            movementModule.addMovementLocation(recommendedMovementLocation, robotController);
+                            robotController.move(directionResult.direction);
                             currentLocation = robotController.getLocation();
-                            turnsStuck = 0;
+                            movementModule.addMovementLocation(currentLocation, robotController);
 
                         }
 
@@ -217,8 +217,8 @@ public class RobotTurret implements Robot {
 
                 // unpack if we're safe
 
-                RobotInfo[] nearbyTeammates = robotController.senseNearbyRobots(8, currentTeam);
-                RobotInfo[] nearbySoldiers = combatModule.robotsOfTypesFromRobots(nearbyTeammates, new RobotType[]{RobotType.SOLDIER});
+                final RobotInfo[] nearbyTeammates = robotController.senseNearbyRobots(8, currentTeam);
+                final RobotInfo[] nearbySoldiers = combatModule.robotsOfTypesFromRobots(nearbyTeammates, new RobotType[]{RobotType.SOLDIER});
 
                 if (nearbySoldiers.length > 2) {
 
@@ -231,8 +231,7 @@ public class RobotTurret implements Robot {
                 // ATTACK
 
                 final RobotInfo[] enemies = robotController.senseHostileRobots(currentLocation, robotController.getType().attackRadiusSquared);
-
-                RobotInfo bestEnemy = this.getBestEnemyToAttackFromEnemies(robotController, enemies);
+                final RobotInfo bestEnemy = this.getBestEnemyToAttackFromEnemies(robotController, enemies);
 
                 // handle attacking
 
@@ -255,8 +254,8 @@ public class RobotTurret implements Robot {
 
                 // pack if we aren't near soldiers
 
-                RobotInfo[] nearbyTeammates = robotController.senseNearbyRobots(type.sensorRadiusSquared, currentTeam);
-                RobotInfo[] nearbySoldiers = combatModule.robotsOfTypesFromRobots(nearbyTeammates, new RobotType[]{RobotType.SOLDIER});
+                final RobotInfo[] nearbyTeammates = robotController.senseNearbyRobots(type.sensorRadiusSquared, currentTeam);
+                final RobotInfo[] nearbySoldiers = combatModule.robotsOfTypesFromRobots(nearbyTeammates, new RobotType[]{RobotType.SOLDIER});
 
                 if (nearbySoldiers.length < 3) {
 
