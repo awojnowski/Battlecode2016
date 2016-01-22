@@ -23,3 +23,4 @@ Post-Seeding:
 - Possibly activate neutrals before building robots? (and count them as built units)
 - Have archons and soldiers play safer if we’re outnumbered (game against hungry games where we got ridiculously lucky lol)
 - Make archons flee towards our soldiers for safety (would need to have our soldier clumps in communication as well)
+- Note what direction zombies come from to find their dens
