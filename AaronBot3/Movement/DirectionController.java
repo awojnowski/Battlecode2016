@@ -157,6 +157,7 @@ public class DirectionController {
 
         }
 
+        final float randomSeed = random.nextFloat() - 0.5f; // between -0.5 and 0.5
         int totalLocationsSampled = 0;
         int totalRobotX = 0;
         int totalRobotY = 0;
@@ -221,10 +222,10 @@ public class DirectionController {
 
         }
 
-        final double averageRobotX = (double)totalRobotX / totalLocationsSampled;
-        final double averageRobotY = (double)totalRobotY / totalLocationsSampled;
-        final double dx = (double)(averageRobotX - currentLocation.x);
-        final double dy = (double)(averageRobotY - currentLocation.y);
+        final double averageRobotX = (double)totalRobotX + randomSeed / totalLocationsSampled;
+        final double averageRobotY = (double)totalRobotY + randomSeed / totalLocationsSampled;
+        final double dx = averageRobotX - currentLocation.x;
+        final double dy = averageRobotY - currentLocation.y;
         return Math.abs(dx) >= 2.414D * Math.abs(dy)?(dx > 0.0D?Direction.EAST:(dx < 0.0D?Direction.WEST:Direction.OMNI)):(Math.abs(dy) >= 2.414D * Math.abs(dx)?(dy > 0.0D?Direction.SOUTH:Direction.NORTH):(dy > 0.0D?(dx > 0.0D?Direction.SOUTH_EAST:Direction.SOUTH_WEST):(dx > 0.0D?Direction.NORTH_EAST:Direction.NORTH_WEST)));
 
     }
