@@ -91,6 +91,9 @@ public class RobotViper implements Robot {
             directionController.random = random;
             directionController.shouldAvoidEnemies = true;
 
+            final RobotInfo[] enemies = robotController.senseHostileRobots(currentLocation, type.sensorRadiusSquared);
+            directionController.nearbyEnemies = enemies;
+
             if (bestEnemy != null && currentLocation.distanceSquaredTo(bestEnemy.location) <= bestEnemy.type.attackRadiusSquared) {
 
                 // should kite
@@ -119,8 +122,7 @@ public class RobotViper implements Robot {
 
             if (robotController.isCoreReady() && communicationModule.initialInformationReceived && ableToMove) {
 
-                RobotInfo[] zombies = robotController.senseNearbyRobots(type.sensorRadiusSquared, Team.ZOMBIE);
-                RobotInfo[] enemies = robotController.senseHostileRobots(currentLocation, type.sensorRadiusSquared);
+                final RobotInfo[] zombies = robotController.senseNearbyRobots(type.sensorRadiusSquared, Team.ZOMBIE);
 
                 // run away from zombies
 
@@ -224,7 +226,7 @@ public class RobotViper implements Robot {
 
                 if (targetRubbleClearanceDirection != null) {
 
-                    final Direction rubbleClearanceDirection = rubbleModule.getRubbleClearanceDirectionFromDirection(targetRubbleClearanceDirection, robotController, RubbleModule.ADJUSTMENT_THRESHOLD_MEDIUM);
+                    final Direction rubbleClearanceDirection = rubbleModule.getRubbleClearanceDirectionFromDirection(targetRubbleClearanceDirection, robotController, RubbleModule.ADJUSTMENT_THRESHOLD_LOW);
                     if (rubbleClearanceDirection != null) {
 
                         robotController.clearRubble(rubbleClearanceDirection);
