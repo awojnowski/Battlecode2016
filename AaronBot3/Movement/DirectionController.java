@@ -238,9 +238,13 @@ public class DirectionController {
 
         // check to make sure that there is no rubble
 
-        if (this.robotController.senseRubble(location) >= GameConstants.RUBBLE_OBSTRUCTION_THRESH) {
+        if (!this.robotController.getType().ignoresRubble) {
 
-            return new Result(null, ErrorType.BLOCKED_RUBBLE);
+            if (this.robotController.senseRubble(location) >= GameConstants.RUBBLE_OBSTRUCTION_THRESH) {
+
+                return new Result(null, ErrorType.BLOCKED_RUBBLE);
+
+            }
 
         }
 
