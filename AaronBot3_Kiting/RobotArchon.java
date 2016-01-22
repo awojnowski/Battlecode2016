@@ -1,11 +1,11 @@
-package team059;
+package AaronBot3_Kiting;
 
-import team059.Combat.CombatModule;
-import team059.Map.*;
-import team059.Movement.*;
-import team059.Rubble.RubbleModule;
-import team059.Signals.*;
-import team059.ZombieSpawns.ZombieSpawnsModule;
+import AaronBot3_Kiting.Combat.CombatModule;
+import AaronBot3_Kiting.Map.*;
+import AaronBot3_Kiting.Movement.*;
+import AaronBot3_Kiting.Rubble.RubbleModule;
+import AaronBot3_Kiting.Signals.*;
+import AaronBot3_Kiting.ZombieSpawns.ZombieSpawnsModule;
 import battlecode.common.*;
 import java.util.*;
 

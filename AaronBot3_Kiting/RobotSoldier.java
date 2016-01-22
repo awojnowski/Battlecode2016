@@ -1,10 +1,10 @@
-package AaronBot3;
+package AaronBot3_Kiting;
 
-import AaronBot3.Combat.*;
-import AaronBot3.Map.MapInfoModule;
-import AaronBot3.Movement.*;
-import AaronBot3.Signals.*;
-import AaronBot3.Rubble.*;
+import AaronBot3_Kiting.Combat.*;
+import AaronBot3_Kiting.Map.MapInfoModule;
+import AaronBot3_Kiting.Movement.*;
+import AaronBot3_Kiting.Signals.*;
+import AaronBot3_Kiting.Rubble.*;
 import battlecode.common.*;
 
 import java.util.*;

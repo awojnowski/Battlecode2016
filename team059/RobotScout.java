@@ -15,11 +15,10 @@ public class RobotScout implements Robot {
 
         final CartographyModule cartographyModule = new CartographyModule();
         final CommunicationModule communicationModule = new CommunicationModule(mapInfoModule);
-        final DirectionModule directionModule = new DirectionModule(robotController.getID());
         final MovementModule movementModule = new MovementModule();
+        final Random random = new Random(robotController.getID());
 
         final MapLocation spawnLocation = robotController.getLocation();
-        final Random random = new Random(robotController.getID());
         final Team team = robotController.getTeam();
 
         boolean returnToSpawnLocation = false;
@@ -27,15 +26,15 @@ public class RobotScout implements Robot {
         int cantSeeShitTurns = 0;
 
         while (true) {
-            
-            communicationModule.processIncomingSignals(robotController);
-
-            // let's try to make sure we're safe and run from enemies
 
             MapLocation currentLocation = robotController.getLocation();
             final RobotInfo[] enemies = robotController.senseHostileRobots(currentLocation, robotController.getType().sensorRadiusSquared);
 
             robotController.setIndicatorString(1, "Signal distance: " + CommunicationModule.maximumBroadcastRange(mapInfoModule, currentLocation) + "; Queue size: " + communicationModule.communicationModuleSignalQueue.size());
+
+            // process incoming communications
+
+            communicationModule.processIncomingSignals(robotController);
 
             // let's check up on existing communications to verify the information, if we can
 
@@ -203,20 +202,33 @@ public class RobotScout implements Robot {
 
             // let's try to flee if we aren't safe
 
+            final DirectionController directionController = new DirectionController(robotController);
+            directionController.currentLocation = currentLocation;
+            directionController.enemyBufferDistance = 2;
+            directionController.nearbyEnemies = enemies;
+            directionController.random = random;
+            directionController.shouldAvoidEnemies = true;
+
+            final Direction enemiesDirectionOutput = directionController.getAverageDirectionTowardsEnemies(enemies, true);
+            if (enemiesDirectionOutput != null) {
+
+                robotController.setIndicatorLine(currentLocation, currentLocation.add(enemiesDirectionOutput, 1000), 50, 25, 25);
+
+            }
+
             if (robotController.isCoreReady() && communicationModule.initialInformationReceived && enemies.length > 0) {
 
-                final Direction fleeDirection = directionModule.averageDirectionTowardDangerousRobotsAndOuterBounds(robotController, enemies);
-                if (fleeDirection != null) {
-                    final Direction fleeMovementDirection = directionModule.recommendedMovementDirectionForDirection(fleeDirection.opposite(), robotController, false);
-                    if (fleeMovementDirection != null) {
+                final Direction enemiesDirection = directionController.getAverageDirectionTowardsEnemies(enemies, true);
+                if (enemiesDirection != null) {
 
-                        robotController.move(fleeMovementDirection);
+                    directionController.shouldAvoidEnemies = false;
+                    final DirectionController.Result enemiesMovementResult = directionController.getDirectionResultFromDirection(enemiesDirection.opposite(), DirectionController.ADJUSTMENT_THRESHOLD_MEDIUM);
+                    directionController.shouldAvoidEnemies = true;
+
+                    if (enemiesMovementResult.direction != null) {
+
+                        robotController.move(enemiesMovementResult.direction);
                         currentLocation = robotController.getLocation();
-                        if (movementDirection != null) {
-
-                            movementDirection = RobotScout.rotateDirection(movementDirection, currentLocation, robotController, mapInfoModule);
-
-                        }
 
                     }
 
@@ -228,11 +240,7 @@ public class RobotScout implements Robot {
 
             if (communicationModule.hasEnqueuedSignalsForBroadcast()) {
 
-                if (directionModule.isMapLocationSafe(currentLocation, enemies, 4) || true) {
-
-                    communicationModule.broadcastEnqueuedSignals(robotController, CommunicationModule.maximumBroadcastRange(mapInfoModule, currentLocation));
-
-                }
+                communicationModule.broadcastEnqueuedSignals(robotController, CommunicationModule.maximumBroadcastRange(mapInfoModule, currentLocation));
 
             }
 
@@ -247,7 +255,7 @@ public class RobotScout implements Robot {
 
                     if (movementDirection == null) {
 
-                        movementDirection = directionModule.randomDirection();
+                        movementDirection = directionController.getRandomDirection();
 
                     }
                     movementDirection = robotController.getID() % 2 == 0 ? movementDirection.rotateLeft().rotateLeft() : movementDirection.rotateRight().rotateRight();
@@ -262,10 +270,11 @@ public class RobotScout implements Robot {
                 if (returnToSpawnLocation) {
 
                     final Direction returnDirection = currentLocation.directionTo(spawnLocation);
-                    final Direction actualReturnDirection = directionModule.recommendedSafeMovementDirectionForDirection(returnDirection, robotController, enemies, 2, true);
-                    if (actualReturnDirection != null) {
+                    final DirectionController.Result returnMovementResult = directionController.getDirectionResultFromDirection(returnDirection, DirectionController.ADJUSTMENT_THRESHOLD_MEDIUM);
+                    if (returnMovementResult.direction != null) {
 
-                        robotController.move(actualReturnDirection);
+                        robotController.move(returnMovementResult.direction);
+                        currentLocation = robotController.getLocation();
 
                     }
 
@@ -274,14 +283,14 @@ public class RobotScout implements Robot {
                     // let's see if we have a movement direction before moving (if not, create one)
                     if (movementDirection == null || !robotController.onTheMap(currentLocation.add(movementDirection))) {
 
-                        movementDirection = directionModule.randomDirection();
+                        movementDirection = directionController.getRandomDirection();
 
                     }
 
-                    final Direction actualMovementDirection = directionModule.recommendedSafeMovementDirectionForDirection(movementDirection, robotController, enemies, 2, true);
-                    if (actualMovementDirection != null) {
+                    final DirectionController.Result movementResult = directionController.getDirectionResultFromDirection(movementDirection, DirectionController.ADJUSTMENT_THRESHOLD_MEDIUM);
+                    if (movementResult.direction != null) {
 
-                        robotController.move(actualMovementDirection);
+                        robotController.move(movementResult.direction);
                         currentLocation = robotController.getLocation();
 
                     } else {

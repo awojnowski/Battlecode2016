@@ -1,4 +1,4 @@
-package AaronBot3.Movement;
+package AaronBot3_Kiting.Movement;
 
 import battlecode.common.*;
 import java.util.Random;

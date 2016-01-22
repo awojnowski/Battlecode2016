@@ -10,7 +10,7 @@ public class RubbleModule {
     public static final int ADJUSTMENT_THRESHOLD_HIGH = 3;
     public static final int ADJUSTMENT_THRESHOLD_ALL = 4;
 
-    public Direction getRubbleClearanceDirectionFromDirection(final Direction direction, final RobotController robotController, final int adjustmentThreshold) {
+    public Direction getRubbleClearanceDirectionFromDirection(final Direction direction, final RobotController robotController, final int adjustmentThreshold) throws GameActionException {
 
         final MapLocation currentLocation = robotController.getLocation();
 
@@ -22,21 +22,31 @@ public class RubbleModule {
 
         for (int i = 0; i <= adjustmentThreshold; i++) {
 
-            final double totalRubbleA = robotController.senseRubble(currentLocation.add(directionB));
-            if (totalRubbleA > GameConstants.RUBBLE_SLOW_THRESH && totalRubbleA < bestRubbleTotal) {
+            final MapLocation rubbleLocationA = currentLocation.add(directionA);
+            if (robotController.onTheMap(rubbleLocationA)) {
 
-                bestRubbleDirection = directionA;
-                bestRubbleTotal = totalRubbleA;
+                final double totalRubbleA = robotController.senseRubble(rubbleLocationA);
+                if (totalRubbleA > GameConstants.RUBBLE_SLOW_THRESH && totalRubbleA < bestRubbleTotal) {
+
+                    bestRubbleDirection = directionA;
+                    bestRubbleTotal = totalRubbleA;
+
+                }
 
             }
 
             if (i > 0 && i < 4) {
 
-                final double totalRubbleB = robotController.senseRubble(currentLocation.add(directionB));
-                if (totalRubbleB > GameConstants.RUBBLE_SLOW_THRESH && totalRubbleB < bestRubbleTotal) {
+                final MapLocation rubbleLocationB = currentLocation.add(directionB);
+                if (robotController.onTheMap(rubbleLocationB)) {
 
-                    bestRubbleDirection = directionB;
-                    bestRubbleTotal = totalRubbleB;
+                    final double totalRubbleB = robotController.senseRubble(rubbleLocationB);
+                    if (totalRubbleB > GameConstants.RUBBLE_SLOW_THRESH && totalRubbleB < bestRubbleTotal) {
+
+                        bestRubbleDirection = directionB;
+                        bestRubbleTotal = totalRubbleB;
+
+                    }
 
                 }
 

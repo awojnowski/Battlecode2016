@@ -1,11 +1,11 @@
-package team059;
+package AaronBot3_Kiting;
 
-import team059.Combat.CombatModule;
-import team059.Map.MapInfoModule;
-import team059.Movement.*;
-import team059.Rubble.RubbleModule;
-import team059.Signals.CommunicationModule;
-import team059.Signals.CommunicationModuleSignal;
+import AaronBot3_Kiting.Combat.CombatModule;
+import AaronBot3_Kiting.Map.MapInfoModule;
+import AaronBot3_Kiting.Movement.*;
+import AaronBot3_Kiting.Rubble.RubbleModule;
+import AaronBot3_Kiting.Signals.CommunicationModule;
+import AaronBot3_Kiting.Signals.CommunicationModuleSignal;
 import battlecode.common.*;
 import java.util.*;
 
