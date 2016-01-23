@@ -291,7 +291,7 @@ public class PoliticalAgenda {
 
             } else if (signal.action == PoliticalAgenda.SignalActionErase) {
 
-                this.zombieDens.remove(signal, signal.data);
+                this.zombieDens.remove(signal.data);
 
             }
 
@@ -483,7 +483,7 @@ public class PoliticalAgenda {
             return true;
 
         }
-        this.zombieDens.remove(signal, signal.data);
+        this.zombieDens.remove(signal.data);
         return false;
 
     }

@@ -66,7 +66,7 @@ public class RobotSoldier implements Robot {
                 }
 
             }
-            
+
             // see if we can attack anything this turn
 
             final RobotInfo[] enemies = robotController.senseHostileRobots(currentLocation, -1);

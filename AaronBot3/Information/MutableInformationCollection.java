@@ -4,38 +4,37 @@ import java.util.*;
 
 public class MutableInformationCollection<T> {
 
-    private int[] hashtable = new int[8192];
+    private Object[] hashtable = new Object[8192];
     private ArrayList<T> array = new ArrayList<T>();
 
     public void add(final T item, final int identifier) {
 
-        if (this.hashtable[identifier] != 0) {
+        if (this.hashtable[identifier] != null) {
 
             return;
 
         }
-        this.hashtable[identifier] = identifier;
+        this.hashtable[identifier] = item;
         this.array.add(item);
 
     }
 
-    public void remove(final int i, final int identifier) {
+    public void remove(final int identifier) {
 
-        this.hashtable[identifier] = 0;
-        this.array.remove(i);
+        final T item = (T)this.hashtable[identifier];
+        if (item == null) {
 
-    }
+            return;
 
-    public void remove(final T item, final int identifier) {
-
-        this.hashtable[identifier] = 0;
+        }
+        this.hashtable[identifier] = null;
         this.array.remove(item);
 
     }
 
     public boolean contains(final int identifier) {
 
-        return this.hashtable[identifier] != 0;
+        return this.hashtable[identifier] != null;
 
     }
 
