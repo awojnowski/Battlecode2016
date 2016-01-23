@@ -28,6 +28,7 @@ public class RobotScout implements Robot {
             MapLocation currentLocation = robotController.getLocation();
             final RobotInfo[] enemies = robotController.senseHostileRobots(currentLocation, robotController.getType().sensorRadiusSquared);
 
+            robotController.setIndicatorString(0, "Map information: N: " + politicalAgenda.mapBoundaryNorth + " E: " + politicalAgenda.mapBoundaryEast + " S: " + politicalAgenda.mapBoundarySouth + " W: " + politicalAgenda.mapBoundaryWest);
             robotController.setIndicatorString(1, "Signal distance: " + politicalAgenda.maximumBroadcastRangeForLocation(currentLocation));
 
             // process incoming communications
@@ -78,10 +79,10 @@ public class RobotScout implements Robot {
 
                 if (!politicalAgenda.hasAllMapBoundaries()) {
 
-                    final boolean hasEast = politicalAgenda.mapBoundaryEast != PoliticalAgenda.UnknownValue;
-                    final boolean hasNorth = politicalAgenda.mapBoundaryNorth != PoliticalAgenda.UnknownValue;
-                    final boolean hasWest = politicalAgenda.mapBoundaryWest != PoliticalAgenda.UnknownValue;
-                    final boolean hasSouth = politicalAgenda.mapBoundarySouth != PoliticalAgenda.UnknownValue;
+                    boolean hasEast = politicalAgenda.mapBoundaryEast != PoliticalAgenda.UnknownValue;
+                    boolean hasNorth = politicalAgenda.mapBoundaryNorth != PoliticalAgenda.UnknownValue;
+                    boolean hasWest = politicalAgenda.mapBoundaryWest != PoliticalAgenda.UnknownValue;
+                    boolean hasSouth = politicalAgenda.mapBoundarySouth != PoliticalAgenda.UnknownValue;
 
                     cartographyModule.probeAndUpdatePoliticalAgenda(politicalAgenda, currentLocation, robotController);
                     if (politicalAgenda.hasAllMapBoundaries()) {
@@ -103,6 +104,7 @@ public class RobotScout implements Robot {
 
                                     politicalAgenda.mapBoundaryWest = mirroredSignal.data;
                                     politicalAgenda.enqueueSignalForBroadcast(mirroredSignal);
+                                    hasWest = true;
 
                                 }
 
@@ -121,6 +123,7 @@ public class RobotScout implements Robot {
 
                                     politicalAgenda.mapBoundarySouth = mirroredSignal.data;
                                     politicalAgenda.enqueueSignalForBroadcast(mirroredSignal);
+                                    hasSouth = true;
 
                                 }
 
@@ -139,6 +142,7 @@ public class RobotScout implements Robot {
 
                                     politicalAgenda.mapBoundaryEast = mirroredSignal.data;
                                     politicalAgenda.enqueueSignalForBroadcast(mirroredSignal);
+                                    hasEast = true;
 
                                 }
 
@@ -146,7 +150,6 @@ public class RobotScout implements Robot {
 
                         }
                         if (!hasSouth && politicalAgenda.mapBoundarySouth != PoliticalAgenda.UnknownValue) {
-
                             final InformationSignal signal = politicalAgenda.generateMapWallInformationSignal(PoliticalAgenda.SignalTypeMapWallSouth, politicalAgenda.mapBoundarySouth);
                             politicalAgenda.enqueueSignalForBroadcast(signal);
 
@@ -157,6 +160,7 @@ public class RobotScout implements Robot {
 
                                     politicalAgenda.mapBoundaryNorth = mirroredSignal.data;
                                     politicalAgenda.enqueueSignalForBroadcast(mirroredSignal);
+                                    hasNorth = true;
 
                                 }
 

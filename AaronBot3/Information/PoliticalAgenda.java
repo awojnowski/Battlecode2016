@@ -1,5 +1,6 @@
 package AaronBot3.Information;
 
+import AaronBot.Robot;
 import battlecode.common.*;
 import java.util.*;
 
@@ -304,7 +305,7 @@ public class PoliticalAgenda {
             final int data = signal.data;
             final int mapWidth = (data & 0x000000FF);
             final int mapHeight = ((data >> 8) & 0x000000FF);
-            this.mapBoundaryWest = this.mapBoundaryWest + mapWidth + 1;
+            this.mapBoundaryEast = this.mapBoundaryWest + mapWidth + 1;
             this.mapBoundarySouth = this.mapBoundaryNorth + mapHeight + 1;
 
         } else if (signal.type == PoliticalAgenda.SignalTypeMapWallNorth) {

@@ -15,6 +15,12 @@ public class CartographyModule {
 
                 politicalAgenda.mapBoundaryEast = foundProbeLocation.x;
 
+                if (robotController.getID() == 3007) {
+
+                    System.out.println("Updating east boundary: " + politicalAgenda.mapBoundaryEast);
+
+                }
+
             }
 
         }
@@ -24,6 +30,12 @@ public class CartographyModule {
             if (foundProbeLocation != null) {
 
                 politicalAgenda.mapBoundaryWest = foundProbeLocation.x;
+
+                if (robotController.getID() == 3007) {
+
+                    System.out.println("Updating west boundary: " + politicalAgenda.mapBoundaryWest);
+
+                }
 
             }
 
@@ -35,6 +47,12 @@ public class CartographyModule {
 
                 politicalAgenda.mapBoundaryNorth = foundProbeLocation.y;
 
+                if (robotController.getID() == 3007) {
+
+                    System.out.println("Updating north boundary: " + politicalAgenda.mapBoundaryNorth);
+
+                }
+
             }
         }
         if (politicalAgenda.mapBoundarySouth == PoliticalAgenda.UnknownValue) {
@@ -43,6 +61,12 @@ public class CartographyModule {
             if (foundProbeLocation != null) {
 
                 politicalAgenda.mapBoundarySouth = foundProbeLocation.y;
+
+                if (robotController.getID() == 3007) {
+
+                    System.out.println("Updating south boundary: " + politicalAgenda.mapBoundarySouth);
+
+                }
 
             }
 
