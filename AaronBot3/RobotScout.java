@@ -26,6 +26,18 @@ public class RobotScout implements Robot {
 
         while (true) {
 
+            // process incoming communications
+
+            politicalAgenda.processIncomingSignalsFromRobotController(robotController);
+            if (!politicalAgenda.isInformationSynced) {
+
+                Clock.yield();
+                continue;
+
+            }
+
+            // continue forward
+
             MapLocation currentLocation = robotController.getLocation();
             final RobotInfo[] enemies = robotController.senseHostileRobots(currentLocation, robotController.getType().sensorRadiusSquared);
 
@@ -44,10 +56,6 @@ public class RobotScout implements Robot {
 
             robotController.setIndicatorString(0, "Map information: N: " + politicalAgenda.mapBoundaryNorth + " E: " + politicalAgenda.mapBoundaryEast + " S: " + politicalAgenda.mapBoundarySouth + " W: " + politicalAgenda.mapBoundaryWest);
             robotController.setIndicatorString(1, "Signal distance: " + politicalAgenda.maximumBroadcastRangeForLocation(currentLocation));
-
-            // process incoming communications
-
-            politicalAgenda.processIncomingSignalsFromRobotController(robotController);
 
             // let's verify information
 
@@ -103,104 +111,100 @@ public class RobotScout implements Robot {
 
             }
 
-            if (politicalAgenda.isInformationSynced) {
+            if (!politicalAgenda.hasAllMapBoundaries()) {
 
-                if (!politicalAgenda.hasAllMapBoundaries()) {
+                boolean hasEast = politicalAgenda.mapBoundaryEast != PoliticalAgenda.UnknownValue;
+                boolean hasNorth = politicalAgenda.mapBoundaryNorth != PoliticalAgenda.UnknownValue;
+                boolean hasWest = politicalAgenda.mapBoundaryWest != PoliticalAgenda.UnknownValue;
+                boolean hasSouth = politicalAgenda.mapBoundarySouth != PoliticalAgenda.UnknownValue;
 
-                    boolean hasEast = politicalAgenda.mapBoundaryEast != PoliticalAgenda.UnknownValue;
-                    boolean hasNorth = politicalAgenda.mapBoundaryNorth != PoliticalAgenda.UnknownValue;
-                    boolean hasWest = politicalAgenda.mapBoundaryWest != PoliticalAgenda.UnknownValue;
-                    boolean hasSouth = politicalAgenda.mapBoundarySouth != PoliticalAgenda.UnknownValue;
+                cartographyModule.probeAndUpdatePoliticalAgenda(politicalAgenda, currentLocation, robotController);
+                if (politicalAgenda.hasAllMapBoundaries()) {
 
-                    cartographyModule.probeAndUpdatePoliticalAgenda(politicalAgenda, currentLocation, robotController);
-                    if (politicalAgenda.hasAllMapBoundaries()) {
+                    final InformationSignal signal = politicalAgenda.generateMapInfoInformationSignal();
+                    signal.broadcastRange = maximumBroadcastRange;
+                    politicalAgenda.enqueueSignalForBroadcast(signal);
 
-                        final InformationSignal signal = politicalAgenda.generateMapInfoInformationSignal();
+                } else {
+
+                    if (!hasEast && politicalAgenda.mapBoundaryEast != PoliticalAgenda.UnknownValue) {
+
+                        final InformationSignal signal = politicalAgenda.generateMapWallInformationSignal(PoliticalAgenda.SignalTypeMapWallEast, politicalAgenda.mapBoundaryEast);
                         signal.broadcastRange = maximumBroadcastRange;
                         politicalAgenda.enqueueSignalForBroadcast(signal);
 
-                    } else {
+                        if (politicalAgenda.mapBoundaryWest == PoliticalAgenda.UnknownValue) {
 
-                        if (!hasEast && politicalAgenda.mapBoundaryEast != PoliticalAgenda.UnknownValue) {
+                            final InformationSignal mirroredSignal = politicalAgenda.getMirroredBoundarySignal(signal);
+                            if (mirroredSignal != null) {
 
-                            final InformationSignal signal = politicalAgenda.generateMapWallInformationSignal(PoliticalAgenda.SignalTypeMapWallEast, politicalAgenda.mapBoundaryEast);
-                            signal.broadcastRange = maximumBroadcastRange;
-                            politicalAgenda.enqueueSignalForBroadcast(signal);
-
-                            if (politicalAgenda.mapBoundaryWest == PoliticalAgenda.UnknownValue) {
-
-                                final InformationSignal mirroredSignal = politicalAgenda.getMirroredBoundarySignal(signal);
-                                if (mirroredSignal != null) {
-
-                                    mirroredSignal.broadcastRange = maximumBroadcastRange;
-                                    politicalAgenda.mapBoundaryWest = mirroredSignal.data;
-                                    politicalAgenda.enqueueSignalForBroadcast(mirroredSignal);
-                                    hasWest = true;
-
-                                }
+                                mirroredSignal.broadcastRange = maximumBroadcastRange;
+                                politicalAgenda.mapBoundaryWest = mirroredSignal.data;
+                                politicalAgenda.enqueueSignalForBroadcast(mirroredSignal);
+                                hasWest = true;
 
                             }
 
                         }
-                        if (!hasNorth && politicalAgenda.mapBoundaryNorth != PoliticalAgenda.UnknownValue) {
 
-                            final InformationSignal signal = politicalAgenda.generateMapWallInformationSignal(PoliticalAgenda.SignalTypeMapWallNorth, politicalAgenda.mapBoundaryNorth);
-                            signal.broadcastRange = maximumBroadcastRange;
-                            politicalAgenda.enqueueSignalForBroadcast(signal);
+                    }
+                    if (!hasNorth && politicalAgenda.mapBoundaryNorth != PoliticalAgenda.UnknownValue) {
 
-                            if (politicalAgenda.mapBoundarySouth == PoliticalAgenda.UnknownValue) {
+                        final InformationSignal signal = politicalAgenda.generateMapWallInformationSignal(PoliticalAgenda.SignalTypeMapWallNorth, politicalAgenda.mapBoundaryNorth);
+                        signal.broadcastRange = maximumBroadcastRange;
+                        politicalAgenda.enqueueSignalForBroadcast(signal);
 
-                                final InformationSignal mirroredSignal = politicalAgenda.getMirroredBoundarySignal(signal);
-                                if (mirroredSignal != null) {
+                        if (politicalAgenda.mapBoundarySouth == PoliticalAgenda.UnknownValue) {
 
-                                    mirroredSignal.broadcastRange = maximumBroadcastRange;
-                                    politicalAgenda.mapBoundarySouth = mirroredSignal.data;
-                                    politicalAgenda.enqueueSignalForBroadcast(mirroredSignal);
-                                    hasSouth = true;
+                            final InformationSignal mirroredSignal = politicalAgenda.getMirroredBoundarySignal(signal);
+                            if (mirroredSignal != null) {
 
-                                }
-
-                            }
-
-                        }
-                        if (!hasWest && politicalAgenda.mapBoundaryWest != PoliticalAgenda.UnknownValue) {
-
-                            final InformationSignal signal = politicalAgenda.generateMapWallInformationSignal(PoliticalAgenda.SignalTypeMapWallWest, politicalAgenda.mapBoundaryWest);
-                            signal.broadcastRange = maximumBroadcastRange;
-                            politicalAgenda.enqueueSignalForBroadcast(signal);
-
-                            if (politicalAgenda.mapBoundaryEast == PoliticalAgenda.UnknownValue) {
-
-                                final InformationSignal mirroredSignal = politicalAgenda.getMirroredBoundarySignal(signal);
-                                if (mirroredSignal != null) {
-
-                                    mirroredSignal.broadcastRange = maximumBroadcastRange;
-                                    politicalAgenda.mapBoundaryEast = mirroredSignal.data;
-                                    politicalAgenda.enqueueSignalForBroadcast(mirroredSignal);
-                                    hasEast = true;
-
-                                }
+                                mirroredSignal.broadcastRange = maximumBroadcastRange;
+                                politicalAgenda.mapBoundarySouth = mirroredSignal.data;
+                                politicalAgenda.enqueueSignalForBroadcast(mirroredSignal);
+                                hasSouth = true;
 
                             }
 
                         }
-                        if (!hasSouth && politicalAgenda.mapBoundarySouth != PoliticalAgenda.UnknownValue) {
 
-                            final InformationSignal signal = politicalAgenda.generateMapWallInformationSignal(PoliticalAgenda.SignalTypeMapWallSouth, politicalAgenda.mapBoundarySouth);
-                            signal.broadcastRange = maximumBroadcastRange;
-                            politicalAgenda.enqueueSignalForBroadcast(signal);
+                    }
+                    if (!hasWest && politicalAgenda.mapBoundaryWest != PoliticalAgenda.UnknownValue) {
 
-                            if (politicalAgenda.mapBoundaryNorth == PoliticalAgenda.UnknownValue) {
+                        final InformationSignal signal = politicalAgenda.generateMapWallInformationSignal(PoliticalAgenda.SignalTypeMapWallWest, politicalAgenda.mapBoundaryWest);
+                        signal.broadcastRange = maximumBroadcastRange;
+                        politicalAgenda.enqueueSignalForBroadcast(signal);
 
-                                final InformationSignal mirroredSignal = politicalAgenda.getMirroredBoundarySignal(signal);
-                                if (mirroredSignal != null) {
+                        if (politicalAgenda.mapBoundaryEast == PoliticalAgenda.UnknownValue) {
 
-                                    mirroredSignal.broadcastRange = maximumBroadcastRange;
-                                    politicalAgenda.mapBoundaryNorth = mirroredSignal.data;
-                                    politicalAgenda.enqueueSignalForBroadcast(mirroredSignal);
-                                    hasNorth = true;
+                            final InformationSignal mirroredSignal = politicalAgenda.getMirroredBoundarySignal(signal);
+                            if (mirroredSignal != null) {
 
-                                }
+                                mirroredSignal.broadcastRange = maximumBroadcastRange;
+                                politicalAgenda.mapBoundaryEast = mirroredSignal.data;
+                                politicalAgenda.enqueueSignalForBroadcast(mirroredSignal);
+                                hasEast = true;
+
+                            }
+
+                        }
+
+                    }
+                    if (!hasSouth && politicalAgenda.mapBoundarySouth != PoliticalAgenda.UnknownValue) {
+
+                        final InformationSignal signal = politicalAgenda.generateMapWallInformationSignal(PoliticalAgenda.SignalTypeMapWallSouth, politicalAgenda.mapBoundarySouth);
+                        signal.broadcastRange = maximumBroadcastRange;
+                        politicalAgenda.enqueueSignalForBroadcast(signal);
+
+                        if (politicalAgenda.mapBoundaryNorth == PoliticalAgenda.UnknownValue) {
+
+                            final InformationSignal mirroredSignal = politicalAgenda.getMirroredBoundarySignal(signal);
+                            if (mirroredSignal != null) {
+
+                                mirroredSignal.broadcastRange = maximumBroadcastRange;
+                                politicalAgenda.mapBoundaryNorth = mirroredSignal.data;
+                                politicalAgenda.enqueueSignalForBroadcast(mirroredSignal);
+                                hasNorth = true;
 
                             }
 
@@ -228,7 +232,7 @@ public class RobotScout implements Robot {
 
             }
 
-            if (robotController.isCoreReady() && politicalAgenda.isInformationSynced && enemies.length > 0) {
+            if (robotController.isCoreReady() && enemies.length > 0) {
 
                 final Direction enemiesDirection = directionController.getAverageDirectionTowardsEnemies(enemies, true);
                 if (enemiesDirection != null) {
@@ -264,7 +268,7 @@ public class RobotScout implements Robot {
 
             // now let's try move to see more
 
-            if (robotController.isCoreReady() && politicalAgenda.isInformationSynced) {
+            if (robotController.isCoreReady()) {
 
                 if (movementDirection == null) {
 

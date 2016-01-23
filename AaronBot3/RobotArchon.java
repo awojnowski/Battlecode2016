@@ -10,7 +10,7 @@ import java.util.*;
 
 public class RobotArchon implements Robot {
 
-    private static int InitialMessageUpdateLength = 2;
+    private static int InitialMessageUpdateLength = 3;
 
     public void run(final RobotController robotController) throws GameActionException {
 
@@ -27,9 +27,9 @@ public class RobotArchon implements Robot {
         int soldiersBuilt = 0;
         RobotType buildingUnitType = null;
 
-        boolean relayExistingInformation = false;
+        boolean relayInformation = false;
+        int relayInformationDelay = 0;
         ArrayList<InformationSignal> informationRelaySignals = null;
-        int informationRelaySignalsIndex = 0;
 
         // general
 
@@ -41,53 +41,78 @@ public class RobotArchon implements Robot {
 
         while (true) {
 
+            robotController.setIndicatorString(1, "");
+
             politicalAgenda.processIncomingSignalsFromRobotController(robotController);
 
-            // we should try activate robots
+            // check relay information
 
-            if (robotController.isCoreReady()) {
+            if (relayInformation) {
 
-                final RobotInfo[] neutrals = robotController.senseNearbyRobots(GameConstants.ARCHON_ACTIVATION_RANGE, Team.NEUTRAL);
-                for (int i = 0; i < neutrals.length; i++) {
+                relayInformationDelay--;
 
-                    robotController.activate(neutrals[i].location);
-                    relayExistingInformation = true;
-                    break;
+            }
+
+            // try to activate robots or check if we just finished building, if we aren't relaying anything
+
+            if (!relayInformation) {
+
+                // we should try activate robots
+
+                if (robotController.isCoreReady()) {
+
+                    final RobotInfo[] neutrals = robotController.senseNearbyRobots(GameConstants.ARCHON_ACTIVATION_RANGE, Team.NEUTRAL);
+                    for (int i = 0; i < neutrals.length; i++) {
+
+                        robotController.activate(neutrals[i].location);
+                        relayInformation = true;
+                        relayInformationDelay = 1;
+                        break;
+
+                    }
+
+                }
+
+                // check if we are done building a unit
+
+                if (robotController.isCoreReady()) {
+
+                    if (buildingUnitType != null) {
+
+                        relayInformation = true;
+                        relayInformationDelay = 2;
+
+                    }
+                    buildingUnitType = null;
 
                 }
 
             }
 
-            // check if we are done building a unit
+            if (relayInformationDelay > 0) {
 
-            if (robotController.isCoreReady()) {
-
-                if (buildingUnitType != null) {
-
-                    relayExistingInformation = true;
-
-                }
-                buildingUnitType = null;
+                Clock.yield();
+                continue;
 
             }
 
             // let's broadcast any remaining information that we have to the nearby, recently created units
 
-            if (relayExistingInformation) {
+            if (relayInformation) {
 
                 informationRelaySignals = this.generateSignalRelayList(politicalAgenda);
-                informationRelaySignalsIndex = 0;
-                relayExistingInformation = false;
+                relayInformation = false;
+                relayInformationDelay = 0;
 
             }
 
             if (informationRelaySignals != null) {
 
-                for (int i = 0; informationRelaySignalsIndex < informationRelaySignals.size(); informationRelaySignalsIndex++, i++) {
+                for (int i = 0; i < informationRelaySignals.size(); i++) {
 
-                    if (i >= GameConstants.MESSAGE_SIGNALS_PER_TURN - 1) {
+                    if (robotController.getMessageSignalCount() >= GameConstants.MESSAGE_SIGNALS_PER_TURN - 1) {
 
-                        break;
+                        Clock.yield();
 
                     }
 
@@ -101,21 +126,18 @@ public class RobotArchon implements Robot {
                     politicalAgenda.broadcastSignal(signal, robotController);
 
                 }
-                if (informationRelaySignalsIndex >= informationRelaySignals.size()) {
 
-                    final InformationSignal signal = new InformationSignal();
-                    signal.action = PoliticalAgenda.SignalActionWrite;
-                    signal.broadcastRange = RobotArchon.InitialMessageUpdateLength;
-                    signal.type = PoliticalAgenda.SignalTypeInformationSynced;
-                    politicalAgenda.broadcastSignal(signal, robotController);
+                final InformationSignal signal = new InformationSignal();
+                signal.action = PoliticalAgenda.SignalActionWrite;
+                signal.broadcastRange = RobotArchon.InitialMessageUpdateLength;
+                signal.type = PoliticalAgenda.SignalTypeInformationSynced;
+                politicalAgenda.broadcastSignal(signal, robotController);
 
-                    informationRelaySignals = null;
-
-                }
+                informationRelaySignals = null;
 
             }
 
-            // send an archon update
+            // send an archon update if necessary
 
             if (robotController.getRoundNum() > 0 && robotController.getRoundNum() % PoliticalAgenda.ArchonUpdateModulus == 0) {
 

@@ -12,6 +12,9 @@ public class RobotSoldier implements Robot {
 
     public void run(final RobotController robotController) throws GameActionException {
 
+        // clear the signal queue for next turn to get information
+        robotController.emptySignalQueue();
+
         final CombatModule combatModule = new CombatModule();
         final MovementModule movementModule = new MovementModule();
         final PoliticalAgenda politicalAgenda = new PoliticalAgenda();
@@ -33,6 +36,12 @@ public class RobotSoldier implements Robot {
             // update communication
 
             politicalAgenda.processIncomingSignalsFromRobotController(robotController);
+            if (!politicalAgenda.isInformationSynced) {
+
+                Clock.yield();
+                continue;
+
+            }
 
             // let's get the best assignment
 
