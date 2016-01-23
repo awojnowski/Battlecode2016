@@ -11,7 +11,6 @@ public class RobotTurret implements Robot {
 
     public void run(final RobotController robotController) throws GameActionException {
 
-
         final CombatModule combatModule = new CombatModule();
         final MovementModule movementModule = new MovementModule();
         final PoliticalAgenda politicalAgenda = new PoliticalAgenda();
@@ -23,14 +22,20 @@ public class RobotTurret implements Robot {
 
         while (true) {
 
-            RobotType type = robotController.getType();
-            MapLocation currentLocation = robotController.getLocation();
-
             // update communication
 
             politicalAgenda.processIncomingSignalsFromRobotController(robotController);
+            if (!politicalAgenda.isInformationSynced) {
 
-            // let's verify existing information
+                Clock.yield();
+                continue;
+
+            }
+
+            // begin
+
+            RobotType type = robotController.getType();
+            MapLocation currentLocation = robotController.getLocation();
 
             if (type == RobotType.TTM) {
 

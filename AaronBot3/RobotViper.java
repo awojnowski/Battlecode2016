@@ -27,14 +27,22 @@ public class RobotViper implements Robot {
 
         while (true) {
 
+            // update communication
+
+            politicalAgenda.processIncomingSignalsFromRobotController(robotController);
+            if (!politicalAgenda.isInformationSynced) {
+
+                Clock.yield();
+                continue;
+
+            }
+
+            // begin
+
             boolean lostHealth = (lastHealth != robotController.getHealth());
             lastHealth = robotController.getHealth();
 
             MapLocation currentLocation = robotController.getLocation();
-
-            // update communication
-
-            politicalAgenda.processIncomingSignalsFromRobotController(robotController);
 
             // let's get the best assignment
 
@@ -248,7 +256,7 @@ public class RobotViper implements Robot {
 
                             if (objectiveSignal.type == PoliticalAgenda.SignalTypeZombieDen) {
 
-                                politicalAgenda.zombieDens.remove(objectiveSignal, objectiveSignal.data);
+                                politicalAgenda.zombieDens.remove(politicalAgenda.getIndexIdentifierForZombieDen(objectiveSignal.location));
 
                             }
                             turnsStuck = 0;
