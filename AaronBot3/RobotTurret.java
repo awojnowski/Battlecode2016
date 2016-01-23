@@ -11,6 +11,8 @@ public class RobotTurret implements Robot {
 
     public void run(final RobotController robotController) throws GameActionException {
 
+        robotController.emptySignalQueue();
+
         final CombatModule combatModule = new CombatModule();
         final MovementModule movementModule = new MovementModule();
         final PoliticalAgenda politicalAgenda = new PoliticalAgenda();
@@ -243,6 +245,29 @@ public class RobotTurret implements Robot {
                     robotController.pack();
 
                 }
+
+            }
+
+            // finish up
+
+            for (int i = 0; i < politicalAgenda.archonLocations.size(); i++) {
+
+                final MapLocation archonLocation = politicalAgenda.archonLocations.get(i);
+                robotController.setIndicatorLine(currentLocation, archonLocation, 25, 25, 255);
+
+            }
+
+            for (int i = 0; i < politicalAgenda.enemies.size(); i++) {
+
+                final EnemyInfo enemy = politicalAgenda.enemies.get(i);
+                robotController.setIndicatorLine(currentLocation, enemy.location, 255, 0, 255);
+
+            }
+
+            for (int i = 0; i < politicalAgenda.zombieDens.size(); i++) {
+
+                final InformationSignal signal = politicalAgenda.zombieDens.get(i);
+                robotController.setIndicatorLine(currentLocation, signal.location, 0, 255, 0);
 
             }
 

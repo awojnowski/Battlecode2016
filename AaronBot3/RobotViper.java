@@ -11,6 +11,8 @@ public class RobotViper implements Robot {
 
     public void run(final RobotController robotController) throws GameActionException {
 
+        robotController.emptySignalQueue();
+
         final CombatModule combatModule = new CombatModule();
         final MovementModule movementModule = new MovementModule();
         final PoliticalAgenda politicalAgenda = new PoliticalAgenda();
@@ -275,28 +277,30 @@ public class RobotViper implements Robot {
 
             // finish up
 
-//            final CommunicationModuleSignalCollection communicationModuleSignalCollection = communicationModule.allCommunicationModuleSignals();
-//            final MapLocation location = robotController.getLocation();
-//            while (communicationModuleSignalCollection.hasMoreElements()) {
-//
-//                final CommunicationModuleSignal communicationModuleSignal = communicationModuleSignalCollection.nextElement();
-//                int[] color = new int[]{255, 255, 255};
-//                if (communicationModuleSignal.type == CommunicationModuleSignal.TYPE_ZOMBIEDEN) {
-//
-//                    color = new int[]{50, 255, 50};
-//
-//                } else if (communicationModuleSignal.type == CommunicationModuleSignal.TYPE_ENEMY_ARCHON) {
-//
-//                    color = new int[]{255, 0, 0};
-//
-//                }
-//                robotController.setIndicatorLine(location, communicationModuleSignal.location, color[0], color[1], color[2]);
-//
-//            }
+            for (int i = 0; i < politicalAgenda.archonLocations.size(); i++) {
+
+                final MapLocation archonLocation = politicalAgenda.archonLocations.get(i);
+                robotController.setIndicatorLine(currentLocation, archonLocation, 25, 25, 255);
+
+            }
+
+            for (int i = 0; i < politicalAgenda.enemies.size(); i++) {
+
+                final EnemyInfo enemy = politicalAgenda.enemies.get(i);
+                robotController.setIndicatorLine(currentLocation, enemy.location, 255, 0, 255);
+
+            }
+
+            for (int i = 0; i < politicalAgenda.zombieDens.size(); i++) {
+
+                final InformationSignal signal = politicalAgenda.zombieDens.get(i);
+                robotController.setIndicatorLine(currentLocation, signal.location, 0, 255, 0);
+
+            }
 
             if (objectiveSignal != null) {
 
-                robotController.setIndicatorLine(objectiveSignal.location, robotController.getLocation(), 255, 0, 0);
+                robotController.setIndicatorLine(objectiveSignal.location, robotController.getLocation(), 125, 0, 0);
 
             }
 

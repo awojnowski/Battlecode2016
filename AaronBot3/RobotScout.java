@@ -11,6 +11,8 @@ public class RobotScout implements Robot {
 
     public void run(final RobotController robotController) throws GameActionException {
 
+        robotController.emptySignalQueue();
+
         final CartographyModule cartographyModule = new CartographyModule();
         final CombatModule combatModule = new CombatModule();
         final PoliticalAgenda politicalAgenda = new PoliticalAgenda();

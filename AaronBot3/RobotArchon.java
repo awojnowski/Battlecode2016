@@ -43,6 +43,8 @@ public class RobotArchon implements Robot {
 
             robotController.setIndicatorString(1, "");
 
+            // update our signals
+
             politicalAgenda.processIncomingSignalsFromRobotController(robotController);
 
             // check relay information
@@ -52,9 +54,6 @@ public class RobotArchon implements Robot {
                 relayInformationDelay--;
 
             }
-
-            // try to activate robots or check if we just finished building, if we aren't relaying anything
-
             if (!relayInformation) {
 
                 // we should try activate robots
@@ -66,7 +65,7 @@ public class RobotArchon implements Robot {
 
                         robotController.activate(neutrals[i].location);
                         relayInformation = true;
-                        relayInformationDelay = 1;
+                        relayInformationDelay = 2;
                         break;
 
                     }
@@ -88,7 +87,6 @@ public class RobotArchon implements Robot {
                 }
 
             }
-
             if (relayInformationDelay > 0) {
 
                 Clock.yield();

@@ -12,7 +12,6 @@ public class RobotSoldier implements Robot {
 
     public void run(final RobotController robotController) throws GameActionException {
 
-        // clear the signal queue for next turn to get information
         robotController.emptySignalQueue();
 
         final CombatModule combatModule = new CombatModule();
