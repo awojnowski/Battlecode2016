@@ -288,11 +288,11 @@ public class PoliticalAgenda {
 
             if (signal.action == PoliticalAgenda.SignalActionWrite) {
 
-                this.zombieDens.add(signal, signal.data);
+                this.zombieDens.add(signal, this.getIndexIdentifierForZombieDen(signal.location));
 
             } else if (signal.action == PoliticalAgenda.SignalActionErase) {
 
-                this.zombieDens.remove(signal.data);
+                this.zombieDens.remove(this.getIndexIdentifierForZombieDen(signal.location));
 
             }
 
@@ -440,11 +440,10 @@ public class PoliticalAgenda {
 
     }
 
-    public InformationSignal generateZombieDenInformationSignal(final MapLocation location, final int identifier) {
+    public InformationSignal generateZombieDenInformationSignal(final MapLocation location) {
 
         final InformationSignal informationSignal = new InformationSignal();
         informationSignal.action = PoliticalAgenda.SignalActionWrite;
-        informationSignal.data = identifier;
         informationSignal.location = location;
         informationSignal.type = PoliticalAgenda.SignalTypeZombieDen;
         return informationSignal;
@@ -468,6 +467,16 @@ public class PoliticalAgenda {
     }
 
     /*
+    SIGNAL INDEXING
+     */
+
+    public int getIndexIdentifierForZombieDen(final MapLocation location) {
+
+        return InformationSignal.serializeMapLocation(location);
+
+    }
+
+    /*
     SIGNAL VERIFICATION
      */
 
@@ -479,12 +488,12 @@ public class PoliticalAgenda {
 
         }
         final RobotInfo robotInfo = robotController.senseRobotAtLocation(signal.location);
-        if (robotInfo != null && robotInfo.ID == signal.data) {
+        if (robotInfo != null && robotInfo.type == RobotType.ZOMBIEDEN) {
 
             return true;
 
         }
-        this.zombieDens.remove(signal.data);
+        this.zombieDens.remove(this.getIndexIdentifierForZombieDen(signal.location));
         return false;
 
     }

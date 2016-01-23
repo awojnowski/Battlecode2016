@@ -60,16 +60,17 @@ public class RobotScout implements Robot {
                 final RobotInfo enemy = enemies[i];
                 if (enemy.type == RobotType.ZOMBIEDEN) {
 
-                    if (politicalAgenda.zombieDens.contains(enemy.ID)) {
+                    if (politicalAgenda.zombieDens.contains(politicalAgenda.getIndexIdentifierForZombieDen(enemy.location))) {
 
                         continue;
 
                     }
 
-                    final InformationSignal signal = politicalAgenda.generateZombieDenInformationSignal(enemy.location, enemy.ID);
+                    final InformationSignal signal = politicalAgenda.generateZombieDenInformationSignal(enemy.location);
                     politicalAgenda.enqueueSignalForBroadcast(signal);
 
-                    // TODO: add mirrored signal
+                    final InformationSignal mirroredSignal = politicalAgenda.generateZombieDenInformationSignal(politicalAgenda.getMirroredLocationFromLocation(enemy.location));
+                    politicalAgenda.enqueueSignalForBroadcast(mirroredSignal);
 
                 }
 
