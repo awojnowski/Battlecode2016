@@ -27,7 +27,19 @@ public class RobotScout implements Robot {
 
             MapLocation currentLocation = robotController.getLocation();
             final RobotInfo[] enemies = robotController.senseHostileRobots(currentLocation, robotController.getType().sensorRadiusSquared);
+
             final RobotInfo[] friendlies = robotController.senseNearbyRobots(-1, robotController.getTeam());
+            boolean areFriendliesNearby = false;
+            for (int i = 0; i < friendlies.length; i++) {
+
+                if (friendlies[i].type != RobotType.SCOUT) {
+
+                    areFriendliesNearby = true;
+                    break;
+
+                }
+
+            }
 
             robotController.setIndicatorString(0, "Map information: N: " + politicalAgenda.mapBoundaryNorth + " E: " + politicalAgenda.mapBoundaryEast + " S: " + politicalAgenda.mapBoundarySouth + " W: " + politicalAgenda.mapBoundaryWest);
             robotController.setIndicatorString(1, "Signal distance: " + politicalAgenda.maximumBroadcastRangeForLocation(currentLocation));
@@ -78,7 +90,7 @@ public class RobotScout implements Robot {
                     mirroredSignal.broadcastRange = maximumBroadcastRange;
                     politicalAgenda.enqueueSignalForBroadcast(mirroredSignal);
 
-                } else if (friendlies.length > 0) {
+                } else if (areFriendliesNearby) {
 
                     // broadcast seen enemy information to friendlies
 
