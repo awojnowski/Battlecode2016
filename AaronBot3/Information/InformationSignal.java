@@ -23,7 +23,7 @@ public class InformationSignal {
         );
         this.type = ((serializedSignal[1] & 0x0000000f) >> 0);
         this.action = ((serializedSignal[1] & 0x00000010) >> 4);
-        this.data = ((serializedSignal[1] & 0xffffffe0) >> 8);
+        this.data = ((serializedSignal[1] & 0xffffffe0) >> 5);
 
     }
 

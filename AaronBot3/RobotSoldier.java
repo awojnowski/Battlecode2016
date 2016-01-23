@@ -25,6 +25,9 @@ public class RobotSoldier implements Robot {
 
         while (true) {
 
+            robotController.setIndicatorString(0, "");
+            robotController.setIndicatorString(1, "");
+
             MapLocation currentLocation = robotController.getLocation();
 
             // update communication
@@ -63,11 +66,8 @@ public class RobotSoldier implements Robot {
                 }
 
             }
-
+            
             // see if we can attack anything this turn
-
-            robotController.setIndicatorString(0, "");
-            robotController.setIndicatorString(1, "");
 
             final RobotInfo[] enemies = robotController.senseHostileRobots(currentLocation, -1);
             final RobotInfo[] friendlies = robotController.senseNearbyRobots(-1, robotController.getTeam());
@@ -107,12 +107,10 @@ public class RobotSoldier implements Robot {
 
                 directionController.enemyBufferDistance = 2;
                 requiresHealing = true;
-                robotController.setIndicatorString(1, "I require healing.");
 
             } else if (robotController.getHealth() / robotController.getType().maxHealth > 0.90) {
 
                 requiresHealing = false;
-                robotController.setIndicatorString(1, "I no longer require healing.");
 
             }
 

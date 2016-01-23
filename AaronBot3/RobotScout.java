@@ -68,6 +68,8 @@ public class RobotScout implements Robot {
                     final InformationSignal signal = politicalAgenda.generateZombieDenInformationSignal(enemy.location, enemy.ID);
                     politicalAgenda.enqueueSignalForBroadcast(signal);
 
+                    System.out.println("Zombie den discovered. Sending with data: " + signal.data + " type: " + signal.type);
+
                     // TODO: add mirrored signal
 
                 }
