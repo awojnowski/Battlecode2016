@@ -4,6 +4,8 @@ import battlecode.common.*;
 
 public class InformationSignal {
 
+    public int broadcastRange = 0;
+
     public int action = 0;
     public MapLocation location = null;
     public int data = 0;

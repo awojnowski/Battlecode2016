@@ -97,15 +97,17 @@ public class RobotArchon implements Robot {
                         continue;
 
                     }
-                    politicalAgenda.broadcastSignal(signal, robotController, RobotArchon.InitialMessageUpdateLength);
+                    signal.broadcastRange = RobotArchon.InitialMessageUpdateLength;
+                    politicalAgenda.broadcastSignal(signal, robotController);
 
                 }
                 if (informationRelaySignalsIndex >= informationRelaySignals.size()) {
 
                     final InformationSignal signal = new InformationSignal();
                     signal.action = PoliticalAgenda.SignalActionWrite;
+                    signal.broadcastRange = RobotArchon.InitialMessageUpdateLength;
                     signal.type = PoliticalAgenda.SignalTypeInformationSynced;
-                    politicalAgenda.broadcastSignal(signal, robotController, RobotArchon.InitialMessageUpdateLength);
+                    politicalAgenda.broadcastSignal(signal, robotController);
 
                     informationRelaySignals = null;
 

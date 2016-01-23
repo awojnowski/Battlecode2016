@@ -325,6 +325,13 @@ public class RobotSoldier implements Robot {
 
             }
 
+            for (int i = 0; i < politicalAgenda.enemies.size(); i++) {
+
+                final EnemyInfo enemy = politicalAgenda.enemies.get(i);
+                robotController.setIndicatorLine(currentLocation, enemy.location, 255, 0, 255);
+
+            }
+
             if (objectiveSignal != null) {
 
                 robotController.setIndicatorLine(objectiveSignal.location, robotController.getLocation(), 125, 0, 0);

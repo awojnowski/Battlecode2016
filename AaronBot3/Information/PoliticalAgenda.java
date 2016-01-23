@@ -48,16 +48,23 @@ public class PoliticalAgenda {
     BROADCASTING
      */
 
-    public void broadcastSignal(final InformationSignal informationSignal, final RobotController robotController, final int broadcastRange) throws GameActionException {
+    public void broadcastSignal(final InformationSignal informationSignal, final RobotController robotController) throws GameActionException {
 
-        this.broadcastSignal(informationSignal, robotController, broadcastRange, true);
+        this.broadcastSignal(informationSignal, robotController, true);
 
     }
 
-    public void broadcastSignal(final InformationSignal informationSignal, final RobotController robotController, final int broadcastRange, boolean processSignal) throws GameActionException {
+    public void broadcastSignal(final InformationSignal informationSignal, final RobotController robotController, boolean processSignal) throws GameActionException {
+
+        if (informationSignal.broadcastRange == 0) {
+
+            System.out.println("WARNING: attempting to broadcast signal: " + informationSignal.type + " location: " + informationSignal.location + " with zero broadcast range.");
+            return;
+
+        }
 
         final int[] message = informationSignal.serialize();
-        robotController.broadcastMessageSignal(message[0], message[1], broadcastRange);
+        robotController.broadcastMessageSignal(message[0], message[1], informationSignal.broadcastRange);
 
         if (processSignal) {
 
@@ -86,11 +93,11 @@ public class PoliticalAgenda {
 
     }
 
-    public void broadcastEnqueuedSignals(final RobotController robotController, final int broadcastRange) throws GameActionException {
+    public void broadcastEnqueuedSignals(final RobotController robotController) throws GameActionException {
 
-        for (int i = 0; i < this.informationSignalQueue.size(); i++) {
+        for (int i = 0; i < this.informationSignalQueue.size() && robotController.getMessageSignalCount() < GameConstants.MESSAGE_SIGNALS_PER_TURN; i++) {
 
-            this.broadcastSignal(this.informationSignalQueue.get(i), robotController, broadcastRange, false);
+            this.broadcastSignal(this.informationSignalQueue.get(i), robotController, false);
 
         }
         this.informationSignalQueue.clear();

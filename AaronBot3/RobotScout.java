@@ -27,6 +27,7 @@ public class RobotScout implements Robot {
 
             MapLocation currentLocation = robotController.getLocation();
             final RobotInfo[] enemies = robotController.senseHostileRobots(currentLocation, robotController.getType().sensorRadiusSquared);
+            final RobotInfo[] friendlies = robotController.senseNearbyRobots(-1, robotController.getTeam());
 
             robotController.setIndicatorString(0, "Map information: N: " + politicalAgenda.mapBoundaryNorth + " E: " + politicalAgenda.mapBoundaryEast + " S: " + politicalAgenda.mapBoundarySouth + " W: " + politicalAgenda.mapBoundaryWest);
             robotController.setIndicatorString(1, "Signal distance: " + politicalAgenda.maximumBroadcastRangeForLocation(currentLocation));
@@ -44,6 +45,7 @@ public class RobotScout implements Robot {
                 if (!politicalAgenda.verifyZombieDenSignal(signal, robotController)) {
 
                     signal.action = PoliticalAgenda.SignalActionErase;
+                    signal.broadcastRange = politicalAgenda.maximumBroadcastRangeForLocation(currentLocation);
                     politicalAgenda.enqueueSignalForBroadcast(signal);
 
                     zombieDenCount --;
@@ -54,6 +56,8 @@ public class RobotScout implements Robot {
             }
 
             // let's try identify what we can see
+
+            final int maximumBroadcastRange = politicalAgenda.maximumBroadcastRangeForLocation(currentLocation);
 
             for (int i = 0; i < enemies.length; i++) {
 
@@ -67,10 +71,20 @@ public class RobotScout implements Robot {
                     }
 
                     final InformationSignal signal = politicalAgenda.generateZombieDenInformationSignal(enemy.location);
+                    signal.broadcastRange = maximumBroadcastRange;
                     politicalAgenda.enqueueSignalForBroadcast(signal);
 
                     final InformationSignal mirroredSignal = politicalAgenda.generateZombieDenInformationSignal(politicalAgenda.getMirroredLocationFromLocation(enemy.location));
+                    mirroredSignal.broadcastRange = maximumBroadcastRange;
                     politicalAgenda.enqueueSignalForBroadcast(mirroredSignal);
+
+                } else if (friendlies.length > 0) {
+
+                    // broadcast seen enemy information to friendlies
+
+                    final InformationSignal signal = politicalAgenda.generateEnemyInformationSignal(enemy.location, enemy.type, (int)enemy.health, enemy.ID);
+                    signal.broadcastRange = politicalAgenda.maximumFreeBroadcastRangeForType(robotController.getType());
+                    politicalAgenda.enqueueSignalForBroadcast(signal);
 
                 }
 
@@ -89,6 +103,7 @@ public class RobotScout implements Robot {
                     if (politicalAgenda.hasAllMapBoundaries()) {
 
                         final InformationSignal signal = politicalAgenda.generateMapInfoInformationSignal();
+                        signal.broadcastRange = maximumBroadcastRange;
                         politicalAgenda.enqueueSignalForBroadcast(signal);
 
                     } else {
@@ -96,6 +111,7 @@ public class RobotScout implements Robot {
                         if (!hasEast && politicalAgenda.mapBoundaryEast != PoliticalAgenda.UnknownValue) {
 
                             final InformationSignal signal = politicalAgenda.generateMapWallInformationSignal(PoliticalAgenda.SignalTypeMapWallEast, politicalAgenda.mapBoundaryEast);
+                            signal.broadcastRange = maximumBroadcastRange;
                             politicalAgenda.enqueueSignalForBroadcast(signal);
 
                             if (politicalAgenda.mapBoundaryWest == PoliticalAgenda.UnknownValue) {
@@ -103,6 +119,7 @@ public class RobotScout implements Robot {
                                 final InformationSignal mirroredSignal = politicalAgenda.getMirroredBoundarySignal(signal);
                                 if (mirroredSignal != null) {
 
+                                    mirroredSignal.broadcastRange = maximumBroadcastRange;
                                     politicalAgenda.mapBoundaryWest = mirroredSignal.data;
                                     politicalAgenda.enqueueSignalForBroadcast(mirroredSignal);
                                     hasWest = true;
@@ -115,6 +132,7 @@ public class RobotScout implements Robot {
                         if (!hasNorth && politicalAgenda.mapBoundaryNorth != PoliticalAgenda.UnknownValue) {
 
                             final InformationSignal signal = politicalAgenda.generateMapWallInformationSignal(PoliticalAgenda.SignalTypeMapWallNorth, politicalAgenda.mapBoundaryNorth);
+                            signal.broadcastRange = maximumBroadcastRange;
                             politicalAgenda.enqueueSignalForBroadcast(signal);
 
                             if (politicalAgenda.mapBoundarySouth == PoliticalAgenda.UnknownValue) {
@@ -122,6 +140,7 @@ public class RobotScout implements Robot {
                                 final InformationSignal mirroredSignal = politicalAgenda.getMirroredBoundarySignal(signal);
                                 if (mirroredSignal != null) {
 
+                                    mirroredSignal.broadcastRange = maximumBroadcastRange;
                                     politicalAgenda.mapBoundarySouth = mirroredSignal.data;
                                     politicalAgenda.enqueueSignalForBroadcast(mirroredSignal);
                                     hasSouth = true;
@@ -134,6 +153,7 @@ public class RobotScout implements Robot {
                         if (!hasWest && politicalAgenda.mapBoundaryWest != PoliticalAgenda.UnknownValue) {
 
                             final InformationSignal signal = politicalAgenda.generateMapWallInformationSignal(PoliticalAgenda.SignalTypeMapWallWest, politicalAgenda.mapBoundaryWest);
+                            signal.broadcastRange = maximumBroadcastRange;
                             politicalAgenda.enqueueSignalForBroadcast(signal);
 
                             if (politicalAgenda.mapBoundaryEast == PoliticalAgenda.UnknownValue) {
@@ -141,6 +161,7 @@ public class RobotScout implements Robot {
                                 final InformationSignal mirroredSignal = politicalAgenda.getMirroredBoundarySignal(signal);
                                 if (mirroredSignal != null) {
 
+                                    mirroredSignal.broadcastRange = maximumBroadcastRange;
                                     politicalAgenda.mapBoundaryEast = mirroredSignal.data;
                                     politicalAgenda.enqueueSignalForBroadcast(mirroredSignal);
                                     hasEast = true;
@@ -151,7 +172,9 @@ public class RobotScout implements Robot {
 
                         }
                         if (!hasSouth && politicalAgenda.mapBoundarySouth != PoliticalAgenda.UnknownValue) {
+
                             final InformationSignal signal = politicalAgenda.generateMapWallInformationSignal(PoliticalAgenda.SignalTypeMapWallSouth, politicalAgenda.mapBoundarySouth);
+                            signal.broadcastRange = maximumBroadcastRange;
                             politicalAgenda.enqueueSignalForBroadcast(signal);
 
                             if (politicalAgenda.mapBoundaryNorth == PoliticalAgenda.UnknownValue) {
@@ -159,6 +182,7 @@ public class RobotScout implements Robot {
                                 final InformationSignal mirroredSignal = politicalAgenda.getMirroredBoundarySignal(signal);
                                 if (mirroredSignal != null) {
 
+                                    mirroredSignal.broadcastRange = maximumBroadcastRange;
                                     politicalAgenda.mapBoundaryNorth = mirroredSignal.data;
                                     politicalAgenda.enqueueSignalForBroadcast(mirroredSignal);
                                     hasNorth = true;
@@ -215,7 +239,7 @@ public class RobotScout implements Robot {
 
             if (politicalAgenda.hasEnqueuedSignalsForBroadcast()) {
 
-                politicalAgenda.broadcastEnqueuedSignals(robotController, politicalAgenda.maximumBroadcastRangeForLocation(currentLocation));
+                politicalAgenda.broadcastEnqueuedSignals(robotController);
 
             }
 
