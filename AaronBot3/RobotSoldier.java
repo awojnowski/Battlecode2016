@@ -318,10 +318,10 @@ public class RobotSoldier implements Robot {
 
             // finish up
 
-            for (int i = 0; i < politicalAgenda.zombieDens.size(); i++) {
+            for (int i = 0; i < politicalAgenda.archonLocations.size(); i++) {
 
-                final InformationSignal signal = politicalAgenda.zombieDens.get(i);
-                robotController.setIndicatorLine(currentLocation, signal.location, 0, 255, 0);
+                final MapLocation archonLocation = politicalAgenda.archonLocations.get(i);
+                robotController.setIndicatorLine(currentLocation, archonLocation, 25, 25, 255);
 
             }
 
@@ -329,6 +329,13 @@ public class RobotSoldier implements Robot {
 
                 final EnemyInfo enemy = politicalAgenda.enemies.get(i);
                 robotController.setIndicatorLine(currentLocation, enemy.location, 255, 0, 255);
+
+            }
+
+            for (int i = 0; i < politicalAgenda.zombieDens.size(); i++) {
+
+                final InformationSignal signal = politicalAgenda.zombieDens.get(i);
+                robotController.setIndicatorLine(currentLocation, signal.location, 0, 255, 0);
 
             }
 

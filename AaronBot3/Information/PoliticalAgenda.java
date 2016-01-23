@@ -6,6 +6,8 @@ import java.util.*;
 
 public class PoliticalAgenda {
 
+    public static int ArchonUpdateModulus         = 50;
+
     public static int SignalActionWrite           = 0;
     public static int SignalActionErase           = 1;
 
@@ -17,6 +19,7 @@ public class PoliticalAgenda {
     public static int SignalTypeMapWallWest       = 5;
     public static int SignalTypeEnemy             = 6;
     public static int SignalTypeInformationSynced = 7;
+    public static int SignalTypeArchonUpdate      = 8;
 
     public static int UnknownValue = -186784223;
 
@@ -34,6 +37,7 @@ public class PoliticalAgenda {
 
     public int companionIdentifier = PoliticalAgenda.UnknownValue;
 
+    public ArrayList<MapLocation> archonLocations = new ArrayList<MapLocation>();
     public ImmutableInformationCollection<EnemyInfo> enemies = null;
     public final ArrayList<Signal> notifications = new ArrayList<Signal>();
     public final MutableInformationCollection<InformationSignal> zombieDens = new MutableInformationCollection<InformationSignal>();
@@ -327,6 +331,12 @@ public class PoliticalAgenda {
         this.enemies = new ImmutableInformationCollection<EnemyInfo>();
         this.notifications.clear();
 
+        if (robotController.getRoundNum() % PoliticalAgenda.ArchonUpdateModulus == 0) {
+
+            this.archonLocations = new ArrayList<MapLocation>();
+
+        }
+
         // process the signals
 
         final Signal[] signals = robotController.emptySignalQueue();
@@ -417,6 +427,10 @@ public class PoliticalAgenda {
                 this.companionIdentifier = signal.data;
 
             }
+
+        } else if (signal.type == PoliticalAgenda.SignalTypeArchonUpdate) {
+
+            this.archonLocations.add(signal.location);
 
         }
 

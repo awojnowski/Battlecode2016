@@ -115,6 +115,22 @@ public class RobotArchon implements Robot {
 
             }
 
+            // send an archon update
+
+            if (robotController.getRoundNum() > 0 && robotController.getRoundNum() % PoliticalAgenda.ArchonUpdateModulus == 0) {
+
+                final MapLocation currentLocation = robotController.getLocation();
+
+                final InformationSignal signal = new InformationSignal();
+                signal.action = PoliticalAgenda.SignalActionWrite;
+                signal.broadcastRange = politicalAgenda.maximumBroadcastRangeForLocation(currentLocation);
+                signal.location = currentLocation;
+                signal.type = PoliticalAgenda.SignalTypeArchonUpdate;
+                politicalAgenda.broadcastSignal(signal, robotController);
+
+
+            }
+
             // check to make sure we are safe
 
             MapLocation currentLocation = robotController.getLocation();
