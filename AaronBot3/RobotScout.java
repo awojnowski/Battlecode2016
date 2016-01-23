@@ -1,6 +1,7 @@
 package AaronBot3;
 
 import AaronBot3.Cartography.*;
+import AaronBot3.Combat.*;
 import AaronBot3.Information.*;
 import AaronBot3.Movement.*;
 import battlecode.common.*;
@@ -11,6 +12,7 @@ public class RobotScout implements Robot {
     public void run(final RobotController robotController) throws GameActionException {
 
         final CartographyModule cartographyModule = new CartographyModule();
+        final CombatModule combatModule = new CombatModule();
         final PoliticalAgenda politicalAgenda = new PoliticalAgenda();
         final MovementModule movementModule = new MovementModule();
         final Random random = new Random(robotController.getID());
@@ -18,7 +20,6 @@ public class RobotScout implements Robot {
         final MapLocation spawnLocation = robotController.getLocation();
         final Team team = robotController.getTeam();
 
-        boolean returnToSpawnLocation = false;
         Direction movementDirection = null;
 
         politicalAgenda.determineMapMirroring(robotController);
@@ -241,6 +242,12 @@ public class RobotScout implements Robot {
                         robotController.move(enemiesMovementResult.direction);
                         currentLocation = robotController.getLocation();
 
+                        if (movementDirection != null) {
+
+                            movementDirection = RobotScout.rotateDirection(movementDirection, currentLocation, robotController);
+
+                        }
+
                     }
 
                 }
@@ -259,56 +266,38 @@ public class RobotScout implements Robot {
 
             if (robotController.isCoreReady() && politicalAgenda.isInformationSynced) {
 
-                final int roundNumber = robotController.getRoundNum();
-                final int freedomRoundNumber = 300;
-                final int spawnDistance = currentLocation.distanceSquaredTo(spawnLocation);
-                if (roundNumber < freedomRoundNumber && spawnDistance > roundNumber * 1.5) {
+                if (movementDirection == null) {
 
-                    if (movementDirection == null) {
-
-                        movementDirection = directionController.getRandomDirection();
-
-                    }
-                    movementDirection = robotController.getID() % 2 == 0 ? movementDirection.rotateLeft().rotateLeft() : movementDirection.rotateRight().rotateRight();
-                    returnToSpawnLocation = true;
-
-                } else if (roundNumber >= freedomRoundNumber || spawnDistance < 64) {
-
-                    returnToSpawnLocation = false;
+                    movementDirection = directionController.getRandomDirection();
 
                 }
 
-                if (returnToSpawnLocation) {
+                final MapLocation movementLocation = currentLocation.add(movementDirection);
 
-                    final Direction returnDirection = currentLocation.directionTo(spawnLocation);
-                    final DirectionController.Result returnMovementResult = directionController.getDirectionResultFromDirection(returnDirection, DirectionController.ADJUSTMENT_THRESHOLD_MEDIUM);
-                    if (returnMovementResult.direction != null) {
+                // let's see if we have a movement direction before moving (if not, create one)
+                if (movementDirection == null) {
 
-                        robotController.move(returnMovementResult.direction);
-                        currentLocation = robotController.getLocation();
+                    movementDirection = directionController.getRandomDirection();
 
-                    }
+                } else if (!robotController.onTheMap(movementLocation)) {
+
+                    movementDirection = RobotScout.rotateDirection(movementDirection, currentLocation, robotController);
+
+                } else if (robotController.getRoundNum() < 300 && !combatModule.isLocationOnOurSide(robotController, movementLocation)) {
+
+                    movementDirection = RobotScout.rotateDirection(movementDirection, currentLocation, robotController);
+
+                }
+
+                final DirectionController.Result movementResult = directionController.getDirectionResultFromDirection(movementDirection, DirectionController.ADJUSTMENT_THRESHOLD_MEDIUM);
+                if (movementResult.direction != null) {
+
+                    robotController.move(movementResult.direction);
+                    currentLocation = robotController.getLocation();
 
                 } else {
 
-                    // let's see if we have a movement direction before moving (if not, create one)
-                    if (movementDirection == null || !robotController.onTheMap(currentLocation.add(movementDirection))) {
-
-                        movementDirection = directionController.getRandomDirection();
-
-                    }
-
-                    final DirectionController.Result movementResult = directionController.getDirectionResultFromDirection(movementDirection, DirectionController.ADJUSTMENT_THRESHOLD_MEDIUM);
-                    if (movementResult.direction != null) {
-
-                        robotController.move(movementResult.direction);
-                        currentLocation = robotController.getLocation();
-
-                    } else {
-
-                        movementDirection = RobotScout.rotateDirection(movementDirection, currentLocation, robotController);
-
-                    }
+                    movementDirection = RobotScout.rotateDirection(movementDirection, currentLocation, robotController);
 
                 }
 
