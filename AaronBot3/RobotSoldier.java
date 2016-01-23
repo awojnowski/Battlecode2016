@@ -46,7 +46,12 @@ public class RobotSoldier implements Robot {
             while (zombieDenCommunicationModuleSignals.hasMoreElements()) {
 
                 final CommunicationModuleSignal signal = zombieDenCommunicationModuleSignals.nextElement();
-                final int distance = signal.location.distanceSquaredTo(currentLocation);
+                int distance = signal.location.distanceSquaredTo(currentLocation);
+                if (!combatModule.isLocationOnOurSide(robotController, signal.location)) {
+
+                    distance = distance * 5;
+
+                }
                 if (distance < closestObjectiveLocationDistance) {
 
                     objectiveSignal = signal;
@@ -121,7 +126,7 @@ public class RobotSoldier implements Robot {
             directionController.enemyBufferDistance = 1;
             directionController.minimumEnemyAttackRadiusSquared = robotController.getType().attackRadiusSquared;
 
-            if (robotController.getHealth() < 15.0) {
+            if (robotController.getHealth() < 30.0) {
 
                 directionController.enemyBufferDistance = 2;
                 requiresHealing = true;

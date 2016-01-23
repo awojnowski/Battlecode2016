@@ -1,6 +1,8 @@
 package AaronBot3.Map;
 
+import AaronBot2.Robot;
 import AaronBot3.Signals.CommunicationModuleSignal;
+import TheHair.Signals.CommunicationModule;
 import battlecode.common.*;
 
 import java.util.Map;
@@ -21,6 +23,9 @@ public class MapInfoModule {
     public int westBoundaryValue = MapInfoModule.UnknownValue;
 
     public boolean shouldThrowGame = false;
+
+    public double midX = UnknownValue;
+    public double midY = UnknownValue;
 
     /*
     MAP DATA
@@ -102,6 +107,117 @@ public class MapInfoModule {
     public int mapHeight() {
 
         return this.southBoundaryValue - this.northBoundaryValue - 1;
+
+    }
+
+    public void determineMapMirror(final RobotController robotController) {
+
+        final MapLocation[] friendlyArchonLocations = robotController.getInitialArchonLocations(robotController.getTeam());
+        final MapLocation[] enemyArchonLocations = robotController.getInitialArchonLocations(robotController.getTeam().opponent());
+
+        int totalFriendlyX = 0;
+        int totalFriendlyY = 0;
+        int totalEnemyX = 0;
+        int totalEnemyY = 0;
+
+        for (int i = 0; i < friendlyArchonLocations.length; i++) {
+
+            final MapLocation location = friendlyArchonLocations[i];
+            totalFriendlyX += location.x;
+            totalFriendlyY += location.y;
+
+        }
+
+        for (int i = 0; i < enemyArchonLocations.length; i++) {
+
+            final MapLocation location = enemyArchonLocations[i];
+            totalEnemyX += location.x;
+            totalEnemyY += location.y;
+
+        }
+
+        double averageFriendlyX = (double)totalFriendlyX / friendlyArchonLocations.length;
+        double averageFriendlyY = (double)totalFriendlyY / friendlyArchonLocations.length;
+        double averageEnemyX = (double)totalEnemyX / enemyArchonLocations.length;
+        double averageEnemyY = (double)totalEnemyY / enemyArchonLocations.length;
+
+        double averageX = (averageFriendlyX + averageEnemyX) / 2;
+        double averageY = (averageFriendlyY + averageEnemyY) / 2;
+        double differenceX = averageFriendlyX - averageEnemyX;
+        double differenceY = averageFriendlyY - averageEnemyY;
+
+//        System.out.println("Average Friendly X: " + averageFriendlyX);
+//        System.out.println("Average Friendly Y: " + averageFriendlyY);
+//        System.out.println("Average Enemy X: " + averageEnemyX);
+//        System.out.println("Average Enemy Y: " + averageEnemyY);
+//        System.out.println("Average X: " + averageX);
+//        System.out.println("Average Y: " + averageY);
+//        System.out.println("Difference X: " + differenceX);
+//        System.out.println("Difference Y: " + differenceY);
+
+        if (differenceX != 0) { // The map mirrors over the x-axis
+
+            midX = averageX;
+
+        }
+        if (differenceY != 0) { // The map mirrors over the y-axis
+
+            midY = averageY;
+
+        }
+
+    }
+
+    public MapLocation mirroredLocation(final MapLocation location) {
+
+        if (midX != UnknownValue && midY != UnknownValue) { // reflect over both axes
+
+            int x = (int)(midX - (location.x - midX));
+            int y = (int)(midY - (location.y - midY));
+            return new MapLocation(x, y);
+
+        } else if (midX != UnknownValue) { // reflect over x-axis
+
+            int x = (int)(midX - (location.x - midX));
+            int y = location.y;
+            return new MapLocation(x, y);
+
+        } else if (midY != UnknownValue) { // reflect over y-axis
+
+            int x = location.x;
+            int y = (int)(midY - (location.y - midY));
+            return new MapLocation(x, y);
+
+        }
+        // Should always return a location since maps are always symmetrical
+        return null;
+
+    }
+
+    public CommunicationModuleSignal mirroredBoundarySignal(final CommunicationModuleSignal signal) {
+
+        if ((signal.type == CommunicationModuleSignal.TYPE_MAP_WALL_EAST || signal.type == CommunicationModuleSignal.TYPE_MAP_WALL_WEST) && midX != UnknownValue) { // reflect over x-axis
+
+            int mirrorX = (int)(midX - (signal.data - midX));
+
+            final CommunicationModuleSignal newSignal = new CommunicationModuleSignal();
+            newSignal.action = CommunicationModuleSignal.ACTION_SEEN;
+            newSignal.type = signal.type == CommunicationModuleSignal.TYPE_MAP_WALL_EAST ? CommunicationModuleSignal.TYPE_MAP_WALL_WEST : CommunicationModuleSignal.TYPE_MAP_WALL_EAST;
+            newSignal.data = mirrorX;
+            return newSignal;
+
+        } else if ((signal.type == CommunicationModuleSignal.TYPE_MAP_WALL_NORTH || signal.type == CommunicationModuleSignal.TYPE_MAP_WALL_SOUTH) && midY != UnknownValue) { // reflect over y-axis
+
+            int mirrorY = (int)(midY - (signal.data - midY));
+
+            final CommunicationModuleSignal newSignal = new CommunicationModuleSignal();
+            newSignal.action = CommunicationModuleSignal.ACTION_SEEN;
+            newSignal.type = signal.type == CommunicationModuleSignal.TYPE_MAP_WALL_NORTH ? CommunicationModuleSignal.TYPE_MAP_WALL_SOUTH : CommunicationModuleSignal.TYPE_MAP_WALL_NORTH;
+            newSignal.data = mirrorY;
+            return newSignal;
+
+        }
+        return null;
 
     }
 

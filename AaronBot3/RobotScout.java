@@ -25,6 +25,8 @@ public class RobotScout implements Robot {
         Direction movementDirection = null;
         int cantSeeShitTurns = 0;
 
+        mapInfoModule.determineMapMirror(robotController);
+
         while (true) {
 
             MapLocation currentLocation = robotController.getLocation();
@@ -65,6 +67,13 @@ public class RobotScout implements Robot {
                     signal.data = enemy.ID;
                     signal.type = CommunicationModuleSignal.TYPE_ZOMBIEDEN;
                     communicationModule.enqueueSignalForBroadcast(signal);
+
+                    final CommunicationModuleSignal signalMirror = new CommunicationModuleSignal();
+                    signalMirror.action = CommunicationModuleSignal.ACTION_SEEN;
+                    signalMirror.location = mapInfoModule.mirroredLocation(enemy.location);
+                    signalMirror.data = enemy.ID;
+                    signalMirror.type = CommunicationModuleSignal.TYPE_ZOMBIEDEN;
+                    communicationModule.enqueueSignalForBroadcast(signalMirror);
 
                 } else if (enemy.type == RobotType.ARCHON) {
 
@@ -151,6 +160,14 @@ public class RobotScout implements Robot {
                             signal.data = mapInfoModule.eastBoundaryValue;
                             communicationModule.enqueueSignalForBroadcast(signal);
 
+                            final CommunicationModuleSignal mirroredSignal = mapInfoModule.mirroredBoundarySignal(signal);
+                            if (mirroredSignal != null) {
+
+                                mapInfoModule.westBoundaryValue = mirroredSignal.data;
+                                communicationModule.enqueueSignalForBroadcast(mirroredSignal);
+
+                            }
+
                         }
                         if (!hasNorth && mapInfoModule.northBoundaryValue != MapInfoModule.UnknownValue) {
 
@@ -159,6 +176,14 @@ public class RobotScout implements Robot {
                             signal.type = CommunicationModuleSignal.TYPE_MAP_WALL_NORTH;
                             signal.data = mapInfoModule.northBoundaryValue;
                             communicationModule.enqueueSignalForBroadcast(signal);
+
+                            final CommunicationModuleSignal mirroredSignal = mapInfoModule.mirroredBoundarySignal(signal);
+                            if (mirroredSignal != null) {
+
+                                mapInfoModule.southBoundaryValue = mirroredSignal.data;
+                                communicationModule.enqueueSignalForBroadcast(mirroredSignal);
+
+                            }
 
                         }
                         if (!hasWest && mapInfoModule.westBoundaryValue != MapInfoModule.UnknownValue) {
@@ -169,6 +194,14 @@ public class RobotScout implements Robot {
                             signal.data = mapInfoModule.westBoundaryValue;
                             communicationModule.enqueueSignalForBroadcast(signal);
 
+                            final CommunicationModuleSignal mirroredSignal = mapInfoModule.mirroredBoundarySignal(signal);
+                            if (mirroredSignal != null) {
+
+                                mapInfoModule.eastBoundaryValue = mirroredSignal.data;
+                                communicationModule.enqueueSignalForBroadcast(mirroredSignal);
+
+                            }
+
                         }
                         if (!hasSouth && mapInfoModule.southBoundaryValue != MapInfoModule.UnknownValue) {
 
@@ -177,6 +210,14 @@ public class RobotScout implements Robot {
                             signal.type = CommunicationModuleSignal.TYPE_MAP_WALL_SOUTH;
                             signal.data = mapInfoModule.southBoundaryValue;
                             communicationModule.enqueueSignalForBroadcast(signal);
+
+                            final CommunicationModuleSignal mirroredSignal = mapInfoModule.mirroredBoundarySignal(signal);
+                            if (mirroredSignal != null) {
+
+                                mapInfoModule.northBoundaryValue = mirroredSignal.data;
+                                communicationModule.enqueueSignalForBroadcast(mirroredSignal);
+
+                            }
 
                         }
 
@@ -354,22 +395,22 @@ public class RobotScout implements Robot {
 
             if (mapInfoModule.eastBoundaryValue != MapInfoModule.UnknownValue) {
 
-                robotController.setIndicatorLine(currentLocation, currentLocation.add(Direction.EAST, 1000), 255, 125, 0);
+                robotController.setIndicatorLine(currentLocation, new MapLocation(mapInfoModule.eastBoundaryValue - 1, currentLocation.y), 255, 125, 0);
 
             }
             if (mapInfoModule.northBoundaryValue != MapInfoModule.UnknownValue) {
 
-                robotController.setIndicatorLine(currentLocation, currentLocation.add(Direction.NORTH, 1000), 255, 125, 0);
+                robotController.setIndicatorLine(currentLocation, new MapLocation(currentLocation.x, mapInfoModule.northBoundaryValue + 1), 255, 125, 0);
 
             }
             if (mapInfoModule.westBoundaryValue != MapInfoModule.UnknownValue) {
 
-                robotController.setIndicatorLine(currentLocation, currentLocation.add(Direction.WEST, 1000), 255, 125, 0);
+                robotController.setIndicatorLine(currentLocation, new MapLocation(mapInfoModule.westBoundaryValue + 1, currentLocation.y), 255, 125, 0);
 
             }
             if (mapInfoModule.southBoundaryValue != MapInfoModule.UnknownValue) {
 
-                robotController.setIndicatorLine(currentLocation, currentLocation.add(Direction.SOUTH, 1000), 255, 125, 0);
+                robotController.setIndicatorLine(currentLocation, new MapLocation(currentLocation.x, mapInfoModule.southBoundaryValue - 1), 255, 125, 0);
 
             }
 
