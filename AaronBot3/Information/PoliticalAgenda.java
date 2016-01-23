@@ -27,8 +27,10 @@ public class PoliticalAgenda {
     public int mapBoundarySouth = PoliticalAgenda.UnknownValue;
     public int mapBoundaryWest = PoliticalAgenda.UnknownValue;
 
-    public double mapMidX = PoliticalAgenda.UnknownValue;
-    public double mapMidY = PoliticalAgenda.UnknownValue;
+    public double mapMirrorX = PoliticalAgenda.UnknownValue;
+    public double mapMirrorY = PoliticalAgenda.UnknownValue;
+    public double mapSecondMirrorX = PoliticalAgenda.UnknownValue;
+    public double mapSecondMirrorY = PoliticalAgenda.UnknownValue;
 
     public int companionIdentifier = PoliticalAgenda.UnknownValue;
 
@@ -180,35 +182,85 @@ public class PoliticalAgenda {
 
         if (differenceX != 0) { // The map mirrors over the x-axis
 
-            this.mapMidX = averageX;
+            this.mapMirrorX = averageX;
+
+        } else {
+
+            this.mapSecondMirrorX = averageX;
 
         }
         if (differenceY != 0) { // The map mirrors over the y-axis
 
-            this.mapMidY = averageY;
+            this.mapMirrorY = averageY;
+
+        } else {
+
+            this.mapSecondMirrorY = averageY;
 
         }
+
+        // Determine secondary mirror (in case of 4-way)
+
+        if (friendlyArchonLocations.length > 1 && (this.mapSecondMirrorX != PoliticalAgenda.UnknownValue || this.mapSecondMirrorY != PoliticalAgenda.UnknownValue)) { // if we're only working with a one-axis mirror (could be 4-way)
+
+            boolean isFourWayMirror = true;
+
+            for (int i = 0; i < friendlyArchonLocations.length && isFourWayMirror; i++) {
+
+                final MapLocation location = friendlyArchonLocations[i];
+                boolean hasMirroredMatch = false;
+
+                for (int j = 0; j < friendlyArchonLocations.length && !hasMirroredMatch; j++) {
+
+                    final MapLocation location2 = friendlyArchonLocations[j];
+                    final MapLocation mirroredLocation2 = getSecondaryMirroredLocationFromLocation(location2);
+
+                    if (location.equals(mirroredLocation2)) {
+
+                        hasMirroredMatch = true;
+
+                    }
+
+                }
+
+                if (!hasMirroredMatch) {
+
+                    isFourWayMirror = false;
+
+                }
+
+            }
+
+            if (!isFourWayMirror) {
+
+                this.mapSecondMirrorX = PoliticalAgenda.UnknownValue;
+                this.mapSecondMirrorY = PoliticalAgenda.UnknownValue;
+
+            }
+
+        }
+
 
     }
 
     public MapLocation getMirroredLocationFromLocation(final MapLocation location) {
 
-        if (this.mapMidX != UnknownValue && this.mapMidY != UnknownValue) { // reflect over both axes
+        if (this.mapMirrorX != UnknownValue && this.mapMirrorY != UnknownValue) { // reflect over both axes
 
-            int x = (int)(this.mapMidX - (location.x - this.mapMidX));
-            int y = (int)(this.mapMidY - (location.y - this.mapMidY));
+            int x = (int)(this.mapMirrorX - (location.x - this.mapMirrorX));
+            int y = (int)(this.mapMirrorY - (location.y - this.mapMirrorY));
             return new MapLocation(x, y);
 
-        } else if (this.mapMidX != UnknownValue) { // reflect over x-axis
+        } else if (this.mapMirrorX != UnknownValue) { // reflect over x-axis
 
-            int x = (int)(this.mapMidX - (location.x - this.mapMidX));
+            int x = (int)(this.mapMirrorX - (location.x - this.mapMirrorX));
             int y = location.y;
             return new MapLocation(x, y);
 
-        } else if (this.mapMidY != UnknownValue) { // reflect over y-axis
+        } else if (this.mapMirrorY != UnknownValue) { // reflect over y-axis
 
             int x = location.x;
-            int y = (int)(this.mapMidY - (location.y - this.mapMidY));
+            int y = (int)(this.mapMirrorY - (location.y - this.mapMirrorY));
             return new MapLocation(x, y);
 
         }
@@ -216,11 +268,31 @@ public class PoliticalAgenda {
 
     }
 
+    public MapLocation getSecondaryMirroredLocationFromLocation(final MapLocation location) {
+
+        if (this.mapSecondMirrorX != UnknownValue) { // reflect over x-axis
+
+            int x = (int)(this.mapSecondMirrorX - (location.x - this.mapSecondMirrorX));
+            int y = location.y;
+            return new MapLocation(x, y);
+
+        } else if (this.mapSecondMirrorY != UnknownValue) { // reflect over y-axis
+
+            int x = location.x;
+            int y = (int)(this.mapSecondMirrorY - (location.y - this.mapSecondMirrorY));
+            return new MapLocation(x, y);
+
+        }
+        return null;
+
+    }
+
     public InformationSignal getMirroredBoundarySignal(final InformationSignal signal) {
 
-        if ((signal.type == PoliticalAgenda.SignalTypeMapWallEast || signal.type == PoliticalAgenda.SignalTypeMapWallWest) && this.mapMidX != UnknownValue) { // reflect over x-axis
+        if ((signal.type == PoliticalAgenda.SignalTypeMapWallEast || signal.type == PoliticalAgenda.SignalTypeMapWallWest) && (this.mapMirrorX != UnknownValue || this.mapSecondMirrorX != UnknownValue)) { // reflect over x-axis
 
-            final int mirrorX = (int)(this.mapMidX - (signal.data - this.mapMidX));
+            final double mapXMirror = this.mapMirrorX != UnknownValue ? this.mapMirrorX : this.mapSecondMirrorX;
+            final int mirrorX = (int)(mapXMirror - (signal.data - mapXMirror));
 
             final InformationSignal newSignal = new InformationSignal();
             newSignal.action = PoliticalAgenda.SignalActionWrite;
@@ -228,9 +300,10 @@ public class PoliticalAgenda {
             newSignal.type = signal.type == PoliticalAgenda.SignalTypeMapWallEast ? PoliticalAgenda.SignalTypeMapWallWest : PoliticalAgenda.SignalTypeMapWallEast;
             return newSignal;
 
-        } else if ((signal.type == PoliticalAgenda.SignalTypeMapWallNorth || signal.type == PoliticalAgenda.SignalTypeMapWallSouth) && this.mapMidY != UnknownValue) { // reflect over y-axis
+        } else if ((signal.type == PoliticalAgenda.SignalTypeMapWallNorth || signal.type == PoliticalAgenda.SignalTypeMapWallSouth) && (this.mapMirrorY != UnknownValue || this.mapSecondMirrorY != UnknownValue)) { // reflect over y-axis
 
-            final int mirrorY = (int)(this.mapMidY - (signal.data - this.mapMidY));
+            final double mapYMirror = this.mapMirrorY != UnknownValue ? this.mapMirrorY : this.mapSecondMirrorY;
+            final int mirrorY = (int)(mapYMirror - (signal.data - mapYMirror));
 
             final InformationSignal newSignal = new InformationSignal();
             newSignal.action = PoliticalAgenda.SignalActionWrite;
