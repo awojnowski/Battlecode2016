@@ -1,48 +1,48 @@
 package AaronBot3.Cartography;
 
-import AaronBot3.Map.*;
+import AaronBot3.Information.*;
 import battlecode.common.*;
 
 public class CartographyModule {
 
-    public void probeAndUpdateMapInfoModule(final MapInfoModule mapInfoModule, final MapLocation location, final RobotController robotController) throws GameActionException {
+    public void probeAndUpdatePoliticalAgenda(final PoliticalAgenda politicalAgenda, final MapLocation location, final RobotController robotController) throws GameActionException {
 
         final int probeDistance = (int)Math.floor(Math.sqrt(robotController.getType().sensorRadiusSquared));
-        if (mapInfoModule.eastBoundaryValue == MapInfoModule.UnknownValue) {
+        if (politicalAgenda.mapBoundaryEast == PoliticalAgenda.UnknownValue) {
 
             final MapLocation foundProbeLocation = this.probeDirection(Direction.EAST, probeDistance, location, robotController);
             if (foundProbeLocation != null) {
 
-                mapInfoModule.eastBoundaryValue = foundProbeLocation.x;
+                politicalAgenda.mapBoundaryEast = foundProbeLocation.x;
 
             }
 
         }
-        if (mapInfoModule.westBoundaryValue == MapInfoModule.UnknownValue) {
+        if (politicalAgenda.mapBoundaryWest == PoliticalAgenda.UnknownValue) {
 
             final MapLocation foundProbeLocation = this.probeDirection(Direction.WEST, probeDistance, location, robotController);
             if (foundProbeLocation != null) {
 
-                mapInfoModule.westBoundaryValue = foundProbeLocation.x;
+                politicalAgenda.mapBoundaryWest = foundProbeLocation.x;
 
             }
 
         }
-        if (mapInfoModule.northBoundaryValue == MapInfoModule.UnknownValue) {
+        if (politicalAgenda.mapBoundaryNorth == PoliticalAgenda.UnknownValue) {
 
             final MapLocation foundProbeLocation = this.probeDirection(Direction.NORTH, probeDistance, location, robotController);
             if (foundProbeLocation != null) {
 
-                mapInfoModule.northBoundaryValue = foundProbeLocation.y;
+                politicalAgenda.mapBoundaryNorth = foundProbeLocation.y;
 
             }
         }
-        if (mapInfoModule.southBoundaryValue == MapInfoModule.UnknownValue) {
+        if (politicalAgenda.mapBoundarySouth == PoliticalAgenda.UnknownValue) {
 
             final MapLocation foundProbeLocation = this.probeDirection(Direction.SOUTH, probeDistance, location, robotController);
             if (foundProbeLocation != null) {
 
-                mapInfoModule.southBoundaryValue = foundProbeLocation.y;
+                politicalAgenda.mapBoundarySouth = foundProbeLocation.y;
 
             }
 

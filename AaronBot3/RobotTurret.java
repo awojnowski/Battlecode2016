@@ -1,11 +1,9 @@
 package AaronBot3;
 
-import AaronBot3.Combat.CombatModule;
-import AaronBot3.Map.MapInfoModule;
+import AaronBot3.Combat.*;
+import AaronBot3.Information.*;
 import AaronBot3.Movement.*;
-import AaronBot3.Rubble.RubbleModule;
-import AaronBot3.Signals.CommunicationModule;
-import AaronBot3.Signals.CommunicationModuleSignal;
+import AaronBot3.Rubble.*;
 import battlecode.common.*;
 import java.util.*;
 
@@ -13,11 +11,10 @@ public class RobotTurret implements Robot {
 
     public void run(final RobotController robotController) throws GameActionException {
 
-        final MapInfoModule mapInfoModule = new MapInfoModule();
 
         final CombatModule combatModule = new CombatModule();
-        final CommunicationModule communicationModule = new CommunicationModule(mapInfoModule);
         final MovementModule movementModule = new MovementModule();
+        final PoliticalAgenda politicalAgenda = new PoliticalAgenda();
         final Random random = new Random(robotController.getID());
         final RubbleModule rubbleModule = new RubbleModule();
 
@@ -31,11 +28,9 @@ public class RobotTurret implements Robot {
 
             // update communication
 
-            communicationModule.processIncomingSignals(robotController);
+            politicalAgenda.processIncomingSignalsFromRobotController(robotController);
 
             // let's verify existing information
-
-            communicationModule.verifyCommunicationsInformation(robotController, null, false);
 
             if (type == RobotType.TTM) {
 
@@ -43,46 +38,27 @@ public class RobotTurret implements Robot {
 
                 // let's get the best assignment
 
-                CommunicationModuleSignal objectiveSignal = null;
+                InformationSignal objectiveSignal = null;
                 int closestObjectiveLocationDistance = Integer.MAX_VALUE;
 
-                final Enumeration<CommunicationModuleSignal> zombieDenCommunicationModuleSignals = communicationModule.zombieDens.elements();
-                while (zombieDenCommunicationModuleSignals.hasMoreElements()) {
+                int zombieDenCount = politicalAgenda.zombieDens.size();
+                for (int i = 0; i < zombieDenCount; i++) {
 
-                    final CommunicationModuleSignal signal = zombieDenCommunicationModuleSignals.nextElement();
-                    final int distance = signal.location.distanceSquaredTo(currentLocation);
+                    final InformationSignal signal = politicalAgenda.zombieDens.get(i);
+                    final int distance = currentLocation.distanceSquaredTo(signal.location);
                     if (distance < closestObjectiveLocationDistance) {
 
-                        objectiveSignal = signal;
-                        closestObjectiveLocationDistance = distance;
+                        if (politicalAgenda.verifyZombieDenSignal(signal, robotController)) {
 
-                    }
+                            objectiveSignal = signal;
+                            closestObjectiveLocationDistance = distance;
 
-                }
+                        } else {
 
-                final Enumeration<CommunicationModuleSignal> enemyArchonCommunicationModuleSignals = communicationModule.enemyArchons.elements();
-                while (enemyArchonCommunicationModuleSignals.hasMoreElements()) {
+                            zombieDenCount --;
+                            i--;
 
-                    final CommunicationModuleSignal signal = enemyArchonCommunicationModuleSignals.nextElement();
-                    final int distance = signal.location.distanceSquaredTo(currentLocation) * 6; // multiplying by 6 to prioritize the dens
-                    if (distance < closestObjectiveLocationDistance) {
-
-                        objectiveSignal = signal;
-                        closestObjectiveLocationDistance = distance;
-
-                    }
-
-                }
-
-                final Enumeration<CommunicationModuleSignal> enemyTurretCommunicationModuleSignals = communicationModule.enemyTurrets.elements();
-                while (enemyTurretCommunicationModuleSignals.hasMoreElements()) {
-
-                    final CommunicationModuleSignal signal = enemyTurretCommunicationModuleSignals.nextElement();
-                    final int distance = signal.location.distanceSquaredTo(currentLocation) * 20;
-                    if (distance < closestObjectiveLocationDistance) {
-
-                        objectiveSignal = signal;
-                        closestObjectiveLocationDistance = distance;
+                        }
 
                     }
 
@@ -132,7 +108,7 @@ public class RobotTurret implements Robot {
                         int closestSignalDistance = Integer.MAX_VALUE;
                         MapLocation closestSignalLocation = null;
 
-                        final ArrayList<Signal> notifications = communicationModule.notifications;
+                        final ArrayList<Signal> notifications = politicalAgenda.notifications;
                         for (int i = 0; i < notifications.size(); i++) {
 
                             final Signal signal = notifications.get(i);
@@ -244,7 +220,7 @@ public class RobotTurret implements Robot {
                         robotController.attackLocation(bestEnemy.location);
                         if (bestEnemy.type != RobotType.ZOMBIEDEN) {
 
-                            communicationModule.broadcastSignal(robotController, CommunicationModule.maximumFreeBroadcastRangeForRobotType(robotController.getType()));
+                            politicalAgenda.broadcastSignal(robotController, politicalAgenda.maximumFreeBroadcastRangeForType(robotController.getType()));
 
                         }
 

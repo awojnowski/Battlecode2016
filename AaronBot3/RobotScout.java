@@ -1,9 +1,8 @@
 package AaronBot3;
 
 import AaronBot3.Cartography.*;
-import AaronBot3.Map.*;
+import AaronBot3.Information.*;
 import AaronBot3.Movement.*;
-import AaronBot3.Signals.*;
 import battlecode.common.*;
 import java.util.*;
 
@@ -11,10 +10,8 @@ public class RobotScout implements Robot {
 
     public void run(final RobotController robotController) throws GameActionException {
 
-        final MapInfoModule mapInfoModule = new MapInfoModule();
-
         final CartographyModule cartographyModule = new CartographyModule();
-        final CommunicationModule communicationModule = new CommunicationModule(mapInfoModule);
+        final PoliticalAgenda politicalAgenda = new PoliticalAgenda();
         final MovementModule movementModule = new MovementModule();
         final Random random = new Random(robotController.getID());
 
@@ -23,27 +20,35 @@ public class RobotScout implements Robot {
 
         boolean returnToSpawnLocation = false;
         Direction movementDirection = null;
-        int cantSeeShitTurns = 0;
 
-        mapInfoModule.determineMapMirror(robotController);
+        politicalAgenda.determineMapMirroring(robotController);
 
         while (true) {
 
             MapLocation currentLocation = robotController.getLocation();
             final RobotInfo[] enemies = robotController.senseHostileRobots(currentLocation, robotController.getType().sensorRadiusSquared);
 
-            robotController.setIndicatorString(1, "Signal distance: " + CommunicationModule.maximumBroadcastRange(mapInfoModule, currentLocation) + "; Queue size: " + communicationModule.communicationModuleSignalQueue.size());
+            robotController.setIndicatorString(1, "Signal distance: " + politicalAgenda.maximumBroadcastRangeForLocation(currentLocation));
 
             // process incoming communications
 
-            communicationModule.processIncomingSignals(robotController);
+            politicalAgenda.processIncomingSignalsFromRobotController(robotController);
 
-            // let's check up on existing communications to verify the information, if we can
+            // let's verify information
 
-            final ArrayList<CommunicationModuleSignal> verifiedSignals = communicationModule.verifyCommunicationsInformation(robotController, enemies, true);
-            for (int i = 0; i < verifiedSignals.size(); i++) {
+            int zombieDenCount = politicalAgenda.zombieDens.size();
+            for (int i = 0; i < zombieDenCount; i++) {
 
-                communicationModule.enqueueSignalForBroadcast(verifiedSignals.get(i));
+                final InformationSignal signal = politicalAgenda.zombieDens.get(i);
+                if (!politicalAgenda.verifyZombieDenSignal(signal, robotController)) {
+
+                    signal.action = PoliticalAgenda.SignalActionErase;
+                    politicalAgenda.enqueueSignalForBroadcast(signal);
+
+                    zombieDenCount --;
+                    i--;
+
+                }
 
             }
 
@@ -54,188 +59,112 @@ public class RobotScout implements Robot {
                 final RobotInfo enemy = enemies[i];
                 if (enemy.type == RobotType.ZOMBIEDEN) {
 
-                    final CommunicationModuleSignal existingSignal = communicationModule.zombieDens.get(CommunicationModule.communicationsIndexFromLocation(enemy.location));
-                    if (existingSignal != null) {
+                    if (politicalAgenda.zombieDens.contains(enemy.ID)) {
 
                         continue;
 
                     }
 
-                    final CommunicationModuleSignal signal = new CommunicationModuleSignal();
-                    signal.action = CommunicationModuleSignal.ACTION_SEEN;
-                    signal.location = enemy.location;
-                    signal.data = enemy.ID;
-                    signal.type = CommunicationModuleSignal.TYPE_ZOMBIEDEN;
-                    communicationModule.enqueueSignalForBroadcast(signal);
+                    final InformationSignal signal = politicalAgenda.generateZombieDenInformationSignal(enemy.location, enemy.ID);
+                    politicalAgenda.enqueueSignalForBroadcast(signal);
 
-                    final CommunicationModuleSignal signalMirror = new CommunicationModuleSignal();
-                    signalMirror.action = CommunicationModuleSignal.ACTION_SEEN;
-                    signalMirror.location = mapInfoModule.mirroredLocation(enemy.location);
-                    signalMirror.data = enemy.ID;
-                    signalMirror.type = CommunicationModuleSignal.TYPE_ZOMBIEDEN;
-                    communicationModule.enqueueSignalForBroadcast(signalMirror);
-
-                } else if (enemy.type == RobotType.ARCHON) {
-
-                    final ArrayList<CommunicationModuleSignal> existingSignals = communicationModule.getCommunicationModuleSignalsNearbyLocation(communicationModule.enemyArchons, currentLocation, CommunicationModule.DefaultApproximateNearbyLocationRange);
-                    if (existingSignals.size() > 0) {
-
-                        continue;
-
-                    }
-
-                    final CommunicationModuleSignal signal = new CommunicationModuleSignal();
-                    signal.action = CommunicationModuleSignal.ACTION_SEEN;
-                    signal.location = enemy.location;
-                    signal.data = enemy.ID;
-                    signal.type = CommunicationModuleSignal.TYPE_ENEMY_ARCHON;
-                    communicationModule.enqueueSignalForBroadcast(signal);
-
-                } else if (enemy.type == RobotType.TURRET) {
-
-                    final ArrayList<CommunicationModuleSignal> existingSignals = communicationModule.getCommunicationModuleSignalsNearbyLocation(communicationModule.enemyTurrets, currentLocation, CommunicationModule.DefaultApproximateNearbyLocationRange);
-                    if (existingSignals.size() > 0) {
-
-                        continue;
-
-                    }
-
-                    final CommunicationModuleSignal signal = new CommunicationModuleSignal();
-                    signal.action = CommunicationModuleSignal.ACTION_SEEN;
-                    signal.location = enemy.location;
-                    signal.data = enemy.ID;
-                    signal.type = CommunicationModuleSignal.TYPE_ENEMY_TURRET;
-                    communicationModule.enqueueSignalForBroadcast(signal);
-
-                    robotController.setIndicatorLine(currentLocation, signal.location, 0, 255, 255);
-
-                } else {
-
-                    if (enemy.type != RobotType.SCOUT && cantSeeShitTurns > 100) {
-
-                        final ArrayList<CommunicationModuleSignal> existingSignals = communicationModule.getCommunicationModuleSignalsNearbyLocation(communicationModule.enemyArchons, currentLocation, CommunicationModule.DefaultApproximateNearbyLocationRange);
-                        if (existingSignals.size() > 0) {
-
-                            continue;
-
-                        }
-
-                        final CommunicationModuleSignal signal = new CommunicationModuleSignal();
-                        signal.action = CommunicationModuleSignal.ACTION_SEEN;
-                        signal.location = enemy.location;
-                        signal.data = enemy.ID;
-                        signal.type = CommunicationModuleSignal.TYPE_ENEMY_ARCHON;
-                        communicationModule.enqueueSignalForBroadcast(signal);
-
-                    }
+                    // TODO: add mirrored signal
 
                 }
 
             }
 
-            if (communicationModule.initialInformationReceived) {
+            if (politicalAgenda.isInformationSynced) {
 
-                if (!mapInfoModule.hasAllBoundaries()) {
+                if (!politicalAgenda.hasAllMapBoundaries()) {
 
-                    final boolean hasEast = mapInfoModule.eastBoundaryValue != MapInfoModule.UnknownValue;
-                    final boolean hasNorth = mapInfoModule.northBoundaryValue != MapInfoModule.UnknownValue;
-                    final boolean hasWest = mapInfoModule.westBoundaryValue != MapInfoModule.UnknownValue;
-                    final boolean hasSouth = mapInfoModule.southBoundaryValue != MapInfoModule.UnknownValue;
+                    final boolean hasEast = politicalAgenda.mapBoundaryEast != PoliticalAgenda.UnknownValue;
+                    final boolean hasNorth = politicalAgenda.mapBoundaryNorth != PoliticalAgenda.UnknownValue;
+                    final boolean hasWest = politicalAgenda.mapBoundaryWest != PoliticalAgenda.UnknownValue;
+                    final boolean hasSouth = politicalAgenda.mapBoundarySouth != PoliticalAgenda.UnknownValue;
 
-                    cartographyModule.probeAndUpdateMapInfoModule(mapInfoModule, currentLocation, robotController);
-                    if (mapInfoModule.hasAllBoundaries()) {
+                    cartographyModule.probeAndUpdatePoliticalAgenda(politicalAgenda, currentLocation, robotController);
+                    if (politicalAgenda.hasAllMapBoundaries()) {
 
-                        final CommunicationModuleSignal signal = new CommunicationModuleSignal();
-                        signal.action = CommunicationModuleSignal.ACTION_SEEN;
-                        mapInfoModule.fillCommunicationModuleSignalWithMapSizeData(signal);
-                        communicationModule.enqueueSignalForBroadcast(signal);
+                        final InformationSignal signal = politicalAgenda.generateMapInfoInformationSignal();
+                        politicalAgenda.enqueueSignalForBroadcast(signal);
 
                     } else {
 
-                        if (!hasEast && mapInfoModule.eastBoundaryValue != MapInfoModule.UnknownValue) {
+                        if (!hasEast && politicalAgenda.mapBoundaryEast != PoliticalAgenda.UnknownValue) {
 
-                            final CommunicationModuleSignal signal = new CommunicationModuleSignal();
-                            signal.action = CommunicationModuleSignal.ACTION_SEEN;
-                            signal.type = CommunicationModuleSignal.TYPE_MAP_WALL_EAST;
-                            signal.data = mapInfoModule.eastBoundaryValue;
-                            communicationModule.enqueueSignalForBroadcast(signal);
+                            final InformationSignal signal = politicalAgenda.generateMapWallInformationSignal(PoliticalAgenda.SignalTypeMapWallEast, politicalAgenda.mapBoundaryEast);
+                            politicalAgenda.enqueueSignalForBroadcast(signal);
 
-                            final CommunicationModuleSignal mirroredSignal = mapInfoModule.mirroredBoundarySignal(signal);
-                            if (mirroredSignal != null) {
+                            if (politicalAgenda.mapBoundaryWest == PoliticalAgenda.UnknownValue) {
 
-                                mapInfoModule.westBoundaryValue = mirroredSignal.data;
-                                communicationModule.enqueueSignalForBroadcast(mirroredSignal);
+                                final InformationSignal mirroredSignal = politicalAgenda.getMirroredBoundarySignal(signal);
+                                if (mirroredSignal != null) {
 
-                            }
+                                    politicalAgenda.mapBoundaryWest = mirroredSignal.data;
+                                    politicalAgenda.enqueueSignalForBroadcast(mirroredSignal);
 
-                        }
-                        if (!hasNorth && mapInfoModule.northBoundaryValue != MapInfoModule.UnknownValue) {
-
-                            final CommunicationModuleSignal signal = new CommunicationModuleSignal();
-                            signal.action = CommunicationModuleSignal.ACTION_SEEN;
-                            signal.type = CommunicationModuleSignal.TYPE_MAP_WALL_NORTH;
-                            signal.data = mapInfoModule.northBoundaryValue;
-                            communicationModule.enqueueSignalForBroadcast(signal);
-
-                            final CommunicationModuleSignal mirroredSignal = mapInfoModule.mirroredBoundarySignal(signal);
-                            if (mirroredSignal != null) {
-
-                                mapInfoModule.southBoundaryValue = mirroredSignal.data;
-                                communicationModule.enqueueSignalForBroadcast(mirroredSignal);
+                                }
 
                             }
 
                         }
-                        if (!hasWest && mapInfoModule.westBoundaryValue != MapInfoModule.UnknownValue) {
+                        if (!hasNorth && politicalAgenda.mapBoundaryNorth != PoliticalAgenda.UnknownValue) {
 
-                            final CommunicationModuleSignal signal = new CommunicationModuleSignal();
-                            signal.action = CommunicationModuleSignal.ACTION_SEEN;
-                            signal.type = CommunicationModuleSignal.TYPE_MAP_WALL_WEST;
-                            signal.data = mapInfoModule.westBoundaryValue;
-                            communicationModule.enqueueSignalForBroadcast(signal);
+                            final InformationSignal signal = politicalAgenda.generateMapWallInformationSignal(PoliticalAgenda.SignalTypeMapWallNorth, politicalAgenda.mapBoundaryNorth);
+                            politicalAgenda.enqueueSignalForBroadcast(signal);
 
-                            final CommunicationModuleSignal mirroredSignal = mapInfoModule.mirroredBoundarySignal(signal);
-                            if (mirroredSignal != null) {
+                            if (politicalAgenda.mapBoundarySouth == PoliticalAgenda.UnknownValue) {
 
-                                mapInfoModule.eastBoundaryValue = mirroredSignal.data;
-                                communicationModule.enqueueSignalForBroadcast(mirroredSignal);
+                                final InformationSignal mirroredSignal = politicalAgenda.getMirroredBoundarySignal(signal);
+                                if (mirroredSignal != null) {
+
+                                    politicalAgenda.mapBoundarySouth = mirroredSignal.data;
+                                    politicalAgenda.enqueueSignalForBroadcast(mirroredSignal);
+
+                                }
 
                             }
 
                         }
-                        if (!hasSouth && mapInfoModule.southBoundaryValue != MapInfoModule.UnknownValue) {
+                        if (!hasWest && politicalAgenda.mapBoundaryWest != PoliticalAgenda.UnknownValue) {
 
-                            final CommunicationModuleSignal signal = new CommunicationModuleSignal();
-                            signal.action = CommunicationModuleSignal.ACTION_SEEN;
-                            signal.type = CommunicationModuleSignal.TYPE_MAP_WALL_SOUTH;
-                            signal.data = mapInfoModule.southBoundaryValue;
-                            communicationModule.enqueueSignalForBroadcast(signal);
+                            final InformationSignal signal = politicalAgenda.generateMapWallInformationSignal(PoliticalAgenda.SignalTypeMapWallWest, politicalAgenda.mapBoundaryWest);
+                            politicalAgenda.enqueueSignalForBroadcast(signal);
 
-                            final CommunicationModuleSignal mirroredSignal = mapInfoModule.mirroredBoundarySignal(signal);
-                            if (mirroredSignal != null) {
+                            if (politicalAgenda.mapBoundaryEast == PoliticalAgenda.UnknownValue) {
 
-                                mapInfoModule.northBoundaryValue = mirroredSignal.data;
-                                communicationModule.enqueueSignalForBroadcast(mirroredSignal);
+                                final InformationSignal mirroredSignal = politicalAgenda.getMirroredBoundarySignal(signal);
+                                if (mirroredSignal != null) {
+
+                                    politicalAgenda.mapBoundaryEast = mirroredSignal.data;
+                                    politicalAgenda.enqueueSignalForBroadcast(mirroredSignal);
+
+                                }
+
+                            }
+
+                        }
+                        if (!hasSouth && politicalAgenda.mapBoundarySouth != PoliticalAgenda.UnknownValue) {
+
+                            final InformationSignal signal = politicalAgenda.generateMapWallInformationSignal(PoliticalAgenda.SignalTypeMapWallSouth, politicalAgenda.mapBoundarySouth);
+                            politicalAgenda.enqueueSignalForBroadcast(signal);
+
+                            if (politicalAgenda.mapBoundaryNorth == PoliticalAgenda.UnknownValue) {
+
+                                final InformationSignal mirroredSignal = politicalAgenda.getMirroredBoundarySignal(signal);
+                                if (mirroredSignal != null) {
+
+                                    politicalAgenda.mapBoundaryNorth = mirroredSignal.data;
+                                    politicalAgenda.enqueueSignalForBroadcast(mirroredSignal);
+
+                                }
 
                             }
 
                         }
 
                     }
-
-                }
-
-            }
-
-            if (!mapInfoModule.hasAllBoundaries()) {
-
-                cartographyModule.probeAndUpdateMapInfoModule(mapInfoModule, currentLocation, robotController);
-                if (mapInfoModule.hasAllBoundaries()) {
-
-                    final CommunicationModuleSignal signal = new CommunicationModuleSignal();
-                    signal.action = CommunicationModuleSignal.ACTION_SEEN;
-                    mapInfoModule.fillCommunicationModuleSignalWithMapSizeData(signal);
-                    communicationModule.enqueueSignalForBroadcast(signal);
 
                 }
 
@@ -257,7 +186,7 @@ public class RobotScout implements Robot {
 
             }
 
-            if (robotController.isCoreReady() && communicationModule.initialInformationReceived && enemies.length > 0) {
+            if (robotController.isCoreReady() && politicalAgenda.isInformationSynced && enemies.length > 0) {
 
                 final Direction enemiesDirection = directionController.getAverageDirectionTowardsEnemies(enemies, true);
                 if (enemiesDirection != null) {
@@ -279,15 +208,15 @@ public class RobotScout implements Robot {
 
             // now let's see if we should send our signals
 
-            if (communicationModule.hasEnqueuedSignalsForBroadcast()) {
+            if (politicalAgenda.hasEnqueuedSignalsForBroadcast()) {
 
-                communicationModule.broadcastEnqueuedSignals(robotController, CommunicationModule.maximumBroadcastRange(mapInfoModule, currentLocation));
+                politicalAgenda.broadcastEnqueuedSignals(robotController, politicalAgenda.maximumBroadcastRangeForLocation(currentLocation));
 
             }
 
             // now let's try move to see more
 
-            if (robotController.isCoreReady() && communicationModule.initialInformationReceived) {
+            if (robotController.isCoreReady() && politicalAgenda.isInformationSynced) {
 
                 final int roundNumber = robotController.getRoundNum();
                 final int freedomRoundNumber = 300;
@@ -336,7 +265,7 @@ public class RobotScout implements Robot {
 
                     } else {
 
-                        movementDirection = RobotScout.rotateDirection(movementDirection, currentLocation, robotController, mapInfoModule);
+                        movementDirection = RobotScout.rotateDirection(movementDirection, currentLocation, robotController);
 
                     }
 
@@ -352,65 +281,31 @@ public class RobotScout implements Robot {
 
             // show what we know
 
-            final CommunicationModuleSignalCollection communicationModuleSignalCollection = communicationModule.allCommunicationModuleSignals();
-            final MapLocation location = robotController.getLocation();
-            while (communicationModuleSignalCollection.hasMoreElements()) {
+            for (int i = 0; i < politicalAgenda.zombieDens.size(); i++) {
 
-                final CommunicationModuleSignal communicationModuleSignal = communicationModuleSignalCollection.nextElement();
-                int[] color = new int[]{255, 255, 255};
-                if (communicationModuleSignal.type == CommunicationModuleSignal.TYPE_ZOMBIEDEN) {
-
-                    color = new int[]{50, 255, 50};
-
-                } else if (communicationModuleSignal.type == CommunicationModuleSignal.TYPE_ENEMY_ARCHON) {
-
-                    color = new int[]{255, 0, 0};
-
-                } else if (communicationModuleSignal.type == CommunicationModuleSignal.TYPE_ENEMY_TURRET) {
-
-                    color = new int[]{255, 50, 100};
-
-                } else {
-
-                    continue;
-
-                }
-                robotController.setIndicatorLine(location, communicationModuleSignal.location, color[0], color[1], color[2]);
+                final InformationSignal signal = politicalAgenda.zombieDens.get(i);
+                robotController.setIndicatorLine(currentLocation, signal.location, 0, 255, 0);
 
             }
 
-            // check if we haven't been producing results
+            if (politicalAgenda.mapBoundaryEast != PoliticalAgenda.UnknownValue) {
 
-            if (communicationModule.zombieDens.size() == 0 && communicationModule.enemyArchons.size() == 0) {
-
-                cantSeeShitTurns++;
-
-            } else {
-
-                cantSeeShitTurns = 0;
+                robotController.setIndicatorLine(currentLocation, new MapLocation(politicalAgenda.mapBoundaryEast - 1, currentLocation.y), 255, 125, 0);
 
             }
+            if (politicalAgenda.mapBoundaryNorth != PoliticalAgenda.UnknownValue) {
 
-            // update indicators
-
-            if (mapInfoModule.eastBoundaryValue != MapInfoModule.UnknownValue) {
-
-                robotController.setIndicatorLine(currentLocation, new MapLocation(mapInfoModule.eastBoundaryValue - 1, currentLocation.y), 255, 125, 0);
+                robotController.setIndicatorLine(currentLocation, new MapLocation(currentLocation.x, politicalAgenda.mapBoundaryNorth + 1), 255, 125, 0);
 
             }
-            if (mapInfoModule.northBoundaryValue != MapInfoModule.UnknownValue) {
+            if (politicalAgenda.mapBoundaryWest != PoliticalAgenda.UnknownValue) {
 
-                robotController.setIndicatorLine(currentLocation, new MapLocation(currentLocation.x, mapInfoModule.northBoundaryValue + 1), 255, 125, 0);
-
-            }
-            if (mapInfoModule.westBoundaryValue != MapInfoModule.UnknownValue) {
-
-                robotController.setIndicatorLine(currentLocation, new MapLocation(mapInfoModule.westBoundaryValue + 1, currentLocation.y), 255, 125, 0);
+                robotController.setIndicatorLine(currentLocation, new MapLocation(politicalAgenda.mapBoundaryWest + 1, currentLocation.y), 255, 125, 0);
 
             }
-            if (mapInfoModule.southBoundaryValue != MapInfoModule.UnknownValue) {
+            if (politicalAgenda.mapBoundarySouth != PoliticalAgenda.UnknownValue) {
 
-                robotController.setIndicatorLine(currentLocation, new MapLocation(currentLocation.x, mapInfoModule.southBoundaryValue - 1), 255, 125, 0);
+                robotController.setIndicatorLine(currentLocation, new MapLocation(currentLocation.x, politicalAgenda.mapBoundarySouth - 1), 255, 125, 0);
 
             }
 
@@ -420,7 +315,7 @@ public class RobotScout implements Robot {
 
     }
 
-    private static Direction rotateDirection(final Direction direction, final MapLocation location, final RobotController robotController, final MapInfoModule mapInfo) {
+    private static Direction rotateDirection(final Direction direction, final MapLocation location, final RobotController robotController) {
 
         if (robotController.getID() % 2 == 0) {
 

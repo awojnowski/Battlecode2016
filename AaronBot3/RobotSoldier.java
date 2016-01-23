@@ -1,9 +1,8 @@
 package AaronBot3;
 
 import AaronBot3.Combat.*;
-import AaronBot3.Map.MapInfoModule;
+import AaronBot3.Information.*;
 import AaronBot3.Movement.*;
-import AaronBot3.Signals.*;
 import AaronBot3.Rubble.*;
 import battlecode.common.*;
 
@@ -13,10 +12,9 @@ public class RobotSoldier implements Robot {
 
     public void run(final RobotController robotController) throws GameActionException {
 
-        final MapInfoModule mapInfoModule = new MapInfoModule();
         final CombatModule combatModule = new CombatModule();
-        final CommunicationModule communicationModule = new CommunicationModule(mapInfoModule);
         final MovementModule movementModule = new MovementModule();
+        final PoliticalAgenda politicalAgenda = new PoliticalAgenda();
         final Random random = new Random(robotController.getID());
         final RubbleModule rubbleModule = new RubbleModule();
 
@@ -31,21 +29,17 @@ public class RobotSoldier implements Robot {
 
             // update communication
 
-            communicationModule.processIncomingSignals(robotController);
-
-            // let's verify existing information
-
-            communicationModule.verifyCommunicationsInformation(robotController, null, false);
+            politicalAgenda.processIncomingSignalsFromRobotController(robotController);
 
             // let's get the best assignment
 
-            CommunicationModuleSignal objectiveSignal = null;
+            InformationSignal objectiveSignal = null;
             int closestObjectiveLocationDistance = Integer.MAX_VALUE;
 
-            final Enumeration<CommunicationModuleSignal> zombieDenCommunicationModuleSignals = communicationModule.zombieDens.elements();
-            while (zombieDenCommunicationModuleSignals.hasMoreElements()) {
+            int zombieDenCount = politicalAgenda.zombieDens.size();
+            for (int i = 0; i < zombieDenCount; i++) {
 
-                final CommunicationModuleSignal signal = zombieDenCommunicationModuleSignals.nextElement();
+                final InformationSignal signal = politicalAgenda.zombieDens.get(i);
                 int distance = signal.location.distanceSquaredTo(currentLocation);
                 if (!combatModule.isLocationOnOurSide(robotController, signal.location)) {
 
@@ -54,36 +48,17 @@ public class RobotSoldier implements Robot {
                 }
                 if (distance < closestObjectiveLocationDistance) {
 
-                    objectiveSignal = signal;
-                    closestObjectiveLocationDistance = distance;
+                    if (politicalAgenda.verifyZombieDenSignal(signal, robotController)) {
 
-                }
+                        objectiveSignal = signal;
+                        closestObjectiveLocationDistance = distance;
 
-            }
+                    } else {
 
-            final Enumeration<CommunicationModuleSignal> enemyArchonCommunicationModuleSignals = communicationModule.enemyArchons.elements();
-            while (enemyArchonCommunicationModuleSignals.hasMoreElements()) {
+                        zombieDenCount --;
+                        i--;
 
-                final CommunicationModuleSignal signal = enemyArchonCommunicationModuleSignals.nextElement();
-                final int distance = signal.location.distanceSquaredTo(currentLocation) * 6; // multiplying by 6 to prioritize the dens
-                if (distance < closestObjectiveLocationDistance) {
-
-                    objectiveSignal = signal;
-                    closestObjectiveLocationDistance = distance;
-
-                }
-
-            }
-
-            final Enumeration<CommunicationModuleSignal> enemyTurretCommunicationModuleSignals = communicationModule.enemyTurrets.elements();
-            while (enemyTurretCommunicationModuleSignals.hasMoreElements()) {
-
-                final CommunicationModuleSignal signal = enemyTurretCommunicationModuleSignals.nextElement();
-                final int distance = signal.location.distanceSquaredTo(currentLocation) * 20;
-                if (distance < closestObjectiveLocationDistance) {
-
-                    objectiveSignal = signal;
-                    closestObjectiveLocationDistance = distance;
+                    }
 
                 }
 
@@ -92,6 +67,7 @@ public class RobotSoldier implements Robot {
             // see if we can attack anything this turn
 
             robotController.setIndicatorString(0, "");
+            robotController.setIndicatorString(1, "");
 
             final RobotInfo[] enemies = robotController.senseHostileRobots(currentLocation, -1);
             final RobotInfo[] friendlies = robotController.senseNearbyRobots(-1, robotController.getTeam());
@@ -103,10 +79,11 @@ public class RobotSoldier implements Robot {
                 if (bestEnemy != null) {
 
                     robotController.attackLocation(bestEnemy.location);
+                    robotController.setIndicatorString(0, "I attacked enemy at " + bestEnemy.location);
 
                     if (bestEnemy.type != RobotType.ZOMBIEDEN) {
 
-                        communicationModule.broadcastSignal(robotController, CommunicationModule.maximumFreeBroadcastRangeForRobotType(robotController.getType()));
+                        politicalAgenda.broadcastSignal(robotController, politicalAgenda.maximumFreeBroadcastRangeForType(robotController.getType()));
 
                     }
 
@@ -130,10 +107,12 @@ public class RobotSoldier implements Robot {
 
                 directionController.enemyBufferDistance = 2;
                 requiresHealing = true;
+                robotController.setIndicatorString(1, "I require healing.");
 
             } else if (robotController.getHealth() / robotController.getType().maxHealth > 0.90) {
 
                 requiresHealing = false;
+                robotController.setIndicatorString(1, "I no longer require healing.");
 
             }
 
@@ -152,6 +131,8 @@ public class RobotSoldier implements Robot {
 
                         robotController.move(kiteDirectionResult.direction);
                         currentLocation = robotController.getLocation();
+
+                        robotController.setIndicatorString(0, "I am trying to kite from enemies " + kiteDirectionResult.direction);
 
                     }
 
@@ -203,6 +184,8 @@ public class RobotSoldier implements Robot {
                         robotController.move(nearestArchonResult.direction);
                         currentLocation = robotController.getLocation();
 
+                        robotController.setIndicatorString(0, "I am moving to an archon at " + nearestArchon.location);
+
                     }
 
                     if (desiredRubbleClearanceDirection != null) {
@@ -222,7 +205,7 @@ public class RobotSoldier implements Robot {
                 int closestSignalDistance = Integer.MAX_VALUE;
                 MapLocation closestSignalLocation = null;
 
-                final ArrayList<Signal> notifications = communicationModule.notifications;
+                final ArrayList<Signal> notifications = politicalAgenda.notifications;
                 for (int i = 0; i < notifications.size(); i++) {
 
                     final Signal signal = notifications.get(i);
@@ -245,6 +228,8 @@ public class RobotSoldier implements Robot {
                         currentLocation = robotController.getLocation();
                         movementModule.addMovementLocation(currentLocation, robotController);
 
+                        robotController.setIndicatorString(0, "I am moving to a signal at " + closestSignalLocation);
+
                     } else if (closestSignalResult.error == DirectionController.ErrorType.BLOCKED_FRIENDLIES) {
 
                         final DirectionController.Result closestSignalResultExtended = directionController.getDirectionResultFromDirection(closestSignalDirection, DirectionController.ADJUSTMENT_THRESHOLD_MEDIUM);
@@ -253,6 +238,8 @@ public class RobotSoldier implements Robot {
                             robotController.move(closestSignalResultExtended.direction);
                             currentLocation = robotController.getLocation();
                             movementModule.addMovementLocation(currentLocation, robotController);
+
+                            robotController.setIndicatorString(0, "I am moving to a signal at " + closestSignalLocation);
 
                         }
 
@@ -273,7 +260,7 @@ public class RobotSoldier implements Robot {
             if (robotController.isCoreReady() && objectiveSignal != null) {
 
                 boolean shouldMoveTowardsObjective = true;
-                if (objectiveSignal.type == CommunicationModuleSignal.TYPE_ZOMBIEDEN) {
+                if (objectiveSignal.type == PoliticalAgenda.SignalTypeZombieDen) {
 
                     final int distance = currentLocation.distanceSquaredTo(objectiveSignal.location);
                     if (distance < 9) {
@@ -293,6 +280,8 @@ public class RobotSoldier implements Robot {
                         robotController.move(signalResult.direction);
                         currentLocation = robotController.getLocation();
                         movementModule.addMovementLocation(currentLocation, robotController);
+
+                        robotController.setIndicatorString(0, "I am moving to an objective at " + objectiveSignal.location);
 
                     }
 
@@ -323,38 +312,18 @@ public class RobotSoldier implements Robot {
 
                     robotController.clearRubble(rubbleClearanceDirection);
 
+                    robotController.setIndicatorString(0, "I cleared rubble " + rubbleClearanceDirection);
+
                 }
 
             }
 
             // finish up
 
-            /*
+            for (int i = 0; i < politicalAgenda.zombieDens.size(); i++) {
 
-            final CommunicationModuleSignalCollection communicationModuleSignalCollection = communicationModule.allCommunicationModuleSignals();
-            final MapLocation location = robotController.getLocation();
-            while (communicationModuleSignalCollection.hasMoreElements()) {
-
-                final CommunicationModuleSignal communicationModuleSignal = communicationModuleSignalCollection.nextElement();
-                int[] color = new int[]{255, 255, 255};
-                if (communicationModuleSignal.type == CommunicationModuleSignal.TYPE_ZOMBIEDEN) {
-
-                    color = new int[]{50, 255, 50};
-
-                } else if (communicationModuleSignal.type == CommunicationModuleSignal.TYPE_ENEMY_ARCHON) {
-
-                    color = new int[]{255, 0, 0};
-
-                } else if (communicationModuleSignal.type == CommunicationModuleSignal.TYPE_ENEMY_TURRET) {
-
-                    color = new int[]{255, 50, 100};
-
-                } else {
-
-                    continue;
-
-                }
-                robotController.setIndicatorLine(location, communicationModuleSignal.location, color[0], color[1], color[2]);
+                final InformationSignal signal = politicalAgenda.zombieDens.get(i);
+                robotController.setIndicatorLine(currentLocation, signal.location, 0, 255, 0);
 
             }
 
@@ -363,8 +332,6 @@ public class RobotSoldier implements Robot {
                 robotController.setIndicatorLine(objectiveSignal.location, robotController.getLocation(), 125, 0, 0);
 
             }
-
-            */
 
             Clock.yield();
 
