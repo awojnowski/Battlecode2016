@@ -386,7 +386,7 @@ public class RobotScout implements Robot {
 
                     movementDirection = RobotScout.rotateDirection(movementDirection, currentLocation, robotController);
 
-                } else if (robotController.getRoundNum() < 300 && !combatModule.isLocationOnOurSide(robotController, movementLocation)) {
+                } else if (robotController.getRoundNum() < 300 && combatModule.isLocationOnOurSide(robotController, currentLocation) && !combatModule.isLocationOnOurSide(robotController, movementLocation)) {
 
                     movementDirection = RobotScout.rotateDirection(movementDirection, currentLocation, robotController);
 
