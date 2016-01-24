@@ -82,7 +82,40 @@ public class RobotViper implements Robot {
                 final RobotInfo bestAttackableEnemy = this.getBestEnemyToAttackFromEnemies(attackableEnemies);
                 final RobotInfo bestFoundEnemy = this.getBestEnemyToAttackFromEnemies(enemies);
 
-                // attack the enemy if it is not a zombie den (those are handled later and prioritized lower)
+                if (robotController.isCoreReady()) {
+
+                    if (bestAttackableEnemy != null) {
+
+                        if (bestAttackableEnemy.type == RobotType.STANDARDZOMBIE || bestAttackableEnemy.type == RobotType.BIGZOMBIE) {
+
+                            final int distance = currentLocation.distanceSquaredTo(bestAttackableEnemy.location);
+                            if (distance < 9) {
+
+                                final Direction kiteDirection = currentLocation.directionTo(bestAttackableEnemy.location);
+                                if (kiteDirection != null) {
+
+                                    directionController.shouldAvoidEnemies = false;
+                                    final DirectionController.Result kiteDirectionResult = directionController.getDirectionResultFromDirection(kiteDirection.opposite(), DirectionController.ADJUSTMENT_THRESHOLD_MEDIUM);
+                                    directionController.shouldAvoidEnemies = true;
+
+                                    if (kiteDirectionResult.direction != null) {
+
+                                        robotController.move(kiteDirectionResult.direction);
+                                        currentLocation = robotController.getLocation();
+                                        robotController.setIndicatorString(1, "I moved away from a zombie at " + kiteDirection);
+                                        break;
+
+                                    }
+
+                                }
+
+                            }
+
+                        }
+
+                    }
+
+                }
 
                 if (robotController.isWeaponReady()) {
 
@@ -582,6 +615,21 @@ public class RobotViper implements Robot {
                             }
 
                         }
+
+                    }
+
+                }
+
+                // try clear rubble
+
+                if (robotController.isCoreReady()) {
+
+                    final Direction rubbleClearanceDirection = rubbleModule.getRubbleClearanceDirectionFromDirection(directionController.getRandomDirection(), robotController, RubbleModule.ADJUSTMENT_THRESHOLD_ALL);
+                    if (rubbleClearanceDirection != null) {
+
+                        robotController.clearRubble(rubbleClearanceDirection);
+                        robotController.setIndicatorString(0, "I cleared rubble " + rubbleClearanceDirection + " because I have nothing else to do.");
+                        break;
 
                     }
 
