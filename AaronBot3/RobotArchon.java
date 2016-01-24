@@ -322,63 +322,67 @@ public class RobotArchon implements Robot {
 
                 if (robotController.isCoreReady()) {
 
-                    RobotType typeToBuild = null;
-                    if (scoutsBuilt == 0 || scoutsBuilt * 15 < soldiersBuilt) {
+                    if (!inDanger) {
 
-                        typeToBuild = RobotType.SCOUT;
+                        RobotType typeToBuild = null;
+                        if (scoutsBuilt == 0 || scoutsBuilt * 15 < soldiersBuilt) {
 
-                    } else if (vipersBuilt * 20 < soldiersBuilt && soldiersBuilt > 5) {
+                            typeToBuild = RobotType.SCOUT;
 
-                        typeToBuild = RobotType.VIPER;
+                        } else if (vipersBuilt * 20 < soldiersBuilt && soldiersBuilt > 5) {
 
-                    } else if (turretsBuilt * 20 < soldiersBuilt && soldiersBuilt > 20 && false) {
+                            typeToBuild = RobotType.VIPER;
 
-                        typeToBuild = RobotType.TURRET;
+                        } else if (turretsBuilt * 20 < soldiersBuilt && soldiersBuilt > 10) {
 
-                    } else {
+                            typeToBuild = RobotType.TURRET;
 
-                        typeToBuild = RobotType.SOLDIER;
+                        } else {
 
-                    }
-                    if (robotController.getTeamParts() >= typeToBuild.partCost) {
+                            typeToBuild = RobotType.SOLDIER;
 
-                        boolean built = false;
-                        for (int i = 0; i < DirectionController.DIRECTIONS.length; i++) {
+                        }
+                        if (robotController.getTeamParts() >= typeToBuild.partCost) {
 
-                            if (robotController.canBuild(DirectionController.DIRECTIONS[i], typeToBuild)) {
+                            boolean built = false;
+                            for (int i = 0; i < DirectionController.DIRECTIONS.length; i++) {
 
-                                buildingUnitType = typeToBuild;
-                                if (typeToBuild == RobotType.SCOUT) {
+                                if (robotController.canBuild(DirectionController.DIRECTIONS[i], typeToBuild)) {
 
-                                    scoutsBuilt ++;
+                                    buildingUnitType = typeToBuild;
+                                    if (typeToBuild == RobotType.SCOUT) {
+
+                                        scoutsBuilt ++;
+
+                                    }
+                                    if (typeToBuild == RobotType.SOLDIER) {
+
+                                        soldiersBuilt ++;
+
+                                    }
+                                    if (typeToBuild == RobotType.VIPER) {
+
+                                        vipersBuilt ++;
+
+                                    }
+                                    if (typeToBuild == RobotType.TURRET) {
+
+                                        turretsBuilt ++;
+
+                                    }
+                                    robotController.build(DirectionController.DIRECTIONS[i], typeToBuild);
+                                    robotController.setIndicatorString(0, "I started to build " + typeToBuild + " in direction " + DirectionController.DIRECTIONS[i]);
+                                    built = true;
+                                    break;
 
                                 }
-                                if (typeToBuild == RobotType.SOLDIER) {
 
-                                    soldiersBuilt ++;
+                            }
+                            if (built) {
 
-                                }
-                                if (typeToBuild == RobotType.VIPER) {
-
-                                    vipersBuilt ++;
-
-                                }
-                                if (typeToBuild == RobotType.TURRET) {
-
-                                    turretsBuilt ++;
-
-                                }
-                                robotController.build(DirectionController.DIRECTIONS[i], typeToBuild);
-                                robotController.setIndicatorString(0, "I started to build " + typeToBuild + " in direction " + DirectionController.DIRECTIONS[i]);
-                                built = true;
                                 break;
 
                             }
-
-                        }
-                        if (built) {
-
-                            break;
 
                         }
 

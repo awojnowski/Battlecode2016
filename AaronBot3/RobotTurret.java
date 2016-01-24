@@ -17,12 +17,16 @@ public class RobotTurret implements Robot {
         final MovementModule movementModule = new MovementModule();
         final PoliticalAgenda politicalAgenda = new PoliticalAgenda();
         final Random random = new Random(robotController.getID());
-        final RubbleModule rubbleModule = new RubbleModule();
 
         final Team currentTeam = robotController.getTeam();
-        int turnsStuck = 0;
+
+        boolean requiresHealing = false;
+        int turnsWithoutEnemy = 0;
 
         while (true) {
+
+            robotController.setIndicatorString(0, "");
+            robotController.setIndicatorString(1, "");
 
             // update communication
 
@@ -36,71 +40,104 @@ public class RobotTurret implements Robot {
 
             // begin
 
-            RobotType type = robotController.getType();
             MapLocation currentLocation = robotController.getLocation();
+            final RobotInfo[] enemies = robotController.senseHostileRobots(currentLocation, robotController.getType().sensorRadiusSquared);
+            final RobotInfo[] friendlies = robotController.senseNearbyRobots(robotController.getType().sensorRadiusSquared, robotController.getTeam());
 
-            if (type == RobotType.TTM) {
+            if (robotController.getHealth() < 30.0) {
 
-                // MOVE
+                requiresHealing = true;
 
-                // let's get the best assignment
+            } else if (robotController.getHealth() / robotController.getType().maxHealth > 0.9) {
 
-                InformationSignal objectiveSignal = null;
-                int closestObjectiveLocationDistance = Integer.MAX_VALUE;
+                requiresHealing = false;
 
-                int zombieDenCount = politicalAgenda.zombieDens.size();
-                for (int i = 0; i < zombieDenCount; i++) {
+            }
 
-                    final InformationSignal signal = politicalAgenda.zombieDens.get(i);
-                    final int distance = currentLocation.distanceSquaredTo(signal.location);
-                    if (distance < closestObjectiveLocationDistance) {
+            boolean isDoomed = false;
+            if (robotController.getInfectedTurns() * 2 > robotController.getHealth()) {
 
-                        if (politicalAgenda.verifyZombieDenSignal(signal, robotController)) {
+                isDoomed = true;
 
-                            objectiveSignal = signal;
-                            closestObjectiveLocationDistance = distance;
+            }
 
-                        } else {
+            if (robotController.getType() == RobotType.TTM) {
 
-                            zombieDenCount --;
-                            i--;
+                if (enemies.length > 0) {
 
-                        }
-
-                    }
+                    robotController.unpack();
+                    Clock.yield();
+                    continue;
 
                 }
 
-                // process movement
-
-                if (robotController.isCoreReady()) {
-
-                    Direction desiredMovementDirection = null;
+                while (true) {
 
                     final DirectionController directionController = new DirectionController(robotController);
                     directionController.currentLocation = currentLocation;
-                    directionController.enemyBufferDistance = 2;
+                    directionController.nearbyEnemies = enemies;
                     directionController.random = random;
                     directionController.shouldAvoidEnemies = true;
+                    directionController.enemyBufferDistance = 1;
 
-                    final RobotInfo[] enemies = robotController.senseHostileRobots(currentLocation, robotController.getType().sensorRadiusSquared);
-                    directionController.nearbyEnemies = enemies;
+                    if (robotController.isCoreReady()) {
 
-                    // run away from nearby enemies
+                        if (requiresHealing) {
 
-                    if (desiredMovementDirection == null && enemies.length > 0) {
+                            MapLocation nearestArchonLocation = null;
+                            int nearestArchonDistance = Integer.MAX_VALUE;
 
-                        final Direction enemiesDirection = directionController.getAverageDirectionTowardsEnemies(enemies, true);
-                        if (enemiesDirection != null) {
+                            for (int i = 0; i < friendlies.length; i++) {
 
-                            directionController.shouldAvoidEnemies = false;
-                            final DirectionController.Result enemiesMovementResult = directionController.getDirectionResultFromDirection(enemiesDirection.opposite(), DirectionController.ADJUSTMENT_THRESHOLD_MEDIUM);
-                            directionController.shouldAvoidEnemies = true;
+                                final RobotInfo robot = friendlies[i];
+                                if (robot.type != RobotType.ARCHON) {
 
-                            if (enemiesMovementResult.direction != null) {
+                                    continue;
 
-                                robotController.move(enemiesMovementResult.direction);
-                                currentLocation = robotController.getLocation();
+                                }
+                                final int distance = currentLocation.distanceSquaredTo(robot.location);
+                                if (distance < nearestArchonDistance) {
+
+                                    nearestArchonLocation = robot.location;
+                                    nearestArchonDistance = distance;
+
+                                }
+
+                            }
+
+                            if (nearestArchonLocation == null) {
+
+                                for (int i = 0; i < politicalAgenda.archonLocations.size(); i++) {
+
+                                    final MapLocation archonLocation = politicalAgenda.archonLocations.get(i);
+                                    final int distance = currentLocation.distanceSquaredTo(archonLocation);
+                                    if (distance < nearestArchonDistance) {
+
+                                        nearestArchonLocation = archonLocation;
+                                        nearestArchonDistance = distance;
+
+                                    }
+
+                                }
+
+                            }
+
+                            if (nearestArchonDistance > 12 && nearestArchonLocation != null) {
+
+                                final Direction nearestArchonDirection = currentLocation.directionTo(nearestArchonLocation);
+
+                                directionController.shouldAvoidEnemies = false;
+                                final DirectionController.Result nearestArchonResult = directionController.getDirectionResultFromDirection(nearestArchonDirection, DirectionController.ADJUSTMENT_THRESHOLD_MEDIUM);
+                                directionController.shouldAvoidEnemies = true;
+
+                                if (nearestArchonResult.direction != null) {
+
+                                    robotController.move(nearestArchonResult.direction);
+                                    currentLocation = robotController.getLocation();
+                                    robotController.setIndicatorString(0, "I am moving to an archon to heal at, at " + nearestArchonLocation);
+                                    break;
+
+                                }
 
                             }
 
@@ -108,44 +145,110 @@ public class RobotTurret implements Robot {
 
                     }
 
-                    // check nearby signals
+                    // move toward an objective
 
-                    if (desiredMovementDirection == null) {
+                    if (robotController.isCoreReady()) {
 
-                        int closestSignalDistance = Integer.MAX_VALUE;
-                        MapLocation closestSignalLocation = null;
+                        InformationSignal objectiveSignal = null;
+                        int closestObjectiveLocationDistance = Integer.MAX_VALUE;
 
-                        final ArrayList<Signal> notifications = politicalAgenda.notifications;
-                        for (int i = 0; i < notifications.size(); i++) {
+                        int enemyArchonCount = politicalAgenda.enemyArchons.size();
+                        for (int i = 0; i < enemyArchonCount; i++) {
 
-                            final Signal signal = notifications.get(i);
-                            final int distance = currentLocation.distanceSquaredTo(signal.getLocation());
-                            if (distance < closestSignalDistance) {
+                            final InformationSignal signal = politicalAgenda.enemyArchons.get(i);
+                            int distance = signal.location.distanceSquaredTo(currentLocation);
+                            if (!combatModule.isLocationOnOurSide(robotController, signal.location)) {
 
-                                closestSignalDistance = distance;
-                                closestSignalLocation = signal.getLocation();
+                                distance = distance * 5;
+
+                            }
+                            if (distance < closestObjectiveLocationDistance) {
+
+                                objectiveSignal = signal;
+                                closestObjectiveLocationDistance = distance;
 
                             }
 
                         }
-                        if (closestSignalLocation != null) {
 
-                            desiredMovementDirection = currentLocation.directionTo(closestSignalLocation);
+                        int zombieDenCount = politicalAgenda.zombieDens.size();
+                        for (int i = 0; i < zombieDenCount; i++) {
+
+                            final InformationSignal signal = politicalAgenda.zombieDens.get(i);
+                            int distance = signal.location.distanceSquaredTo(currentLocation);
+                            if (!combatModule.isLocationOnOurSide(robotController, signal.location)) {
+
+                                distance = distance * 5;
+
+                            }
+                            if (distance < closestObjectiveLocationDistance) {
+
+                                if (politicalAgenda.verifyZombieDenSignal(signal, robotController)) {
+
+                                    objectiveSignal = signal;
+                                    closestObjectiveLocationDistance = distance;
+
+                                } else {
+
+                                    zombieDenCount --;
+                                    i--;
+
+                                }
+
+                            }
 
                         }
-
-                    }
-
-                    // check if we have an objective
-
-                    if (desiredMovementDirection == null) {
 
                         if (objectiveSignal != null) {
 
-                            final MapLocation objectiveLocation = objectiveSignal.location;
-                            if (objectiveLocation.distanceSquaredTo(currentLocation) >= 8) {
+                            boolean shouldMoveTowardsObjective = true;
+                            if (objectiveSignal.type == PoliticalAgenda.SignalTypeZombieDen) {
 
-                                desiredMovementDirection = currentLocation.directionTo(objectiveLocation);
+                                final int distance = currentLocation.distanceSquaredTo(objectiveSignal.location);
+                                if (distance < 9) {
+
+                                    shouldMoveTowardsObjective = false;
+
+                                }
+
+                            }
+
+                            if (shouldMoveTowardsObjective) {
+
+                                final Direction signalDirection = currentLocation.directionTo(objectiveSignal.location);
+                                final DirectionController.Result signalResult = directionController.getDirectionResultFromDirection(signalDirection, DirectionController.ADJUSTMENT_THRESHOLD_LOW);
+
+                                boolean clearRubble = false;
+                                if (signalResult.direction != null) {
+
+                                    if (!movementModule.isMovementLocationRepetitive(currentLocation.add(signalResult.direction), robotController)) {
+
+                                        robotController.move(signalResult.direction);
+                                        currentLocation = robotController.getLocation();
+                                        movementModule.addMovementLocation(currentLocation, robotController);
+                                        robotController.setIndicatorString(0, "I moved toward the objective at " + objectiveSignal.location);
+                                        break;
+
+                                    }
+
+                                } else if (signalResult.error == DirectionController.ErrorType.BLOCKED_FRIENDLIES) {
+
+                                    final DirectionController.Result signalResultExtended = directionController.getDirectionResultFromDirection(signalDirection, DirectionController.ADJUSTMENT_THRESHOLD_LOW, DirectionController.ADJUSTMENT_THRESHOLD_MEDIUM);
+                                    if (signalResultExtended.direction != null) {
+
+                                        if (!movementModule.isMovementLocationRepetitive(currentLocation.add(signalResultExtended.direction), robotController)) {
+
+                                            robotController.move(signalResultExtended.direction);
+                                            currentLocation = robotController.getLocation();
+                                            movementModule.addMovementLocation(currentLocation, robotController);
+                                            robotController.setIndicatorString(0, "I moved toward the objective at " + objectiveSignal.location);
+                                            break;
+
+                                        }
+
+                                    }
+
+                                }
 
                             }
 
@@ -153,96 +256,200 @@ public class RobotTurret implements Robot {
 
                     }
 
-                    // try move towards archon starting positions
+                    // move to an enemy
 
-                    if (desiredMovementDirection == null) {
+                    if (robotController.isCoreReady()) {
 
-                        int closestArchonDistance = Integer.MAX_VALUE;
-                        MapLocation closestArchonLocation = null;
+                        int closestSignalDistance = Integer.MAX_VALUE;
+                        MapLocation closestLocation = null;
 
-                        final MapLocation[] archonLocations = robotController.getInitialArchonLocations(robotController.getTeam().opponent());
-                        for (int i = 0; i < archonLocations.length; i++) {
+                        final ImmutableInformationCollection<EnemyInfo> enemySignals = politicalAgenda.enemies;
+                        for (int i = 0; i < enemySignals.size(); i++) {
 
-                            final MapLocation location = archonLocations[i];
+                            final EnemyInfo enemyInfo = enemySignals.get(i);
+                            final int distance = currentLocation.distanceSquaredTo(enemyInfo.location);
+                            if (distance < closestSignalDistance) {
+
+                                closestSignalDistance = distance;
+                                closestLocation = enemyInfo.location;
+
+                            }
+
+                        }
+                        if (closestLocation != null) {
+
+                            final Direction closestSignalDirection = currentLocation.directionTo(closestLocation);
+                            final DirectionController.Result closestSignalResult = directionController.getDirectionResultFromDirection(closestSignalDirection, DirectionController.ADJUSTMENT_THRESHOLD_LOW);
+                            if (closestSignalResult.direction != null && !movementModule.isMovementLocationRepetitive(currentLocation.add(closestSignalResult.direction), robotController)) {
+
+                                robotController.move(closestSignalResult.direction);
+                                currentLocation = robotController.getLocation();
+                                movementModule.addMovementLocation(currentLocation, robotController);
+                                robotController.setIndicatorString(0, "I am moving to an enemy " + closestLocation);
+                                break;
+
+                            }
+
+                        }
+
+                    }
+
+                    // move to an enemy clump
+
+                    if (robotController.isCoreReady()) {
+
+                        int closestEnemyClump = Integer.MAX_VALUE;
+                        MapLocation closestLocation = null;
+
+                        final ArrayList<ClumpInfo> enemyClumps = politicalAgenda.enemyClumps;
+                        for (int i = 0; i < enemyClumps.size(); i++) {
+
+                            final ClumpInfo enemyInfo = enemyClumps.get(i);
+                            final int distance = currentLocation.distanceSquaredTo(enemyInfo.location);
+                            if (distance < closestEnemyClump) {
+
+                                closestEnemyClump = distance;
+                                closestLocation = enemyInfo.location;
+
+                            }
+
+                        }
+                        if (closestLocation != null) {
+
+                            final Direction closestSignalDirection = currentLocation.directionTo(closestLocation);
+                            final DirectionController.Result closestSignalResult = directionController.getDirectionResultFromDirection(closestSignalDirection, DirectionController.ADJUSTMENT_THRESHOLD_LOW);
+                            if (closestSignalResult.direction != null && !movementModule.isMovementLocationRepetitive(currentLocation.add(closestSignalResult.direction), robotController)) {
+
+                                robotController.move(closestSignalResult.direction);
+                                currentLocation = robotController.getLocation();
+                                movementModule.addMovementLocation(currentLocation, robotController);
+                                robotController.setIndicatorString(0, "I am moving to an enemy clump at " + closestLocation);
+                                break;
+
+                            }
+
+                        }
+
+                    }
+
+                    // move to a friendly clump
+
+                    if (robotController.isCoreReady()) {
+
+                        int closestFriendlyClump = Integer.MAX_VALUE;
+                        MapLocation closestLocation = null;
+
+                        final ArrayList<ClumpInfo> friendlyClumps = politicalAgenda.friendlyClumps;
+                        for (int i = 0; i < friendlyClumps.size(); i++) {
+
+                            final ClumpInfo enemyInfo = friendlyClumps.get(i);
+                            final int distance = currentLocation.distanceSquaredTo(enemyInfo.location);
+                            if (distance < closestFriendlyClump) {
+
+                                closestFriendlyClump = distance;
+                                closestLocation = enemyInfo.location;
+
+                            }
+
+                        }
+                        if (closestLocation != null) {
+
+                            final Direction closestSignalDirection = currentLocation.directionTo(closestLocation);
+                            final DirectionController.Result closestSignalResult = directionController.getDirectionResultFromDirection(closestSignalDirection, DirectionController.ADJUSTMENT_THRESHOLD_LOW);
+                            if (closestSignalResult.direction != null && !movementModule.isMovementLocationRepetitive(currentLocation.add(closestSignalResult.direction), robotController)) {
+
+                                robotController.move(closestSignalResult.direction);
+                                currentLocation = robotController.getLocation();
+                                movementModule.addMovementLocation(currentLocation, robotController);
+                                robotController.setIndicatorString(0, "I am moving to a friendly clump at " + closestLocation);
+                                break;
+
+                            }
+
+                        }
+
+                    }
+
+                    // move to an archon
+
+                    if (robotController.isCoreReady()) {
+
+                        int closestSignalDistance = Integer.MAX_VALUE;
+                        MapLocation closestLocation = null;
+
+                        final ArrayList<MapLocation> archonLocations = politicalAgenda.archonLocations;
+                        for (int i = 0; i < archonLocations.size(); i++) {
+
+                            final MapLocation location = archonLocations.get(i);
                             final int distance = currentLocation.distanceSquaredTo(location);
-                            if (distance < closestArchonDistance) {
+                            if (distance < closestSignalDistance) {
 
-                                closestArchonDistance = distance;
-                                closestArchonLocation = location;
+                                closestSignalDistance = distance;
+                                closestLocation = location;
 
                             }
 
                         }
-                        if (closestArchonLocation != null) {
+                        if (closestLocation != null) {
 
-                            desiredMovementDirection = currentLocation.directionTo(closestArchonLocation);
+                            final Direction closestSignalDirection = currentLocation.directionTo(closestLocation);
+                            final DirectionController.Result closestSignalResult = directionController.getDirectionResultFromDirection(closestSignalDirection, DirectionController.ADJUSTMENT_THRESHOLD_LOW);
+                            if (closestSignalResult.direction != null && !movementModule.isMovementLocationRepetitive(currentLocation.add(closestSignalResult.direction), robotController)) {
 
-                        }
+                                robotController.move(closestSignalResult.direction);
+                                currentLocation = robotController.getLocation();
+                                movementModule.addMovementLocation(currentLocation, robotController);
+                                robotController.setIndicatorString(0, "I am moving to a friendly archon at " + closestLocation);
+                                break;
 
-                    }
-
-                    // process movement
-
-                    if (desiredMovementDirection != null) {
-
-                        final DirectionController.Result directionResult = directionController.getDirectionResultFromDirection(desiredMovementDirection, DirectionController.ADJUSTMENT_THRESHOLD_LOW);
-                        if (directionResult.direction != null && !movementModule.isMovementLocationRepetitive(currentLocation.add(directionResult.direction), robotController)) {
-
-                            robotController.move(directionResult.direction);
-                            currentLocation = robotController.getLocation();
-                            movementModule.addMovementLocation(currentLocation, robotController);
+                            }
 
                         }
 
                     }
 
-                }
-
-                // unpack if we're safe
-
-                final RobotInfo[] nearbyTeammates = robotController.senseNearbyRobots(8, currentTeam);
-                final RobotInfo[] nearbySoldiers = combatModule.robotsOfTypesFromRobots(nearbyTeammates, new RobotType[]{RobotType.SOLDIER});
-
-                if (nearbySoldiers.length > 2) {
-
-                    robotController.unpack();
+                    break;
 
                 }
 
-            } else {
+            } else if (robotController.getType() == RobotType.TURRET) {
 
-                // ATTACK
+                final RobotInfo[] attackableEnemies = robotController.senseHostileRobots(currentLocation, robotController.getType().attackRadiusSquared);
+                if (attackableEnemies.length == 0) {
 
-                final RobotInfo[] enemies = robotController.senseHostileRobots(currentLocation, robotController.getType().attackRadiusSquared);
-                final RobotInfo bestEnemy = this.getBestEnemyToAttackFromEnemies(robotController, enemies);
+                    turnsWithoutEnemy++;
 
-                // handle attacking
+                } else {
 
-                if (bestEnemy != null) {
+                    turnsWithoutEnemy = 0;
+
+                }
+
+                if (turnsWithoutEnemy >= 20) {
+
+                    turnsWithoutEnemy = 0;
+
+                    robotController.pack();
+                    Clock.yield();
+                    continue;
+
+                }
+
+                while (true) {
 
                     if (robotController.isWeaponReady()) {
 
-                        // we can attack the enemy
+                        final RobotInfo bestAttackableEnemy = this.getBestEnemyToAttackFromEnemies(robotController, attackableEnemies);
+                        if (bestAttackableEnemy != null) {
 
-                        robotController.attackLocation(bestEnemy.location);
-                        if (bestEnemy.type != RobotType.ZOMBIEDEN) {
-
-                            politicalAgenda.broadcastSignal(robotController, politicalAgenda.maximumFreeBroadcastRangeForType(robotController.getType()));
+                            robotController.attackLocation(bestAttackableEnemy.location);
+                            break;
 
                         }
 
                     }
 
-                }
-
-                // pack if we aren't near soldiers
-
-                final RobotInfo[] nearbyTeammates = robotController.senseNearbyRobots(type.sensorRadiusSquared, currentTeam);
-                final RobotInfo[] nearbySoldiers = combatModule.robotsOfTypesFromRobots(nearbyTeammates, new RobotType[]{RobotType.SOLDIER});
-
-                if (nearbySoldiers.length < 3) {
-
-                    robotController.pack();
+                    break;
 
                 }
 
@@ -252,19 +459,26 @@ public class RobotTurret implements Robot {
 
             // show what we know
 
-            for (int i = 0; i < politicalAgenda.archonLocations.size(); i++) {
+            /*for (int i = 0; i < politicalAgenda.archonLocations.size(); i++) {
 
                 final MapLocation archonLocation = politicalAgenda.archonLocations.get(i);
-                robotController.setIndicatorLine(currentLocation, archonLocation, 25, 25, 255);
+                robotController.setIndicatorLine(currentLocation, archonLocation, 136, 125, 255);
 
             }
 
             for (int i = 0; i < politicalAgenda.enemies.size(); i++) {
 
                 final EnemyInfo enemy = politicalAgenda.enemies.get(i);
-                robotController.setIndicatorLine(currentLocation, enemy.location, 255, 0, 255);
+                robotController.setIndicatorLine(currentLocation, enemy.location, 255, 0, 208);
 
             }
+
+            */for (int i = 0; i < politicalAgenda.enemyArchons.size(); i++) {
+
+                final InformationSignal signal = politicalAgenda.enemyArchons.get(i);
+                robotController.setIndicatorLine(currentLocation, signal.location, 174, 0, 255);
+
+            }/*
 
             for (int i = 0; i < politicalAgenda.zombieDens.size(); i++) {
 
@@ -276,16 +490,16 @@ public class RobotTurret implements Robot {
             for (int i = 0; i < politicalAgenda.enemyClumps.size(); i++) {
 
                 final ClumpInfo clumpInfo = politicalAgenda.enemyClumps.get(i);
-                robotController.setIndicatorLine(currentLocation, clumpInfo.location, 120, 0, 0);
+                robotController.setIndicatorLine(currentLocation, clumpInfo.location, 255, 186, 186);
 
             }
 
             for (int i = 0; i < politicalAgenda.friendlyClumps.size(); i++) {
 
                 final ClumpInfo clumpInfo = politicalAgenda.friendlyClumps.get(i);
-                robotController.setIndicatorLine(currentLocation, clumpInfo.location, 0, 120, 0);
+                robotController.setIndicatorLine(currentLocation, clumpInfo.location, 186, 207, 255);
 
-            }
+            }*/
 
             Clock.yield();
 
