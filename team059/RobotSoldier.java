@@ -108,67 +108,71 @@ public class RobotSoldier implements Robot {
 
                 if (robotController.isCoreReady()) {
 
-                    MapLocation nearestArchonLocation = null;
-                    int nearestArchonDistance = Integer.MAX_VALUE;
+                    if (requiresHealing) {
 
-                    for (int i = 0; i < friendlies.length; i++) {
+                        MapLocation nearestArchonLocation = null;
+                        int nearestArchonDistance = Integer.MAX_VALUE;
 
-                        final RobotInfo robot = friendlies[i];
-                        if (robot.type != RobotType.ARCHON) {
+                        for (int i = 0; i < friendlies.length; i++) {
 
-                            continue;
+                            final RobotInfo robot = friendlies[i];
+                            if (robot.type != RobotType.ARCHON) {
 
-                        }
-                        final int distance = currentLocation.distanceSquaredTo(robot.location);
-                        if (distance < nearestArchonDistance) {
+                                continue;
 
-                            nearestArchonLocation = robot.location;
-                            nearestArchonDistance = distance;
-
-                        }
-
-                    }
-
-                    if (nearestArchonLocation == null) {
-
-                        for (int i = 0; i < politicalAgenda.archonLocations.size(); i++) {
-
-                            final MapLocation archonLocation = politicalAgenda.archonLocations.get(i);
-                            final int distance = currentLocation.distanceSquaredTo(archonLocation);
+                            }
+                            final int distance = currentLocation.distanceSquaredTo(robot.location);
                             if (distance < nearestArchonDistance) {
 
-                                nearestArchonLocation = archonLocation;
+                                nearestArchonLocation = robot.location;
                                 nearestArchonDistance = distance;
 
                             }
 
                         }
 
-                    }
+                        if (nearestArchonLocation == null) {
 
-                    if (nearestArchonDistance > 12 && nearestArchonLocation != null) {
+                            for (int i = 0; i < politicalAgenda.archonLocations.size(); i++) {
 
-                        final Direction nearestArchonDirection = currentLocation.directionTo(nearestArchonLocation);
+                                final MapLocation archonLocation = politicalAgenda.archonLocations.get(i);
+                                final int distance = currentLocation.distanceSquaredTo(archonLocation);
+                                if (distance < nearestArchonDistance) {
 
-                        directionController.shouldAvoidEnemies = false;
-                        final DirectionController.Result nearestArchonResult = directionController.getDirectionResultFromDirection(nearestArchonDirection, DirectionController.ADJUSTMENT_THRESHOLD_MEDIUM);
-                        directionController.shouldAvoidEnemies = true;
+                                    nearestArchonLocation = archonLocation;
+                                    nearestArchonDistance = distance;
 
-                        if (nearestArchonResult.direction != null) {
+                                }
 
-                            robotController.move(nearestArchonResult.direction);
-                            currentLocation = robotController.getLocation();
-                            robotController.setIndicatorString(0, "I am moving to an archon to heal at, at " + nearestArchonLocation);
-                            break;
+                            }
 
-                        } else if (nearestArchonResult.error == DirectionController.ErrorType.BLOCKED_RUBBLE) {
+                        }
 
-                            final Direction rubbleClearanceDirection = rubbleModule.getRubbleClearanceDirectionFromDirection(nearestArchonDirection, robotController, RubbleModule.ADJUSTMENT_THRESHOLD_MEDIUM);
-                            if (rubbleClearanceDirection != null) {
+                        if (nearestArchonDistance > 12 && nearestArchonLocation != null) {
 
-                                robotController.clearRubble(rubbleClearanceDirection);
-                                robotController.setIndicatorString(0, "I cleared rubble to get to an archon to heal at, at " + nearestArchonLocation);
+                            final Direction nearestArchonDirection = currentLocation.directionTo(nearestArchonLocation);
+
+                            directionController.shouldAvoidEnemies = false;
+                            final DirectionController.Result nearestArchonResult = directionController.getDirectionResultFromDirection(nearestArchonDirection, DirectionController.ADJUSTMENT_THRESHOLD_MEDIUM);
+                            directionController.shouldAvoidEnemies = true;
+
+                            if (nearestArchonResult.direction != null) {
+
+                                robotController.move(nearestArchonResult.direction);
+                                currentLocation = robotController.getLocation();
+                                robotController.setIndicatorString(0, "I am moving to an archon to heal at, at " + nearestArchonLocation);
                                 break;
+
+                            } else if (nearestArchonResult.error == DirectionController.ErrorType.BLOCKED_RUBBLE) {
+
+                                final Direction rubbleClearanceDirection = rubbleModule.getRubbleClearanceDirectionFromDirection(nearestArchonDirection, robotController, RubbleModule.ADJUSTMENT_THRESHOLD_MEDIUM);
+                                if (rubbleClearanceDirection != null) {
+
+                                    robotController.clearRubble(rubbleClearanceDirection);
+                                    robotController.setIndicatorString(0, "I cleared rubble to get to an archon to heal at, at " + nearestArchonLocation);
+                                    break;
+
+                                }
 
                             }
 
