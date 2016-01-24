@@ -1,6 +1,5 @@
 package team059.Information;
 
-import AaronBot.Robot;
 import battlecode.common.*;
 import java.util.*;
 
