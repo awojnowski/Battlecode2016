@@ -25,11 +25,22 @@ public class RobotSoldier implements Robot {
         final RobotType type = robotController.getType();
 
         boolean requiresHealing = false;
+        int aggressiveLock = 0;
 
         while (true) {
 
+            // prep to run this turn
+
             robotController.setIndicatorString(0, "");
             robotController.setIndicatorString(1, "");
+
+            if (aggressiveLock > 0) {
+
+                aggressiveLock --;
+
+            }
+
+            // begin
 
             MapLocation currentLocation = robotController.getLocation();
 
@@ -47,70 +58,179 @@ public class RobotSoldier implements Robot {
             final RobotInfo[] friendlies = robotController.senseNearbyRobots(-1, robotController.getTeam());
             politicalAgenda.verifyAllEnemyArchonSignals(robotController, enemies);
 
-            // let's get the best assignment
+            while (true) {
 
-            InformationSignal objectiveSignal = null;
-            int closestObjectiveLocationDistance = Integer.MAX_VALUE;
+                if (!robotController.isCoreReady() || !robotController.isWeaponReady()) {
 
-            int enemyArchonCount = politicalAgenda.enemyArchons.size();
-            for (int i = 0; i < enemyArchonCount; i++) {
-
-                final InformationSignal signal = politicalAgenda.enemyArchons.get(i);
-                int distance = signal.location.distanceSquaredTo(currentLocation);
-                if (!combatModule.isLocationOnOurSide(robotController, signal.location)) {
-
-                    distance = distance * 5;
-
-                }
-                if (distance < closestObjectiveLocationDistance) {
-
-                    objectiveSignal = signal;
-                    closestObjectiveLocationDistance = distance;
+                    break; // can't make any moves
 
                 }
 
-            }
+                // initialize some shared variables
 
-            int zombieDenCount = politicalAgenda.zombieDens.size();
-            for (int i = 0; i < zombieDenCount; i++) {
+                if (robotController.getHealth() < 30.0) {
 
-                final InformationSignal signal = politicalAgenda.zombieDens.get(i);
-                int distance = signal.location.distanceSquaredTo(currentLocation);
-                if (!combatModule.isLocationOnOurSide(robotController, signal.location)) {
+                    requiresHealing = true;
 
-                    distance = distance * 5;
+                } else if (robotController.getHealth() / robotController.getType().maxHealth > 0.9) {
+
+                    requiresHealing = false;
 
                 }
-                if (distance < closestObjectiveLocationDistance) {
 
-                    if (politicalAgenda.verifyZombieDenSignal(signal, robotController)) {
+                final DirectionController directionController = new DirectionController(robotController);
+                directionController.currentLocation = currentLocation;
+                directionController.nearbyEnemies = enemies;
+                directionController.random = random;
+                directionController.shouldAvoidEnemies = true;
+                directionController.enemyBufferDistance = 1;
 
-                        objectiveSignal = signal;
-                        closestObjectiveLocationDistance = distance;
+                final RobotInfo[] attackableEnemies = robotController.senseHostileRobots(currentLocation, robotController.getType().attackRadiusSquared);
+                final RobotInfo bestAttackableEnemy = this.getBestEnemyToAttackFromEnemies(attackableEnemies);
+                final RobotInfo bestFoundEnemy = this.getBestEnemyToAttackFromEnemies(enemies);
 
-                    } else {
+                // attack the enemy if it is not a zombie den (those are handled later and prioritized lower)
 
-                        zombieDenCount --;
-                        i--;
+                if (robotController.isWeaponReady()) {
+
+                    if (bestAttackableEnemy != null && bestAttackableEnemy.type != RobotType.ZOMBIEDEN) {
+
+                        robotController.attackLocation(bestAttackableEnemy.location);
+                        break;
 
                     }
 
                 }
 
+                // move forward or kite back
+
+                if (robotController.isCoreReady()) {
+
+                    // check whether we should move forward to engage or kite back
+
+                    boolean shouldBePassive = true;
+                    if (aggressiveLock == 0) {
+
+                        if (friendlies.length > enemies.length * 3) {
+
+                            shouldBePassive = false;
+
+                        }
+
+                    }
+
+                    if (shouldBePassive) {
+
+                        final Direction kiteDirection = directionController.getAverageDirectionTowardsEnemies(enemies, true);
+                        if (kiteDirection != null) {
+
+                            directionController.shouldAvoidEnemies = false;
+                            final DirectionController.Result kiteDirectionResult = directionController.getDirectionResultFromDirection(kiteDirection.opposite(), DirectionController.ADJUSTMENT_THRESHOLD_LOW);
+                            directionController.shouldAvoidEnemies = true;
+
+                            if (kiteDirectionResult.direction != null) {
+
+                                robotController.move(kiteDirectionResult.direction);
+                                currentLocation = robotController.getLocation();
+                                break;
+
+                            }
+
+                        }
+
+                    } else {
+
+                        if (bestFoundEnemy != null) {
+
+                            final int distance = currentLocation.distanceSquaredTo(bestFoundEnemy.location);
+
+
+                            final Direction pushDirection = currentLocation.directionTo(bestFoundEnemy.location);
+
+                            directionController.shouldAvoidEnemies = false;
+                            final DirectionController.Result kiteDirectionResult = directionController.getDirectionResultFromDirection(pushDirection, DirectionController.ADJUSTMENT_THRESHOLD_LOW);
+                            directionController.shouldAvoidEnemies = true;
+
+                            if (kiteDirectionResult.direction != null) {
+
+                                robotController.move(kiteDirectionResult.direction);
+                                currentLocation = robotController.getLocation();
+                                break;
+
+                            }
+
+                        }
+
+                    }
+
+                }
+
+                // move toward an objective
+
+                if (robotController.isCoreReady()) {
+
+                    InformationSignal objectiveSignal = null;
+                    int closestObjectiveLocationDistance = Integer.MAX_VALUE;
+
+                    int enemyArchonCount = politicalAgenda.enemyArchons.size();
+                    for (int i = 0; i < enemyArchonCount; i++) {
+
+                        final InformationSignal signal = politicalAgenda.enemyArchons.get(i);
+                        int distance = signal.location.distanceSquaredTo(currentLocation);
+                        if (!combatModule.isLocationOnOurSide(robotController, signal.location)) {
+
+                            distance = distance * 5;
+
+                        }
+                        if (distance < closestObjectiveLocationDistance) {
+
+                            objectiveSignal = signal;
+                            closestObjectiveLocationDistance = distance;
+
+                        }
+
+                    }
+
+                    int zombieDenCount = politicalAgenda.zombieDens.size();
+                    for (int i = 0; i < zombieDenCount; i++) {
+
+                        final InformationSignal signal = politicalAgenda.zombieDens.get(i);
+                        int distance = signal.location.distanceSquaredTo(currentLocation);
+                        if (!combatModule.isLocationOnOurSide(robotController, signal.location)) {
+
+                            distance = distance * 5;
+
+                        }
+                        if (distance < closestObjectiveLocationDistance) {
+
+                            if (politicalAgenda.verifyZombieDenSignal(signal, robotController)) {
+
+                                objectiveSignal = signal;
+                                closestObjectiveLocationDistance = distance;
+
+                            } else {
+
+                                zombieDenCount --;
+                                i--;
+
+                            }
+
+                        }
+
+                    }
+
+                    
+
+                }
+
+                break;
+
             }
 
-            if (robotController.getHealth() < 30.0) {
 
-                requiresHealing = true;
-
-            } else if (robotController.getHealth() / robotController.getType().maxHealth > 0.9) {
-
-                requiresHealing = false;
-
-            }
 
             // the while block allows us to just break out of the actions when one is completed
-            while (true) {
+            /*while (true) {
 
                 if (!robotController.isCoreReady() && !robotController.isWeaponReady()) {
 
@@ -391,7 +511,7 @@ public class RobotSoldier implements Robot {
 
                 break;
 
-            }
+            }*/
 
             /*// see if we can attack anything this turn
 
