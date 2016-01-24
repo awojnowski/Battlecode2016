@@ -341,7 +341,7 @@ public class PoliticalAgenda {
         for (int i = 0; i < this.enemyClumps.size(); i++) {
 
             final ClumpInfo clumpInfo = this.enemyClumps.get(i);
-            if (clumpInfo.turn + 20 < roundNumber) {
+            if (clumpInfo.turn + 50 < roundNumber) {
 
                 this.enemyClumps.remove(i);
                 i--;
@@ -353,7 +353,7 @@ public class PoliticalAgenda {
         for (int i = 0; i < this.friendlyClumps.size(); i++) {
 
             final ClumpInfo clumpInfo = this.friendlyClumps.get(i);
-            if (clumpInfo.turn + 20 < roundNumber) {
+            if (clumpInfo.turn + 50 < roundNumber) {
 
                 this.friendlyClumps.remove(i);
                 i--;
