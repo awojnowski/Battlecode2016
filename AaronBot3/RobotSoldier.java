@@ -443,6 +443,7 @@ public class RobotSoldier implements Robot {
                             if (rubbleClearanceDirection != null) {
 
                                 robotController.clearRubble(rubbleClearanceDirection);
+                                movementModule.extendLocationInvalidationTurn(robotController);
                                 robotController.setIndicatorString(0, "I cleared rubble to get to an enemy at " + closestLocation);
                                 break;
 
@@ -492,7 +493,9 @@ public class RobotSoldier implements Robot {
                             if (rubbleClearanceDirection != null) {
 
                                 robotController.clearRubble(rubbleClearanceDirection);
-                                robotController.setIndicatorString(0, "I cleared rubble to get to an enemy clump at " + closestLocation);
+                                movementModule.extendLocationInvalidationTurn(robotController);
+                                robotController.setIndicatorString(0, "I cleared rubble" +
+                                        " to get to an enemy clump at " + closestLocation);
                                 break;
 
                             }
@@ -541,6 +544,7 @@ public class RobotSoldier implements Robot {
                             if (rubbleClearanceDirection != null) {
 
                                 robotController.clearRubble(rubbleClearanceDirection);
+                                movementModule.extendLocationInvalidationTurn(robotController);
                                 robotController.setIndicatorString(0, "I cleared rubble to get to a friendly clump at " + closestLocation);
                                 break;
 
@@ -590,6 +594,7 @@ public class RobotSoldier implements Robot {
                             if (rubbleClearanceDirection != null) {
 
                                 robotController.clearRubble(rubbleClearanceDirection);
+                                movementModule.extendLocationInvalidationTurn(robotController);
                                 robotController.setIndicatorString(0, "I cleared rubble to get to a friendly archon at " + closestLocation);
                                 break;
 
@@ -607,7 +612,7 @@ public class RobotSoldier implements Robot {
 
             // finish up
 
-            for (int i = 0; i < politicalAgenda.archonLocations.size(); i++) {
+            /*for (int i = 0; i < politicalAgenda.archonLocations.size(); i++) {
 
                 final MapLocation archonLocation = politicalAgenda.archonLocations.get(i);
                 robotController.setIndicatorLine(currentLocation, archonLocation, 136, 125, 255);
@@ -621,12 +626,12 @@ public class RobotSoldier implements Robot {
 
             }
 
-            for (int i = 0; i < politicalAgenda.enemyArchons.size(); i++) {
+            */for (int i = 0; i < politicalAgenda.enemyArchons.size(); i++) {
 
                 final InformationSignal signal = politicalAgenda.enemyArchons.get(i);
                 robotController.setIndicatorLine(currentLocation, signal.location, 174, 0, 255);
 
-            }
+            }/*
 
             for (int i = 0; i < politicalAgenda.zombieDens.size(); i++) {
 
@@ -647,7 +652,7 @@ public class RobotSoldier implements Robot {
                 final ClumpInfo clumpInfo = politicalAgenda.friendlyClumps.get(i);
                 robotController.setIndicatorLine(currentLocation, clumpInfo.location, 186, 207, 255);
 
-            }
+            }*/
 
             Clock.yield();
 

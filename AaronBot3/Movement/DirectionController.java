@@ -319,7 +319,7 @@ public class DirectionController {
     ENEMIES
      */
 
-    private int attackRadiusSquaredWithBuffer(final int attackDistanceSquared, final int buffer) {
+    public int attackRadiusSquaredWithBuffer(final int attackDistanceSquared, final int buffer) {
 
         return buffer > 0 ? (int)Math.floor(Math.pow(Math.sqrt((double)attackDistanceSquared) + buffer, 2.0)) : attackDistanceSquared;
 

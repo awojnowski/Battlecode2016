@@ -203,6 +203,12 @@ public class RobotSoldier implements Robot {
 
                     }
 
+                    if (bestAttackableEnemy != null && (bestAttackableEnemy.type == RobotType.VIPER)) {
+
+                        isAggressive = true;
+
+                    }
+
                     if (bestAttackableEnemy != null && (bestAttackableEnemy.type == RobotType.BIGZOMBIE || bestAttackableEnemy.type == RobotType.STANDARDZOMBIE)) {
 
                         isAggressive = false;

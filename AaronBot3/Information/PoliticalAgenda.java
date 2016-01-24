@@ -675,7 +675,7 @@ public class PoliticalAgenda {
     public boolean verifyEnemyArchonSignal(final InformationSignal signal, final RobotController robotController, final RobotInfo[] enemies) throws GameActionException {
 
         final int distance = robotController.getLocation().distanceSquaredTo(signal.location);
-        if (distance > robotController.getType().sensorRadiusSquared / 2.0) {
+        if (distance > robotController.getType().sensorRadiusSquared / 8.0) {
 
             return true;
 
