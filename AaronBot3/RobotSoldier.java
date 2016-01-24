@@ -43,10 +43,32 @@ public class RobotSoldier implements Robot {
 
             }
 
+            final RobotInfo[] enemies = robotController.senseHostileRobots(currentLocation, robotController.getType().sensorRadiusSquared);
+            politicalAgenda.verifyAllEnemyArchonSignals(robotController, enemies);
+
             // let's get the best assignment
 
             InformationSignal objectiveSignal = null;
             int closestObjectiveLocationDistance = Integer.MAX_VALUE;
+
+            int enemyArchonCount = politicalAgenda.enemyArchons.size();
+            for (int i = 0; i < enemyArchonCount; i++) {
+
+                final InformationSignal signal = politicalAgenda.enemyArchons.get(i);
+                int distance = signal.location.distanceSquaredTo(currentLocation);
+                if (!combatModule.isLocationOnOurSide(robotController, signal.location)) {
+
+                    distance = distance * 5;
+
+                }
+                if (distance < closestObjectiveLocationDistance) {
+
+                    objectiveSignal = signal;
+                    closestObjectiveLocationDistance = distance;
+
+                }
+
+            }
 
             int zombieDenCount = politicalAgenda.zombieDens.size();
             for (int i = 0; i < zombieDenCount; i++) {
@@ -78,9 +100,7 @@ public class RobotSoldier implements Robot {
 
             // see if we can attack anything this turn
 
-            final RobotInfo[] enemies = robotController.senseHostileRobots(currentLocation, -1);
             final RobotInfo[] friendlies = robotController.senseNearbyRobots(-1, robotController.getTeam());
-
             final RobotInfo[] attackableEnemies = robotController.senseHostileRobots(currentLocation, robotController.getType().attackRadiusSquared);
             final RobotInfo bestEnemy = this.getBestEnemyToAttackFromEnemies(attackableEnemies);
 
@@ -539,14 +559,21 @@ public class RobotSoldier implements Robot {
             for (int i = 0; i < politicalAgenda.archonLocations.size(); i++) {
 
                 final MapLocation archonLocation = politicalAgenda.archonLocations.get(i);
-                robotController.setIndicatorLine(currentLocation, archonLocation, 25, 25, 255);
+                robotController.setIndicatorLine(currentLocation, archonLocation, 136, 125, 255);
 
             }
 
             for (int i = 0; i < politicalAgenda.enemies.size(); i++) {
 
                 final EnemyInfo enemy = politicalAgenda.enemies.get(i);
-                robotController.setIndicatorLine(currentLocation, enemy.location, 255, 0, 255);
+                robotController.setIndicatorLine(currentLocation, enemy.location, 255, 0, 208);
+
+            }
+
+            for (int i = 0; i < politicalAgenda.enemyArchons.size(); i++) {
+
+                final InformationSignal signal = politicalAgenda.enemyArchons.get(i);
+                robotController.setIndicatorLine(currentLocation, signal.location, 174, 0, 255);
 
             }
 
@@ -560,20 +587,20 @@ public class RobotSoldier implements Robot {
             for (int i = 0; i < politicalAgenda.enemyClumps.size(); i++) {
 
                 final ClumpInfo clumpInfo = politicalAgenda.enemyClumps.get(i);
-                robotController.setIndicatorLine(currentLocation, clumpInfo.location, 120, 0, 0);
+                robotController.setIndicatorLine(currentLocation, clumpInfo.location, 255, 186, 186);
 
             }
 
             for (int i = 0; i < politicalAgenda.friendlyClumps.size(); i++) {
 
                 final ClumpInfo clumpInfo = politicalAgenda.friendlyClumps.get(i);
-                robotController.setIndicatorLine(currentLocation, clumpInfo.location, 0, 120, 0);
+                robotController.setIndicatorLine(currentLocation, clumpInfo.location, 186, 207, 255);
 
             }
 
             if (objectiveSignal != null) {
 
-                robotController.setIndicatorLine(objectiveSignal.location, robotController.getLocation(), 0, 200, 200);
+                robotController.setIndicatorLine(objectiveSignal.location, robotController.getLocation(), 255, 0, 0);
 
             }
 

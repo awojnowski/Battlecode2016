@@ -57,7 +57,6 @@ public class RobotScout implements Robot {
 
             MapLocation currentLocation = robotController.getLocation();
             final RobotInfo[] enemies = robotController.senseHostileRobots(currentLocation, robotController.getType().sensorRadiusSquared);
-
             final RobotInfo[] friendlies = robotController.senseNearbyRobots(-1, robotController.getTeam());
             boolean areFriendliesNearby = false;
             for (int i = 0; i < friendlies.length; i++) {
@@ -75,6 +74,21 @@ public class RobotScout implements Robot {
             robotController.setIndicatorString(1, "Signal distance: " + politicalAgenda.maximumBroadcastRangeForLocation(currentLocation));
 
             // let's verify information
+
+            for (int i = 0; i < politicalAgenda.enemyArchons.size(); i++) {
+
+                final InformationSignal signal = politicalAgenda.enemyArchons.get(i);
+                if (!politicalAgenda.verifyEnemyArchonSignal(signal, robotController, enemies)) {
+
+                    i--;
+
+                    signal.action = PoliticalAgenda.SignalActionErase;
+                    signal.broadcastRange = politicalAgenda.maximumBroadcastRangeForLocation(currentLocation);
+                    politicalAgenda.enqueueSignalForBroadcast(signal, robotController);
+
+                }
+
+            }
 
             int zombieDenCount = politicalAgenda.zombieDens.size();
             for (int i = 0; i < zombieDenCount; i++) {
@@ -116,13 +130,31 @@ public class RobotScout implements Robot {
                     mirroredSignal.broadcastRange = maximumBroadcastRange;
                     politicalAgenda.enqueueSignalForBroadcast(mirroredSignal, robotController);
 
-                } else if (areFriendliesNearby) {
+                } else {
 
-                    // broadcast seen enemy information to friendlies
+                    if (areFriendliesNearby) {
 
-                    final InformationSignal signal = politicalAgenda.generateEnemyInformationSignal(enemy.location, enemy.type, (int)enemy.health, enemy.ID);
-                    signal.broadcastRange = politicalAgenda.maximumFreeBroadcastRangeForType(robotController.getType());
-                    politicalAgenda.enqueueSignalForBroadcast(signal, robotController);
+                        // broadcast seen enemy information to friendlies
+
+                        final InformationSignal signal = politicalAgenda.generateEnemyInformationSignal(enemy.location, enemy.type, (int)enemy.health, enemy.ID);
+                        signal.broadcastRange = politicalAgenda.maximumFreeBroadcastRangeForType(robotController.getType());
+                        politicalAgenda.enqueueSignalForBroadcast(signal, robotController);
+
+                    }
+
+                    if (enemy.type == RobotType.ARCHON) {
+
+                        if (politicalAgenda.enemyArchons.contains(enemy.ID)) {
+
+                            continue;
+
+                        }
+
+                        final InformationSignal signal = politicalAgenda.generateEnemyArchonInformationSignal(enemy.location, enemy.ID);
+                        signal.broadcastRange = politicalAgenda.maximumBroadcastRangeForLocation(currentLocation);
+                        politicalAgenda.enqueueSignalForBroadcast(signal, robotController);
+
+                    }
 
                 }
 
@@ -385,14 +417,21 @@ public class RobotScout implements Robot {
             for (int i = 0; i < politicalAgenda.archonLocations.size(); i++) {
 
                 final MapLocation archonLocation = politicalAgenda.archonLocations.get(i);
-                robotController.setIndicatorLine(currentLocation, archonLocation, 25, 25, 255);
+                robotController.setIndicatorLine(currentLocation, archonLocation, 136, 125, 255);
 
             }
 
             for (int i = 0; i < politicalAgenda.enemies.size(); i++) {
 
                 final EnemyInfo enemy = politicalAgenda.enemies.get(i);
-                robotController.setIndicatorLine(currentLocation, enemy.location, 255, 0, 255);
+                robotController.setIndicatorLine(currentLocation, enemy.location, 255, 0, 208);
+
+            }
+
+            for (int i = 0; i < politicalAgenda.enemyArchons.size(); i++) {
+
+                final InformationSignal signal = politicalAgenda.enemyArchons.get(i);
+                robotController.setIndicatorLine(currentLocation, signal.location, 174, 0, 255);
 
             }
 
@@ -406,14 +445,14 @@ public class RobotScout implements Robot {
             for (int i = 0; i < politicalAgenda.enemyClumps.size(); i++) {
 
                 final ClumpInfo clumpInfo = politicalAgenda.enemyClumps.get(i);
-                robotController.setIndicatorLine(currentLocation, clumpInfo.location, 120, 0, 0);
+                robotController.setIndicatorLine(currentLocation, clumpInfo.location, 255, 186, 186);
 
             }
 
             for (int i = 0; i < politicalAgenda.friendlyClumps.size(); i++) {
 
                 final ClumpInfo clumpInfo = politicalAgenda.friendlyClumps.get(i);
-                robotController.setIndicatorLine(currentLocation, clumpInfo.location, 0, 120, 0);
+                robotController.setIndicatorLine(currentLocation, clumpInfo.location, 186, 207, 255);
 
             }
 

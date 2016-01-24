@@ -22,6 +22,7 @@ public class PoliticalAgenda {
     public static int SignalTypeArchonUpdate      = 8;
     public static int SignalTypeFriendlyClump     = 9;
     public static int SignalTypeEnemyClump        = 10;
+    public static int SignalTypeEnemyArchon       = 11;
 
     public static int UnknownValue = -186784223;
 
@@ -40,9 +41,9 @@ public class PoliticalAgenda {
     public int companionIdentifier = PoliticalAgenda.UnknownValue;
 
     public ArrayList<MapLocation> archonLocations = new ArrayList<MapLocation>();
-    public ArrayList<MapLocation> archonMaydayLocations = new ArrayList<MapLocation>();
     public ImmutableInformationCollection<EnemyInfo> enemies = null;
     public final ArrayList<Signal> notifications = new ArrayList<Signal>();
+    public final MutableInformationCollection<InformationSignal> enemyArchons = new MutableInformationCollection<InformationSignal>();
     public final MutableInformationCollection<InformationSignal> zombieDens = new MutableInformationCollection<InformationSignal>();
     public final ArrayList<ClumpInfo> enemyClumps = new ArrayList<ClumpInfo>();
     public final ArrayList<ClumpInfo> friendlyClumps = new ArrayList<ClumpInfo>();
@@ -475,6 +476,14 @@ public class PoliticalAgenda {
             clumpInfo.turn = robotController.getRoundNum();
             this.friendlyClumps.add(clumpInfo);
 
+        } else if (signal.type == PoliticalAgenda.SignalTypeEnemyArchon) {
+
+            this.enemyArchons.remove(signal.data);
+            if (signal.action == PoliticalAgenda.SignalActionWrite) {
+
+                this.enemyArchons.add(signal, signal.data);
+
+            }
 
         }
 
@@ -578,6 +587,17 @@ public class PoliticalAgenda {
 
     }
 
+    public InformationSignal generateEnemyArchonInformationSignal(final MapLocation location, final int identifier) {
+
+        final InformationSignal informationSignal = new InformationSignal();
+        informationSignal.action = PoliticalAgenda.SignalActionWrite;
+        informationSignal.data = identifier;
+        informationSignal.location = location;
+        informationSignal.type = PoliticalAgenda.SignalTypeEnemyArchon;
+        return informationSignal;
+
+    }
+
     public InformationSignal generateZombieDenInformationSignal(final MapLocation location) {
 
         final InformationSignal informationSignal = new InformationSignal();
@@ -637,6 +657,45 @@ public class PoliticalAgenda {
     /*
     SIGNAL VERIFICATION
      */
+
+    public void verifyAllEnemyArchonSignals(final RobotController robotController, final RobotInfo[] enemies) throws GameActionException {
+
+        for (int i = 0; i < this.enemyArchons.size(); i++) {
+
+            final InformationSignal archonSignal = this.enemyArchons.get(i);
+            if (!this.verifyEnemyArchonSignal(archonSignal, robotController, enemies)) {
+
+                i--;
+
+            }
+
+        }
+
+    }
+
+    public boolean verifyEnemyArchonSignal(final InformationSignal signal, final RobotController robotController, final RobotInfo[] enemies) throws GameActionException {
+
+        final int distance = robotController.getLocation().distanceSquaredTo(signal.location);
+        if (distance > robotController.getType().sensorRadiusSquared / 2.0) {
+
+            return true;
+
+        }
+
+        for (int i = 0; i < enemies.length; i++) {
+
+            final RobotInfo enemy = enemies[i];
+            if (signal.data == enemy.ID) {
+
+                return true;
+
+            }
+
+        }
+        this.enemyArchons.remove(signal.data);
+        return false;
+
+    }
 
     public boolean verifyZombieDenSignal(final InformationSignal signal, final RobotController robotController) throws GameActionException {
 
