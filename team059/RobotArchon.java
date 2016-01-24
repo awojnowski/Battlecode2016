@@ -30,6 +30,7 @@ public class RobotArchon implements Robot {
         RobotType buildingUnitType = null;
 
         boolean relayInformation = false;
+        boolean sendArchonUpdate = false;
         int relayInformationDelay = 0;
         ArrayList<InformationSignal> informationRelaySignals = null;
 
@@ -142,24 +143,17 @@ public class RobotArchon implements Robot {
 
             // send an archon update if necessary
 
-            if (robotController.getRoundNum() > 0 && robotController.getRoundNum() % PoliticalAgenda.ArchonUpdateModulus == 0) {
+            if (robotController.getRoundNum() > 300 && robotController.getRoundNum() % PoliticalAgenda.ArchonUpdateModulus == 0) {
 
-                final MapLocation currentLocation = robotController.getLocation();
-
-                final InformationSignal signal = new InformationSignal();
-                signal.action = PoliticalAgenda.SignalActionWrite;
-                signal.broadcastRange = politicalAgenda.maximumBroadcastRangeForLocation(currentLocation);
-                signal.location = currentLocation;
-                signal.type = PoliticalAgenda.SignalTypeArchonUpdate;
-                politicalAgenda.broadcastSignal(signal, robotController);
-
+                sendArchonUpdate = true;
 
             }
 
-            // check to make sure we are safe
+            // setup action constants
 
             MapLocation currentLocation = robotController.getLocation();
             final RobotInfo[] enemies = robotController.senseHostileRobots(currentLocation, robotController.getType().sensorRadiusSquared);
+            final RobotInfo[] friendlies = robotController.senseNearbyRobots(robotController.getType().sensorRadiusSquared, robotController.getTeam());
 
             final DirectionController directionController = new DirectionController(robotController);
             directionController.currentLocation = currentLocation;
@@ -168,19 +162,24 @@ public class RobotArchon implements Robot {
             directionController.random = random;
             directionController.shouldAvoidEnemies = true;
 
-            if (robotController.isCoreReady() && enemies.length > 0) {
+            boolean inDanger = false;
+            if (enemies.length > friendlies.length) {
 
-                final Direction enemiesDirection = directionController.getAverageDirectionTowardsEnemies(enemies, true);
-                if (enemiesDirection != null) {
+                // either we are outnumbered
 
-                    directionController.shouldAvoidEnemies = false;
-                    final DirectionController.Result enemiesMovementResult = directionController.getDirectionResultFromDirection(enemiesDirection.opposite(), DirectionController.ADJUSTMENT_THRESHOLD_MEDIUM);
-                    directionController.shouldAvoidEnemies = true;
+                inDanger = true;
 
-                    if (enemiesMovementResult.direction != null) {
+            } else {
 
-                        robotController.move(enemiesMovementResult.direction);
-                        currentLocation = robotController.getLocation();
+                // or we are in attack range
+
+                for (int i = 0; i < enemies.length; i++) {
+
+                    final int attackRadiusSquared = directionController.attackRadiusSquaredWithBuffer(enemies[i].type.attackRadiusSquared, 2);
+                    if (attackRadiusSquared >= currentLocation.distanceSquaredTo(enemies[i].location)) {
+
+                        inDanger = true;
+                        break;
 
                     }
 
@@ -188,58 +187,197 @@ public class RobotArchon implements Robot {
 
             }
 
-            // attempt to build new units
+            // check if we need to send an archon update
 
-            RobotType typeToBuild = null;
-            if (scoutsBuilt == 0 || scoutsBuilt * 15 < soldiersBuilt) {
+            if (sendArchonUpdate && !inDanger) {
 
-                typeToBuild = RobotType.SCOUT;
+                robotController.setIndicatorString(1, "Sending archon update with enemies " + enemies.length);
 
-            } else if (vipersBuilt * 20 < soldiersBuilt && soldiersBuilt > 5) {
+                final InformationSignal signal = new InformationSignal();
+                signal.action = PoliticalAgenda.SignalActionWrite;
+                signal.broadcastRange = politicalAgenda.maximumBroadcastRangeForLocation(currentLocation);
+                signal.location = currentLocation;
+                signal.type = PoliticalAgenda.SignalTypeArchonUpdate;
+                politicalAgenda.broadcastSignal(signal, robotController);
 
-                typeToBuild = RobotType.VIPER;
-
-            } else if (turretsBuilt * 20 < soldiersBuilt && soldiersBuilt > 20 && false) {
-
-                typeToBuild = RobotType.TURRET;
-
-            } else {
-
-                typeToBuild = RobotType.SOLDIER;
+                sendArchonUpdate = false;
 
             }
-            robotController.setIndicatorString(0, "Building " + typeToBuild);
 
-            if (robotController.isCoreReady()) {
+            // perform action
 
-                if (robotController.getTeamParts() >= typeToBuild.partCost) {
+            while (true) {
 
-                    for (int i = 0; i < DirectionController.DIRECTIONS.length; i++) {
+                if (!robotController.isCoreReady()) {
 
-                        if (robotController.canBuild(DirectionController.DIRECTIONS[i], typeToBuild)) {
+                    break;
 
-                            buildingUnitType = typeToBuild;
-                            if (typeToBuild == RobotType.SCOUT) {
+                }
 
-                                scoutsBuilt ++;
+                // get to our friendlies if need be
+
+                if (robotController.isCoreReady()) {
+
+                    if (friendlies.length < 8) {
+
+                        robotController.setIndicatorString(1, "I need to try and find some friendlies...");
+
+                        int closestFriendlyDistance = Integer.MAX_VALUE;
+                        MapLocation closestLocation = null;
+
+                        final ArrayList<ClumpInfo> friendlyClumps = politicalAgenda.friendlyClumps;
+                        for (int i = 0; i < friendlyClumps.size(); i++) {
+
+                            final ClumpInfo enemyInfo = friendlyClumps.get(i);
+                            final int distance = currentLocation.distanceSquaredTo(enemyInfo.location);
+                            if (distance < closestFriendlyDistance) {
+
+                                closestFriendlyDistance = distance;
+                                closestLocation = enemyInfo.location;
 
                             }
-                            if (typeToBuild == RobotType.SOLDIER) {
 
-                                soldiersBuilt ++;
+                        }
+                        if (closestLocation != null) {
+
+                            if (closestFriendlyDistance > 64) {
+
+                                final Direction closestSignalDirection = currentLocation.directionTo(closestLocation);
+                                final DirectionController.Result closestSignalResult = directionController.getDirectionResultFromDirection(closestSignalDirection, DirectionController.ADJUSTMENT_THRESHOLD_LOW);
+                                if (closestSignalResult.direction != null && !movementModule.isMovementLocationRepetitive(currentLocation.add(closestSignalResult.direction), robotController)) {
+
+                                    robotController.move(closestSignalResult.direction);
+                                    currentLocation = robotController.getLocation();
+                                    movementModule.addMovementLocation(currentLocation, robotController);
+                                    robotController.setIndicatorString(0, "I am moving to a friendly clump at " + closestLocation);
+                                    break;
+
+                                } else if (closestSignalResult.error == DirectionController.ErrorType.BLOCKED_RUBBLE) {
+
+                                    final Direction rubbleClearanceDirection = rubbleModule.getRubbleClearanceDirectionFromDirection(closestSignalDirection, robotController, RubbleModule.ADJUSTMENT_THRESHOLD_MEDIUM);
+                                    if (rubbleClearanceDirection != null) {
+
+                                        robotController.clearRubble(rubbleClearanceDirection);
+                                        movementModule.extendLocationInvalidationTurn(robotController);
+                                        robotController.setIndicatorString(0, "I cleared rubble to get to a friendly clump at " + closestLocation);
+                                        break;
+
+                                    }
+
+                                }
 
                             }
-                            if (typeToBuild == RobotType.VIPER) {
 
-                                vipersBuilt ++;
+                        }
+
+                    }
+
+                }
+
+                // see if we are safe
+
+                if (robotController.isCoreReady()) {
+
+                    if (inDanger) {
+
+                        final Direction enemiesDirection = directionController.getAverageDirectionTowardsEnemies(enemies, true);
+                        if (enemiesDirection != null) {
+
+                            directionController.shouldAvoidEnemies = false;
+                            final DirectionController.Result enemiesMovementResult = directionController.getDirectionResultFromDirection(enemiesDirection.opposite(), DirectionController.ADJUSTMENT_THRESHOLD_MEDIUM);
+                            directionController.shouldAvoidEnemies = true;
+
+                            if (enemiesMovementResult.direction != null) {
+
+                                robotController.move(enemiesMovementResult.direction);
+                                currentLocation = robotController.getLocation();
+                                robotController.setIndicatorString(0, "I'm fleeing to get away from enemies " + enemiesDirection);
+                                break;
+
+                            } else if (enemiesMovementResult.error == DirectionController.ErrorType.BLOCKED_RUBBLE) {
+
+                                final Direction rubbleClearanceDirection = rubbleModule.getRubbleClearanceDirectionFromDirection(enemiesDirection.opposite(), robotController, RubbleModule.ADJUSTMENT_THRESHOLD_MEDIUM);
+                                if (rubbleClearanceDirection != null) {
+
+                                    final double rubble = robotController.senseRubble(currentLocation.add(rubbleClearanceDirection));
+                                    if (rubble < 1000.0) {
+
+                                        robotController.clearRubble(rubbleClearanceDirection);
+                                        robotController.setIndicatorString(0, "I'm clearing rubble " + rubbleClearanceDirection + " to get away from enemies " + enemiesDirection);
+                                        break;
+
+                                    }
+
+                                }
 
                             }
-                            if (typeToBuild == RobotType.TURRET) {
 
-                                turretsBuilt ++;
+                        }
+
+                    }
+
+                }
+
+                // try and build new units
+
+                if (robotController.isCoreReady()) {
+
+                    RobotType typeToBuild = null;
+                    if (scoutsBuilt == 0 || scoutsBuilt * 15 < soldiersBuilt) {
+
+                        typeToBuild = RobotType.SCOUT;
+
+                    } else if (vipersBuilt * 20 < soldiersBuilt && soldiersBuilt > 5) {
+
+                        typeToBuild = RobotType.VIPER;
+
+                    } else if (turretsBuilt * 20 < soldiersBuilt && soldiersBuilt > 20 && false) {
+
+                        typeToBuild = RobotType.TURRET;
+
+                    } else {
+
+                        typeToBuild = RobotType.SOLDIER;
+
+                    }
+                    if (robotController.getTeamParts() >= typeToBuild.partCost) {
+
+                        boolean built = false;
+                        for (int i = 0; i < DirectionController.DIRECTIONS.length; i++) {
+
+                            if (robotController.canBuild(DirectionController.DIRECTIONS[i], typeToBuild)) {
+
+                                buildingUnitType = typeToBuild;
+                                if (typeToBuild == RobotType.SCOUT) {
+
+                                    scoutsBuilt ++;
+
+                                }
+                                if (typeToBuild == RobotType.SOLDIER) {
+
+                                    soldiersBuilt ++;
+
+                                }
+                                if (typeToBuild == RobotType.VIPER) {
+
+                                    vipersBuilt ++;
+
+                                }
+                                if (typeToBuild == RobotType.TURRET) {
+
+                                    turretsBuilt ++;
+
+                                }
+                                robotController.build(DirectionController.DIRECTIONS[i], typeToBuild);
+                                robotController.setIndicatorString(0, "I started to build " + typeToBuild + " in direction " + DirectionController.DIRECTIONS[i]);
+                                built = true;
+                                break;
 
                             }
-                            robotController.build(DirectionController.DIRECTIONS[i], typeToBuild);
+
+                        }
+                        if (built) {
+
                             break;
 
                         }
@@ -248,161 +386,140 @@ public class RobotArchon implements Robot {
 
                 }
 
-            }
+                // move toward visible neutral robots
 
-            // try to move toward neutral robots
+                if (robotController.isCoreReady()) {
 
-            Direction targetRubbleClearanceDirection = null;
-            if (robotController.isCoreReady()) {
+                    MapLocation nearestNeutralLocation = null;
 
-                MapLocation nearestNeutralLocation = null;
+                    final RobotInfo[] neutrals = robotController.senseNearbyRobots(robotController.getType().sensorRadiusSquared, Team.NEUTRAL);
+                    if (neutrals.length > 0) {
 
-                final RobotInfo[] neutrals = robotController.senseNearbyRobots(robotController.getType().sensorRadiusSquared, Team.NEUTRAL);
-                if (neutrals.length > 0) {
+                        double nearestNeutralRanking = 0;
 
-                    double nearestNeutralRanking = 0;
+                        for (int i = 0; i < neutrals.length; i++) {
 
-                    for (int i = 0; i < neutrals.length; i++) {
+                            final RobotInfo neutralRobot = neutrals[i];
+                            final MapLocation neutralLocation = neutralRobot.location;
+                            final double neutralValue = neutralRobot.maxHealth * neutralRobot.type.attackRadiusSquared;
+                            final int distance = neutralLocation.distanceSquaredTo(currentLocation);
 
-                        final RobotInfo neutralRobot = neutrals[i];
-                        final MapLocation neutralLocation = neutralRobot.location;
-                        final double neutralValue = neutralRobot.maxHealth * neutralRobot.type.attackRadiusSquared;
-                        final int distance = neutralLocation.distanceSquaredTo(currentLocation);
+                            final double ranking = neutralValue / distance;
+                            if (ranking > nearestNeutralRanking) {
 
-                        final double ranking = neutralValue / distance;
-                        if (ranking > nearestNeutralRanking) {
+                                nearestNeutralLocation = neutralLocation;
+                                nearestNeutralRanking = ranking;
 
-                            nearestNeutralLocation = neutralLocation;
-                            nearestNeutralRanking = ranking;
+                            }
+
+                        }
+
+                    }
+                    if (nearestNeutralLocation != null) {
+
+                        final Direction nearestNeutralDirection = currentLocation.directionTo(nearestNeutralLocation);
+                        final DirectionController.Result nearestNeutralMovementResult = directionController.getDirectionResultFromDirection(nearestNeutralDirection, DirectionController.ADJUSTMENT_THRESHOLD_MEDIUM);
+                        if (nearestNeutralMovementResult.direction != null && !movementModule.isMovementLocationRepetitive(currentLocation.add(nearestNeutralMovementResult.direction), robotController)) {
+
+                            robotController.move(nearestNeutralMovementResult.direction);
+                            currentLocation = robotController.getLocation();
+                            movementModule.addMovementLocation(currentLocation, robotController);
+                            robotController.setIndicatorString(0, "I moved " + nearestNeutralMovementResult.direction + " to get to a neutral at " + nearestNeutralLocation);
+                            break;
+
+                        } else if (nearestNeutralMovementResult.error == DirectionController.ErrorType.BLOCKED_RUBBLE) {
+
+                            final Direction rubbleClearanceDirection = rubbleModule.getRubbleClearanceDirectionFromDirection(nearestNeutralDirection, robotController, RubbleModule.ADJUSTMENT_THRESHOLD_MEDIUM);
+                            if (rubbleClearanceDirection != null) {
+
+                                robotController.clearRubble(rubbleClearanceDirection);
+                                movementModule.extendLocationInvalidationTurn(robotController);
+                                robotController.setIndicatorString(0, "I cleared rubble " + rubbleClearanceDirection + " to get to a neutral at " + nearestNeutralLocation);
+                                break;
+
+                            }
 
                         }
 
                     }
 
                 }
-                if (nearestNeutralLocation != null) {
 
-                    final Direction nearestNeutralDirection = currentLocation.directionTo(nearestNeutralLocation);
-                    final DirectionController.Result nearestNeutralMovementResult = directionController.getDirectionResultFromDirection(nearestNeutralDirection, DirectionController.ADJUSTMENT_THRESHOLD_MEDIUM);
-                    if (nearestNeutralMovementResult.direction != null && !movementModule.isMovementLocationRepetitive(currentLocation.add(nearestNeutralMovementResult.direction), robotController)) {
+                // move toward spare parts
 
-                        robotController.move(nearestNeutralMovementResult.direction);
-                        currentLocation = robotController.getLocation();
-                        movementModule.addMovementLocation(currentLocation, robotController);
+                if (robotController.isCoreReady()) {
 
-                    } else {
+                    MapLocation nearestPartsLocation = null;
 
-                        targetRubbleClearanceDirection = nearestNeutralDirection;
+                    final MapLocation[] partsLocations = robotController.sensePartLocations(-1);
+                    if (partsLocations.length > 0) {
+
+                        double nearestPartsRanking = 0;
+
+                        for (int i = 0; i < partsLocations.length; i++) {
+
+                            final MapLocation partsLocation = partsLocations[i];
+                            final double partsTotal = robotController.senseParts(partsLocation);
+                            final double rubbleTotal = Math.max(1, robotController.senseRubble(partsLocation));
+                            final int distance = partsLocation.distanceSquaredTo(currentLocation);
+
+                            final double ranking = partsTotal / Math.sqrt(rubbleTotal) / distance;
+                            if (ranking > nearestPartsRanking) {
+
+                                nearestPartsLocation = partsLocation;
+                                nearestPartsRanking = ranking;
+
+                            }
+
+                        }
 
                     }
+                    if (nearestPartsLocation != null) {
 
-                }
+                        final Direction nearestPartsDirection = currentLocation.directionTo(nearestPartsLocation);
+                        final DirectionController.Result nearestPartsMovementResult = directionController.getDirectionResultFromDirection(nearestPartsDirection, DirectionController.ADJUSTMENT_THRESHOLD_MEDIUM);
+                        if (nearestPartsMovementResult.direction != null && !movementModule.isMovementLocationRepetitive(currentLocation.add(nearestPartsMovementResult.direction), robotController)) {
 
-            }
+                            robotController.move(nearestPartsMovementResult.direction);
+                            currentLocation = robotController.getLocation();
+                            movementModule.addMovementLocation(currentLocation, robotController);
+                            robotController.setIndicatorString(0, "I moved " + nearestPartsMovementResult.direction + " to get to spare parts at " + nearestPartsLocation);
+                            break;
 
-            // try to move toward some spare parts
+                        } else if (nearestPartsMovementResult.error == DirectionController.ErrorType.BLOCKED_RUBBLE) {
 
-            if (robotController.isCoreReady()) {
+                            final Direction rubbleClearanceDirection = rubbleModule.getRubbleClearanceDirectionFromDirection(nearestPartsDirection, robotController, RubbleModule.ADJUSTMENT_THRESHOLD_MEDIUM);
+                            if (rubbleClearanceDirection != null) {
 
-                MapLocation nearestPartsLocation = null;
+                                robotController.clearRubble(rubbleClearanceDirection);
+                                movementModule.extendLocationInvalidationTurn(robotController);
+                                robotController.setIndicatorString(0, "I cleared rubble " + rubbleClearanceDirection + " to get to spare parts at " + nearestPartsLocation);
+                                break;
 
-                final MapLocation[] partsLocations = robotController.sensePartLocations(-1);
-                if (partsLocations.length > 0) {
-
-                    double nearestPartsRanking = 0;
-
-                    for (int i = 0; i < partsLocations.length; i++) {
-
-                        final MapLocation partsLocation = partsLocations[i];
-                        final double partsTotal = robotController.senseParts(partsLocation);
-                        final double rubbleTotal = Math.max(1, robotController.senseRubble(partsLocation));
-                        final int distance = partsLocation.distanceSquaredTo(currentLocation);
-
-                        final double ranking = partsTotal / Math.sqrt(rubbleTotal) / distance;
-                        if (ranking > nearestPartsRanking) {
-
-                            nearestPartsLocation = partsLocation;
-                            nearestPartsRanking = ranking;
+                            }
 
                         }
 
                     }
 
                 }
-                if (nearestPartsLocation != null) {
 
-                    final Direction nearestPartsDirection = currentLocation.directionTo(nearestPartsLocation);
-                    final DirectionController.Result nearestPartsMovementResult = directionController.getDirectionResultFromDirection(nearestPartsDirection, DirectionController.ADJUSTMENT_THRESHOLD_MEDIUM);
-                    if (nearestPartsMovementResult.direction != null && !movementModule.isMovementLocationRepetitive(currentLocation.add(nearestPartsMovementResult.direction), robotController)) {
+                // try clear rubble
 
-                        robotController.move(nearestPartsMovementResult.direction);
-                        currentLocation = robotController.getLocation();
-                        movementModule.addMovementLocation(currentLocation, robotController);
+                if (robotController.isCoreReady()) {
 
-                    } else {
-
-                        targetRubbleClearanceDirection = nearestPartsDirection;
-
-                    }
-
-                }
-
-            }
-
-            // we can try clear rubble if we didn't move
-
-            if (robotController.isCoreReady()) {
-
-                if (targetRubbleClearanceDirection != null) {
-
-                    final Direction rubbleClearanceDirection = rubbleModule.getRubbleClearanceDirectionFromDirection(targetRubbleClearanceDirection, robotController, RubbleModule.ADJUSTMENT_THRESHOLD_LOW);
+                    final Direction rubbleClearanceDirection = rubbleModule.getRubbleClearanceDirectionFromDirection(directionController.getRandomDirection(), robotController, RubbleModule.ADJUSTMENT_THRESHOLD_ALL);
                     if (rubbleClearanceDirection != null) {
 
                         robotController.clearRubble(rubbleClearanceDirection);
-                        movementModule.extendLocationInvalidationTurn(robotController);
+                        robotController.setIndicatorString(0, "I cleared rubble " + rubbleClearanceDirection + " because I have nothing else to do.");
+                        break;
 
                     }
 
                 }
 
-            }
-
-            // otherwise, try to follow the soldier clump
-
-            if (robotController.isCoreReady()) {
-
-                Direction nearestFriendliesDirection = null;
-
-                RobotInfo[] closeAllies = robotController.senseNearbyRobots(3, currentTeam); // How close they stay to their team, lower means they'll stay closer
-                RobotInfo[] closeSoldiers = CombatModule.robotsOfTypesFromRobots(closeAllies, new RobotType[]{RobotType.SOLDIER, RobotType.GUARD});
-
-                if (closeSoldiers.length < 2) { // Move towards team if far away
-
-                    final RobotInfo[] nearbyFriendlies = robotController.senseNearbyRobots(-1, currentTeam);
-                    if (nearbyFriendlies.length > 0) {
-
-                        nearestFriendliesDirection = directionController.getAverageDirectionTowardFriendlies(nearbyFriendlies, false);
-
-                    }
-
-                }
-
-                if (nearestFriendliesDirection != null) {
-
-                    final DirectionController.Result nearestFriendliesMovementResult = directionController.getDirectionResultFromDirection(nearestFriendliesDirection, DirectionController.ADJUSTMENT_THRESHOLD_MEDIUM);
-                    if (nearestFriendliesMovementResult.direction != null && !movementModule.isMovementLocationRepetitive(currentLocation.add(nearestFriendliesMovementResult.direction), robotController)) {
-
-                        robotController.move(nearestFriendliesMovementResult.direction);
-                        currentLocation = robotController.getLocation();
-                        movementModule.addMovementLocation(currentLocation, robotController);
-
-                    } else {
-
-                        targetRubbleClearanceDirection = nearestFriendliesDirection;
-
-                    }
-
-                }
+                break;
 
             }
 
@@ -446,7 +563,7 @@ public class RobotArchon implements Robot {
 
             // show what we know
 
-            for (int i = 0; i < politicalAgenda.archonLocations.size(); i++) {
+            /*for (int i = 0; i < politicalAgenda.archonLocations.size(); i++) {
 
                 final MapLocation archonLocation = politicalAgenda.archonLocations.get(i);
                 robotController.setIndicatorLine(currentLocation, archonLocation, 136, 125, 255);
@@ -460,12 +577,12 @@ public class RobotArchon implements Robot {
 
             }
 
-            for (int i = 0; i < politicalAgenda.enemyArchons.size(); i++) {
+            */for (int i = 0; i < politicalAgenda.enemyArchons.size(); i++) {
 
                 final InformationSignal signal = politicalAgenda.enemyArchons.get(i);
                 robotController.setIndicatorLine(currentLocation, signal.location, 174, 0, 255);
 
-            }
+            }/*
 
             for (int i = 0; i < politicalAgenda.zombieDens.size(); i++) {
 
@@ -486,7 +603,7 @@ public class RobotArchon implements Robot {
                 final ClumpInfo clumpInfo = politicalAgenda.friendlyClumps.get(i);
                 robotController.setIndicatorLine(currentLocation, clumpInfo.location, 186, 207, 255);
 
-            }
+            }*/
 
             Clock.yield();
 

@@ -79,6 +79,13 @@ public class RobotSoldier implements Robot {
 
                 }
 
+                boolean isDoomed = false;
+                if (robotController.getInfectedTurns() * 2 > robotController.getHealth()) {
+
+                    isDoomed = true;
+
+                }
+
                 final DirectionController directionController = new DirectionController(robotController);
                 directionController.currentLocation = currentLocation;
                 directionController.nearbyEnemies = enemies;
@@ -90,7 +97,40 @@ public class RobotSoldier implements Robot {
                 final RobotInfo bestAttackableEnemy = this.getBestEnemyToAttackFromEnemies(attackableEnemies);
                 final RobotInfo bestFoundEnemy = this.getBestEnemyToAttackFromEnemies(enemies);
 
-                // attack the enemy if it is not a zombie den (those are handled later and prioritized lower)
+                if (robotController.isCoreReady()) {
+
+                    if (bestAttackableEnemy != null) {
+
+                        if (bestAttackableEnemy.type == RobotType.STANDARDZOMBIE || bestAttackableEnemy.type == RobotType.BIGZOMBIE) {
+
+                            final int distance = currentLocation.distanceSquaredTo(bestAttackableEnemy.location);
+                            if (distance < 9) {
+
+                                final Direction kiteDirection = currentLocation.directionTo(bestAttackableEnemy.location);
+                                if (kiteDirection != null) {
+
+                                    directionController.shouldAvoidEnemies = false;
+                                    final DirectionController.Result kiteDirectionResult = directionController.getDirectionResultFromDirection(kiteDirection.opposite(), DirectionController.ADJUSTMENT_THRESHOLD_MEDIUM);
+                                    directionController.shouldAvoidEnemies = true;
+
+                                    if (kiteDirectionResult.direction != null) {
+
+                                        robotController.move(kiteDirectionResult.direction);
+                                        currentLocation = robotController.getLocation();
+                                        robotController.setIndicatorString(1, "I moved away from a zombie at " + kiteDirection);
+                                        break;
+
+                                    }
+
+                                }
+
+                            }
+
+                        }
+
+                    }
+
+                }
 
                 if (robotController.isWeaponReady()) {
 
@@ -212,6 +252,12 @@ public class RobotSoldier implements Robot {
                     if (bestAttackableEnemy != null && (bestAttackableEnemy.type == RobotType.BIGZOMBIE || bestAttackableEnemy.type == RobotType.STANDARDZOMBIE)) {
 
                         isAggressive = false;
+
+                    }
+
+                    if (isDoomed) {
+
+                        isAggressive = true;
 
                     }
 
@@ -443,6 +489,7 @@ public class RobotSoldier implements Robot {
                             if (rubbleClearanceDirection != null) {
 
                                 robotController.clearRubble(rubbleClearanceDirection);
+                                movementModule.extendLocationInvalidationTurn(robotController);
                                 robotController.setIndicatorString(0, "I cleared rubble to get to an enemy at " + closestLocation);
                                 break;
 
@@ -492,7 +539,9 @@ public class RobotSoldier implements Robot {
                             if (rubbleClearanceDirection != null) {
 
                                 robotController.clearRubble(rubbleClearanceDirection);
-                                robotController.setIndicatorString(0, "I cleared rubble to get to an enemy clump at " + closestLocation);
+                                movementModule.extendLocationInvalidationTurn(robotController);
+                                robotController.setIndicatorString(0, "I cleared rubble" +
+                                        " to get to an enemy clump at " + closestLocation);
                                 break;
 
                             }
@@ -541,6 +590,7 @@ public class RobotSoldier implements Robot {
                             if (rubbleClearanceDirection != null) {
 
                                 robotController.clearRubble(rubbleClearanceDirection);
+                                movementModule.extendLocationInvalidationTurn(robotController);
                                 robotController.setIndicatorString(0, "I cleared rubble to get to a friendly clump at " + closestLocation);
                                 break;
 
@@ -590,6 +640,7 @@ public class RobotSoldier implements Robot {
                             if (rubbleClearanceDirection != null) {
 
                                 robotController.clearRubble(rubbleClearanceDirection);
+                                movementModule.extendLocationInvalidationTurn(robotController);
                                 robotController.setIndicatorString(0, "I cleared rubble to get to a friendly archon at " + closestLocation);
                                 break;
 
@@ -601,13 +652,28 @@ public class RobotSoldier implements Robot {
 
                 }
 
+                // try clear rubble
+
+                if (robotController.isCoreReady()) {
+
+                    final Direction rubbleClearanceDirection = rubbleModule.getRubbleClearanceDirectionFromDirection(directionController.getRandomDirection(), robotController, RubbleModule.ADJUSTMENT_THRESHOLD_ALL);
+                    if (rubbleClearanceDirection != null) {
+
+                        robotController.clearRubble(rubbleClearanceDirection);
+                        robotController.setIndicatorString(0, "I cleared rubble " + rubbleClearanceDirection + " because I have nothing else to do.");
+                        break;
+
+                    }
+
+                }
+
                 break;
 
             }
 
             // finish up
 
-            for (int i = 0; i < politicalAgenda.archonLocations.size(); i++) {
+            /*for (int i = 0; i < politicalAgenda.archonLocations.size(); i++) {
 
                 final MapLocation archonLocation = politicalAgenda.archonLocations.get(i);
                 robotController.setIndicatorLine(currentLocation, archonLocation, 136, 125, 255);
@@ -621,12 +687,12 @@ public class RobotSoldier implements Robot {
 
             }
 
-            for (int i = 0; i < politicalAgenda.enemyArchons.size(); i++) {
+            */for (int i = 0; i < politicalAgenda.enemyArchons.size(); i++) {
 
                 final InformationSignal signal = politicalAgenda.enemyArchons.get(i);
                 robotController.setIndicatorLine(currentLocation, signal.location, 174, 0, 255);
 
-            }
+            }/*
 
             for (int i = 0; i < politicalAgenda.zombieDens.size(); i++) {
 
@@ -647,7 +713,7 @@ public class RobotSoldier implements Robot {
                 final ClumpInfo clumpInfo = politicalAgenda.friendlyClumps.get(i);
                 robotController.setIndicatorLine(currentLocation, clumpInfo.location, 186, 207, 255);
 
-            }
+            }*/
 
             Clock.yield();
 
