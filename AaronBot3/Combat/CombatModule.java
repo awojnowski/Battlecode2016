@@ -126,7 +126,6 @@ public class CombatModule {
             }
 
             averageFriendlyArchonLocation = new MapLocation(totalX / friendlyArchonLocations.length, totalY / friendlyArchonLocations.length);
-            robotController.setIndicatorDot(averageFriendlyArchonLocation, 255, 255, 255);
 
         }
         return averageFriendlyArchonLocation;
@@ -149,7 +148,6 @@ public class CombatModule {
             }
 
             averageEnemyArchonLocation = new MapLocation(totalX / enemyArchonLocations.length, totalY / enemyArchonLocations.length);
-            robotController.setIndicatorDot(averageEnemyArchonLocation, 255, 255, 255);
 
         }
         return averageEnemyArchonLocation;

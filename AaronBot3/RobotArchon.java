@@ -387,7 +387,7 @@ public class RobotArchon implements Robot {
             for (int i = 0; i < friendlyRepairableUnits.length; i++) {
 
                 final RobotInfo friendly = friendlyRepairableUnits[i];
-                if (lastRepairedRobot != null && friendly.ID == lastRepairedRobot.ID) { // Prioritize last healed robot
+                if (lastRepairedRobot != null && friendly.ID == lastRepairedRobot.ID && friendly.health < friendly.maxHealth) { // Prioritize last healed robot
                     
                     injuredUnit = friendly;
                     break;
