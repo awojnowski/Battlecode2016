@@ -25,6 +25,8 @@ public class RobotArchon implements Robot {
 
         int scoutsBuilt = 0;
         int soldiersBuilt = 0;
+        int turretsBuilt = 0;
+        int vipersBuilt = 0;
         RobotType buildingUnitType = null;
 
         boolean relayInformation = false;
@@ -43,6 +45,7 @@ public class RobotArchon implements Robot {
 
         while (true) {
 
+            robotController.setIndicatorString(0, "");
             robotController.setIndicatorString(1, "");
 
             // update our signals
@@ -187,14 +190,28 @@ public class RobotArchon implements Robot {
 
             // attempt to build new units
 
+            RobotType typeToBuild = null;
+            if (scoutsBuilt == 0 || scoutsBuilt * 15 < soldiersBuilt) {
+
+                typeToBuild = RobotType.SCOUT;
+
+            } else if (vipersBuilt * 20 < soldiersBuilt && soldiersBuilt > 5) {
+
+                typeToBuild = RobotType.VIPER;
+
+            } else if (turretsBuilt * 20 < soldiersBuilt && soldiersBuilt > 20 && false) {
+
+                typeToBuild = RobotType.TURRET;
+
+            } else {
+
+                typeToBuild = RobotType.SOLDIER;
+
+            }
+            robotController.setIndicatorString(0, "Building " + typeToBuild);
+
             if (robotController.isCoreReady()) {
 
-                RobotType typeToBuild = RobotType.SOLDIER;
-                if (scoutsBuilt == 0 || scoutsBuilt * 10 < soldiersBuilt) {
-
-                    typeToBuild = RobotType.SCOUT;
-
-                }
                 if (robotController.getTeamParts() >= typeToBuild.partCost) {
 
                     for (int i = 0; i < DirectionController.DIRECTIONS.length; i++) {
@@ -210,6 +227,16 @@ public class RobotArchon implements Robot {
                             if (typeToBuild == RobotType.SOLDIER) {
 
                                 soldiersBuilt ++;
+
+                            }
+                            if (typeToBuild == RobotType.VIPER) {
+
+                                vipersBuilt ++;
+
+                            }
+                            if (typeToBuild == RobotType.TURRET) {
+
+                                turretsBuilt ++;
 
                             }
                             robotController.build(DirectionController.DIRECTIONS[i], typeToBuild);

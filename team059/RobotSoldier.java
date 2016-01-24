@@ -599,12 +599,6 @@ public class RobotSoldier implements Robot {
 
             }
 
-            if (robotController.getID() == 1607) {
-
-                System.out.println("Bytecode check D: " + Clock.getBytecodeNum());
-
-            }
-
             // finish up
 
             for (int i = 0; i < politicalAgenda.archonLocations.size(); i++) {
@@ -691,33 +685,6 @@ public class RobotSoldier implements Robot {
 
         }
         return bestEnemy;
-
-    }
-
-    private boolean shouldKiteEnemy(final RobotInfo enemy) {
-
-        return enemy.type == RobotType.BIGZOMBIE || enemy.type == RobotType.STANDARDZOMBIE;
-
-    }
-
-    private boolean shouldMoveTowardsEnemy(final RobotInfo enemy, final MapLocation currentLocation) {
-
-        if (enemy.type == RobotType.TURRET || enemy.type == RobotType.ARCHON || enemy.type == RobotType.SCOUT) {
-
-            return true;
-
-        }
-        if (enemy.type == RobotType.ZOMBIEDEN) {
-
-            final int distance = currentLocation.distanceSquaredTo(enemy.location);
-            if (distance > 8) {
-
-                return true;
-
-            }
-
-        }
-        return false;
 
     }
 
