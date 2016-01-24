@@ -86,16 +86,22 @@ public class DirectionController {
 
     public Result getDirectionResultFromDirection(final Direction direction, final int adjustmentThreshold) throws GameActionException {
 
+        return this.getDirectionResultFromDirection(direction, 0, adjustmentThreshold);
+
+    }
+
+    public Result getDirectionResultFromDirection(final Direction direction, final int adjustmentThresholdStart, final int adjustmentThreshold) throws GameActionException {
+
         Direction directionA = direction;
         Direction directionB = direction;
 
         Result initialResult = null; // this will be used if result is null
         Result result = null;
 
-        for (int i = 0; i <= adjustmentThreshold; i++) {
+        for (int i = adjustmentThresholdStart; i <= adjustmentThreshold; i++) {
 
             Result resultA = this.getResultForDirection(directionA);
-            if (i == 0) {
+            if (initialResult == null) {
 
                 initialResult = resultA;
 

@@ -132,7 +132,7 @@ public class RobotScout implements Robot {
 
                 } else {
 
-                    if (areFriendliesNearby) {
+                    /*if (areFriendliesNearby) {
 
                         // broadcast seen enemy information to friendlies
 
@@ -140,7 +140,7 @@ public class RobotScout implements Robot {
                         signal.broadcastRange = politicalAgenda.maximumFreeBroadcastRangeForType(robotController.getType());
                         politicalAgenda.enqueueSignalForBroadcast(signal, robotController);
 
-                    }
+                    }*/
 
                     if (enemy.type == RobotType.ARCHON) {
 

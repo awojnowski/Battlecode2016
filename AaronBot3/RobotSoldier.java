@@ -172,39 +172,81 @@ public class RobotSoldier implements Robot {
 
                 }
 
+                // information
+
                 final RobotInfo[] attackableEnemies = robotController.senseHostileRobots(currentLocation, robotController.getType().attackRadiusSquared);
                 final RobotInfo bestAttackableEnemy = this.getBestEnemyToAttackFromEnemies(attackableEnemies);
 
-                if (requiresHealing) {
+                // flags
 
-                    // we want to reduce the waiting time until the core is ready, so we should wait to attack
+                if (robotController.isWeaponReady()) {
 
-                    if (!robotController.isCoreReady()) {
+                    if (bestAttackableEnemy != null) {
 
+                        robotController.attackLocation(bestAttackableEnemy.location);
+                        if (bestAttackableEnemy.type != RobotType.ZOMBIEDEN) {
+
+                            politicalAgenda.broadcastSignal(robotController, politicalAgenda.maximumFreeBroadcastRangeForType(robotController.getType()));
+
+                        }
                         break;
 
                     }
 
-                    // try and move toward an archon over everything
+                }
 
-                    if (nearestArchonDistance > 16) {
+                // logic
 
-                        final Direction nearestArchonDirection = currentLocation.directionTo(nearestArchonLocation);
-                        final DirectionController.Result nearestArchonDirectionResult = directionController.getDirectionResultFromDirection(nearestArchonDirection, DirectionController.ADJUSTMENT_THRESHOLD_MEDIUM);
-                        if (nearestArchonDirectionResult.direction != null) {
+                // see if we should kite or move forward to an enemy
 
-                            robotController.move(nearestArchonDirectionResult.direction);
-                            currentLocation = robotController.getLocation();
-                            break;
+                if (enemies.length > 0 && friendlies.length > enemies.length * 4) {
+
+                    robotController.setIndicatorString(1, "Aggressive");
+
+                    if (robotController.isCoreReady()) {
+
+                        if (bestAttackableEnemy != null) {
+
+                            final Direction bestAttackableEnemyDirection = currentLocation.directionTo(bestAttackableEnemy.location);
+
+                            directionController.shouldAvoidEnemies = false;
+                            final DirectionController.Result bestAttackableEnemyDirectionResult = directionController.getDirectionResultFromDirection(bestAttackableEnemyDirection, DirectionController.ADJUSTMENT_THRESHOLD_LOW);
+                            directionController.shouldAvoidEnemies = true;
+
+                            if (bestAttackableEnemyDirectionResult.direction != null && !movementModule.isMovementLocationRepetitive(currentLocation.add(bestAttackableEnemyDirectionResult.direction), robotController)) {
+
+                                robotController.move(bestAttackableEnemyDirectionResult.direction);
+                                currentLocation = robotController.getLocation();
+                                movementModule.addMovementLocation(currentLocation, robotController);
+
+                                robotController.setIndicatorString(0, "I am moving to an enemy " + bestAttackableEnemy.location);
+                                break;
+
+                            }
 
                         }
 
-                        if (nearestArchonDirectionResult.error == DirectionController.ErrorType.BLOCKED_RUBBLE) {
+                    }
 
-                            final Direction rubbleClearanceDirection = rubbleModule.getRubbleClearanceDirectionFromDirection(nearestArchonDirection, robotController, RubbleModule.ADJUSTMENT_THRESHOLD_MEDIUM);
-                            if (rubbleClearanceDirection != null) {
+                } else {
 
-                                robotController.clearRubble(rubbleClearanceDirection);
+                    robotController.setIndicatorString(1, "Passive");
+
+                    if (robotController.isCoreReady()) {
+
+                        final Direction kiteDirection = directionController.getAverageDirectionTowardsEnemies(enemies, true);
+                        if (kiteDirection != null) {
+
+                            directionController.shouldAvoidEnemies = false;
+                            final DirectionController.Result kiteDirectionResult = directionController.getDirectionResultFromDirection(kiteDirection.opposite(), DirectionController.ADJUSTMENT_THRESHOLD_MEDIUM);
+                            directionController.shouldAvoidEnemies = true;
+
+                            if (kiteDirectionResult.direction != null) {
+
+                                robotController.move(kiteDirectionResult.direction);
+                                currentLocation = robotController.getLocation();
+
+                                robotController.setIndicatorString(0, "I am trying to kite from enemies " + kiteDirectionResult.direction);
                                 break;
 
                             }
@@ -215,7 +257,137 @@ public class RobotSoldier implements Robot {
 
                 }
 
-                
+                // respond to nearby unit pings
+
+                if (robotController.isCoreReady() && !requiresHealing) {
+
+                    int closestSignalDistance = Integer.MAX_VALUE;
+                    MapLocation closestSignalLocation = null;
+
+                    final ArrayList<Signal> notifications = politicalAgenda.notifications;
+                    for (int i = 0; i < notifications.size(); i++) {
+
+                        final Signal signal = notifications.get(i);
+                        final int distance = currentLocation.distanceSquaredTo(signal.getLocation());
+                        if (distance < closestSignalDistance) {
+
+                            closestSignalDistance = distance;
+                            closestSignalLocation = signal.getLocation();
+
+                        }
+
+                    }
+                    if (closestSignalLocation != null) {
+
+                        final Direction closestSignalDirection = currentLocation.directionTo(closestSignalLocation);
+                        final DirectionController.Result closestSignalResult = directionController.getDirectionResultFromDirection(closestSignalDirection, DirectionController.ADJUSTMENT_THRESHOLD_LOW);
+                        if (closestSignalResult.direction != null && !movementModule.isMovementLocationRepetitive(currentLocation.add(closestSignalResult.direction), robotController)) {
+
+                            robotController.move(closestSignalResult.direction);
+                            currentLocation = robotController.getLocation();
+                            movementModule.addMovementLocation(currentLocation, robotController);
+
+                            robotController.setIndicatorString(0, "I am moving to a signal at " + closestSignalLocation);
+                            break;
+
+                        } else if (closestSignalResult.error == DirectionController.ErrorType.BLOCKED_FRIENDLIES) {
+
+                            final DirectionController.Result closestSignalResultExtended = directionController.getDirectionResultFromDirection(closestSignalDirection, DirectionController.ADJUSTMENT_THRESHOLD_MEDIUM);
+                            if (closestSignalResultExtended.direction != null && !movementModule.isMovementLocationRepetitive(currentLocation.add(closestSignalResultExtended.direction), robotController)) {
+
+                                robotController.move(closestSignalResultExtended.direction);
+                                currentLocation = robotController.getLocation();
+                                movementModule.addMovementLocation(currentLocation, robotController);
+
+                                robotController.setIndicatorString(0, "I am moving to a signal at " + closestSignalLocation);
+                                break;
+
+                            }
+
+                        }
+
+                    }
+
+                }
+
+                // try to move to an objective
+
+                if (robotController.isCoreReady() && objectiveSignal != null) {
+
+                    boolean shouldMoveTowardsObjective = true;
+                    if (objectiveSignal.type == PoliticalAgenda.SignalTypeZombieDen) {
+
+                        final int distance = currentLocation.distanceSquaredTo(objectiveSignal.location);
+                        if (distance < 9) {
+
+                            shouldMoveTowardsObjective = false;
+
+                        }
+
+                    }
+
+                    if (shouldMoveTowardsObjective) {
+
+                        final Direction signalDirection = currentLocation.directionTo(objectiveSignal.location);
+                        final DirectionController.Result signalResult = directionController.getDirectionResultFromDirection(signalDirection, DirectionController.ADJUSTMENT_THRESHOLD_LOW);
+
+                        boolean clearRubble = false;
+                        if (signalResult.direction != null) {
+
+                            if (!movementModule.isMovementLocationRepetitive(currentLocation.add(signalResult.direction), robotController)) {
+
+                                robotController.move(signalResult.direction);
+                                currentLocation = robotController.getLocation();
+                                movementModule.addMovementLocation(currentLocation, robotController);
+                                robotController.setIndicatorString(0, "I am moving to an objective at " + objectiveSignal.location);
+                                break;
+
+                            } else {
+
+                                clearRubble = true;
+
+                            }
+
+                        } else if (signalResult.error == DirectionController.ErrorType.BLOCKED_RUBBLE) {
+
+                            clearRubble = true;
+
+                        } else if (signalResult.error == DirectionController.ErrorType.BLOCKED_FRIENDLIES) {
+
+                            final DirectionController.Result signalResultExtended = directionController.getDirectionResultFromDirection(signalDirection, DirectionController.ADJUSTMENT_THRESHOLD_LOW, DirectionController.ADJUSTMENT_THRESHOLD_MEDIUM);
+                            if (signalResultExtended.direction != null) {
+
+                                if (!movementModule.isMovementLocationRepetitive(currentLocation.add(signalResultExtended.direction), robotController)) {
+
+                                    robotController.move(signalResultExtended.direction);
+                                    currentLocation = robotController.getLocation();
+                                    movementModule.addMovementLocation(currentLocation, robotController);
+                                    robotController.setIndicatorString(0, "I am moving to an objective at " + objectiveSignal.location + " (extended)");
+                                    break;
+
+                                }
+
+                            }
+
+                        }
+
+                        if (clearRubble) {
+
+                            final Direction rubbleClearanceDirection = rubbleModule.getRubbleClearanceDirectionFromDirection(signalDirection, robotController, RubbleModule.ADJUSTMENT_THRESHOLD_HIGH);
+                            if (rubbleClearanceDirection != null) {
+
+                                robotController.clearRubble(rubbleClearanceDirection);
+                                movementModule.extendLocationInvalidationTurn(robotController);
+                                robotController.setIndicatorString(0, "I cleared rubble " + rubbleClearanceDirection);
+                                break;
+
+                            }
+
+                        }
+
+                    }
+
+                }
 
                 break;
 
@@ -675,6 +847,12 @@ public class RobotSoldier implements Robot {
                 }
 
             }*/
+
+            if (robotController.getID() == 1607) {
+
+                System.out.println("Bytecode check D: " + Clock.getBytecodeNum());
+
+            }
 
             // finish up
 
