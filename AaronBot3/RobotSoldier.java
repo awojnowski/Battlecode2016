@@ -43,7 +43,8 @@ public class RobotSoldier implements Robot {
 
             }
 
-            final RobotInfo[] enemies = robotController.senseHostileRobots(currentLocation, robotController.getType().sensorRadiusSquared);
+            final RobotInfo[] enemies = robotController.senseHostileRobots(currentLocation, -1);
+            final RobotInfo[] friendlies = robotController.senseNearbyRobots(-1, robotController.getTeam());
             politicalAgenda.verifyAllEnemyArchonSignals(robotController, enemies);
 
             // let's get the best assignment
@@ -98,9 +99,130 @@ public class RobotSoldier implements Robot {
 
             }
 
-            // see if we can attack anything this turn
+            if (robotController.getHealth() < 30.0) {
 
-            final RobotInfo[] friendlies = robotController.senseNearbyRobots(-1, robotController.getTeam());
+                requiresHealing = true;
+
+            } else if (robotController.getHealth() / robotController.getType().maxHealth > 0.9) {
+
+                requiresHealing = false;
+
+            }
+
+            // the while block allows us to just break out of the actions when one is completed
+            while (true) {
+
+                if (!robotController.isCoreReady() && !robotController.isWeaponReady()) {
+
+                    break;
+
+                }
+
+                // create the direction controller
+
+                final DirectionController directionController = new DirectionController(robotController);
+                directionController.currentLocation = currentLocation;
+                directionController.nearbyEnemies = enemies;
+                directionController.random = random;
+                directionController.shouldAvoidEnemies = true;
+                directionController.enemyBufferDistance = 1;
+
+                if (requiresHealing) {
+
+                    directionController.enemyBufferDistance = 2;
+
+                }
+
+                // firstly let's find the closest archon, for reference
+
+                int nearestArchonDistance = Integer.MAX_VALUE;
+                MapLocation nearestArchonLocation = null;
+
+                for (int i = 0; i < friendlies.length; i++) {
+
+                    final RobotInfo robot = friendlies[i];
+                    if (robot.type != RobotType.ARCHON) {
+
+                        continue;
+
+                    }
+                    final int distance = currentLocation.distanceSquaredTo(robot.location);
+                    if (distance < nearestArchonDistance) {
+
+                        nearestArchonDistance = distance;
+                        nearestArchonLocation = robot.location;
+
+                    }
+
+                }
+                if (nearestArchonLocation == null) {
+
+                    for (int i = 0; i < politicalAgenda.archonLocations.size(); i++) {
+
+                        final MapLocation archonLocation = politicalAgenda.archonLocations.get(i);
+                        final int distance = currentLocation.distanceSquaredTo(archonLocation);
+                        if (distance < nearestArchonDistance) {
+
+                            nearestArchonDistance = distance;
+                            nearestArchonLocation = archonLocation;
+
+                        }
+
+                    }
+
+                }
+
+                final RobotInfo[] attackableEnemies = robotController.senseHostileRobots(currentLocation, robotController.getType().attackRadiusSquared);
+                final RobotInfo bestAttackableEnemy = this.getBestEnemyToAttackFromEnemies(attackableEnemies);
+
+                if (requiresHealing) {
+
+                    // we want to reduce the waiting time until the core is ready, so we should wait to attack
+
+                    if (!robotController.isCoreReady()) {
+
+                        break;
+
+                    }
+
+                    // try and move toward an archon over everything
+
+                    if (nearestArchonDistance > 16) {
+
+                        final Direction nearestArchonDirection = currentLocation.directionTo(nearestArchonLocation);
+                        final DirectionController.Result nearestArchonDirectionResult = directionController.getDirectionResultFromDirection(nearestArchonDirection, DirectionController.ADJUSTMENT_THRESHOLD_MEDIUM);
+                        if (nearestArchonDirectionResult.direction != null) {
+
+                            robotController.move(nearestArchonDirectionResult.direction);
+                            currentLocation = robotController.getLocation();
+                            break;
+
+                        }
+
+                        if (nearestArchonDirectionResult.error == DirectionController.ErrorType.BLOCKED_RUBBLE) {
+
+                            final Direction rubbleClearanceDirection = rubbleModule.getRubbleClearanceDirectionFromDirection(nearestArchonDirection, robotController, RubbleModule.ADJUSTMENT_THRESHOLD_MEDIUM);
+                            if (rubbleClearanceDirection != null) {
+
+                                robotController.clearRubble(rubbleClearanceDirection);
+                                break;
+
+                            }
+
+                        }
+
+                    }
+
+                }
+
+                
+
+                break;
+
+            }
+
+            /*// see if we can attack anything this turn
+
             final RobotInfo[] attackableEnemies = robotController.senseHostileRobots(currentLocation, robotController.getType().attackRadiusSquared);
             final RobotInfo bestEnemy = this.getBestEnemyToAttackFromEnemies(attackableEnemies);
 
@@ -552,7 +674,7 @@ public class RobotSoldier implements Robot {
 
                 }
 
-            }
+            }*/
 
             // finish up
 
