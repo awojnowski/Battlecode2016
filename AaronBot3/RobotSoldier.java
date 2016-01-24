@@ -79,6 +79,13 @@ public class RobotSoldier implements Robot {
 
                 }
 
+                boolean isDoomed = false;
+                if (robotController.getInfectedTurns() * 2 > robotController.getHealth()) {
+
+                    isDoomed = true;
+
+                }
+
                 final DirectionController directionController = new DirectionController(robotController);
                 directionController.currentLocation = currentLocation;
                 directionController.nearbyEnemies = enemies;
@@ -245,6 +252,12 @@ public class RobotSoldier implements Robot {
                     if (bestAttackableEnemy != null && (bestAttackableEnemy.type == RobotType.BIGZOMBIE || bestAttackableEnemy.type == RobotType.STANDARDZOMBIE)) {
 
                         isAggressive = false;
+
+                    }
+
+                    if (isDoomed) {
+
+                        isAggressive = true;
 
                     }
 
