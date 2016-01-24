@@ -1,48 +1,72 @@
 package team059.Cartography;
 
-import team059.Map.*;
+import team059.Information.*;
 import battlecode.common.*;
 
 public class CartographyModule {
 
-    public void probeAndUpdateMapInfoModule(final MapInfoModule mapInfoModule, final MapLocation location, final RobotController robotController) throws GameActionException {
+    public void probeAndUpdatePoliticalAgenda(final PoliticalAgenda politicalAgenda, final MapLocation location, final RobotController robotController) throws GameActionException {
 
         final int probeDistance = (int)Math.floor(Math.sqrt(robotController.getType().sensorRadiusSquared));
-        if (mapInfoModule.eastBoundaryValue == MapInfoModule.UnknownValue) {
+        if (politicalAgenda.mapBoundaryEast == PoliticalAgenda.UnknownValue) {
 
             final MapLocation foundProbeLocation = this.probeDirection(Direction.EAST, probeDistance, location, robotController);
             if (foundProbeLocation != null) {
 
-                mapInfoModule.eastBoundaryValue = foundProbeLocation.x;
+                politicalAgenda.mapBoundaryEast = foundProbeLocation.x;
+
+                if (robotController.getID() == 3007) {
+
+                    System.out.println("Updating east boundary: " + politicalAgenda.mapBoundaryEast);
+
+                }
 
             }
 
         }
-        if (mapInfoModule.westBoundaryValue == MapInfoModule.UnknownValue) {
+        if (politicalAgenda.mapBoundaryWest == PoliticalAgenda.UnknownValue) {
 
             final MapLocation foundProbeLocation = this.probeDirection(Direction.WEST, probeDistance, location, robotController);
             if (foundProbeLocation != null) {
 
-                mapInfoModule.westBoundaryValue = foundProbeLocation.x;
+                politicalAgenda.mapBoundaryWest = foundProbeLocation.x;
+
+                if (robotController.getID() == 3007) {
+
+                    System.out.println("Updating west boundary: " + politicalAgenda.mapBoundaryWest);
+
+                }
 
             }
 
         }
-        if (mapInfoModule.northBoundaryValue == MapInfoModule.UnknownValue) {
+        if (politicalAgenda.mapBoundaryNorth == PoliticalAgenda.UnknownValue) {
 
             final MapLocation foundProbeLocation = this.probeDirection(Direction.NORTH, probeDistance, location, robotController);
             if (foundProbeLocation != null) {
 
-                mapInfoModule.northBoundaryValue = foundProbeLocation.y;
+                politicalAgenda.mapBoundaryNorth = foundProbeLocation.y;
+
+                if (robotController.getID() == 3007) {
+
+                    System.out.println("Updating north boundary: " + politicalAgenda.mapBoundaryNorth);
+
+                }
 
             }
         }
-        if (mapInfoModule.southBoundaryValue == MapInfoModule.UnknownValue) {
+        if (politicalAgenda.mapBoundarySouth == PoliticalAgenda.UnknownValue) {
 
             final MapLocation foundProbeLocation = this.probeDirection(Direction.SOUTH, probeDistance, location, robotController);
             if (foundProbeLocation != null) {
 
-                mapInfoModule.southBoundaryValue = foundProbeLocation.y;
+                politicalAgenda.mapBoundarySouth = foundProbeLocation.y;
+
+                if (robotController.getID() == 3007) {
+
+                    System.out.println("Updating south boundary: " + politicalAgenda.mapBoundarySouth);
+
+                }
 
             }
 

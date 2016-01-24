@@ -86,16 +86,22 @@ public class DirectionController {
 
     public Result getDirectionResultFromDirection(final Direction direction, final int adjustmentThreshold) throws GameActionException {
 
+        return this.getDirectionResultFromDirection(direction, 0, adjustmentThreshold);
+
+    }
+
+    public Result getDirectionResultFromDirection(final Direction direction, final int adjustmentThresholdStart, final int adjustmentThreshold) throws GameActionException {
+
         Direction directionA = direction;
         Direction directionB = direction;
 
         Result initialResult = null; // this will be used if result is null
         Result result = null;
 
-        for (int i = 0; i <= adjustmentThreshold; i++) {
+        for (int i = adjustmentThresholdStart; i <= adjustmentThreshold; i++) {
 
             Result resultA = this.getResultForDirection(directionA);
-            if (i == 0) {
+            if (initialResult == null) {
 
                 initialResult = resultA;
 
@@ -157,6 +163,7 @@ public class DirectionController {
 
         }
 
+        final float randomSeed = (random.nextFloat() - 0.5f) / 100; // between -0.005 and 0.005
         int totalLocationsSampled = 0;
         int totalRobotX = 0;
         int totalRobotY = 0;
@@ -221,10 +228,10 @@ public class DirectionController {
 
         }
 
-        final double averageRobotX = (double)totalRobotX / totalLocationsSampled;
-        final double averageRobotY = (double)totalRobotY / totalLocationsSampled;
-        final double dx = (double)(averageRobotX - currentLocation.x);
-        final double dy = (double)(averageRobotY - currentLocation.y);
+        final double averageRobotX = ((double)totalRobotX + randomSeed) / totalLocationsSampled;
+        final double averageRobotY = ((double)totalRobotY + randomSeed) / totalLocationsSampled;
+        final double dx = averageRobotX - currentLocation.x;
+        final double dy = averageRobotY - currentLocation.y;
         return Math.abs(dx) >= 2.414D * Math.abs(dy)?(dx > 0.0D?Direction.EAST:(dx < 0.0D?Direction.WEST:Direction.OMNI)):(Math.abs(dy) >= 2.414D * Math.abs(dx)?(dy > 0.0D?Direction.SOUTH:Direction.NORTH):(dy > 0.0D?(dx > 0.0D?Direction.SOUTH_EAST:Direction.SOUTH_WEST):(dx > 0.0D?Direction.NORTH_EAST:Direction.NORTH_WEST)));
 
     }

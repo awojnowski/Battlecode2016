@@ -1,11 +1,9 @@
 package team059;
 
-import team059.Combat.CombatModule;
-import team059.Map.MapInfoModule;
+import team059.Combat.*;
+import team059.Information.*;
 import team059.Movement.*;
-import team059.Rubble.RubbleModule;
-import team059.Signals.CommunicationModule;
-import team059.Signals.CommunicationModuleSignal;
+import team059.Rubble.*;
 import battlecode.common.*;
 import java.util.*;
 
@@ -13,11 +11,11 @@ public class RobotTurret implements Robot {
 
     public void run(final RobotController robotController) throws GameActionException {
 
-        final MapInfoModule mapInfoModule = new MapInfoModule();
+        robotController.emptySignalQueue();
 
         final CombatModule combatModule = new CombatModule();
-        final CommunicationModule communicationModule = new CommunicationModule(mapInfoModule);
         final MovementModule movementModule = new MovementModule();
+        final PoliticalAgenda politicalAgenda = new PoliticalAgenda();
         final Random random = new Random(robotController.getID());
         final RubbleModule rubbleModule = new RubbleModule();
 
@@ -26,16 +24,20 @@ public class RobotTurret implements Robot {
 
         while (true) {
 
-            RobotType type = robotController.getType();
-            MapLocation currentLocation = robotController.getLocation();
-
             // update communication
 
-            communicationModule.processIncomingSignals(robotController);
+            politicalAgenda.processIncomingSignalsFromRobotController(robotController);
+            if (!politicalAgenda.isInformationSynced) {
 
-            // let's verify existing information
+                Clock.yield();
+                continue;
 
-            communicationModule.verifyCommunicationsInformation(robotController, null, false);
+            }
+
+            // begin
+
+            RobotType type = robotController.getType();
+            MapLocation currentLocation = robotController.getLocation();
 
             if (type == RobotType.TTM) {
 
@@ -43,46 +45,27 @@ public class RobotTurret implements Robot {
 
                 // let's get the best assignment
 
-                CommunicationModuleSignal objectiveSignal = null;
+                InformationSignal objectiveSignal = null;
                 int closestObjectiveLocationDistance = Integer.MAX_VALUE;
 
-                final Enumeration<CommunicationModuleSignal> zombieDenCommunicationModuleSignals = communicationModule.zombieDens.elements();
-                while (zombieDenCommunicationModuleSignals.hasMoreElements()) {
+                int zombieDenCount = politicalAgenda.zombieDens.size();
+                for (int i = 0; i < zombieDenCount; i++) {
 
-                    final CommunicationModuleSignal signal = zombieDenCommunicationModuleSignals.nextElement();
-                    final int distance = signal.location.distanceSquaredTo(currentLocation);
+                    final InformationSignal signal = politicalAgenda.zombieDens.get(i);
+                    final int distance = currentLocation.distanceSquaredTo(signal.location);
                     if (distance < closestObjectiveLocationDistance) {
 
-                        objectiveSignal = signal;
-                        closestObjectiveLocationDistance = distance;
+                        if (politicalAgenda.verifyZombieDenSignal(signal, robotController)) {
 
-                    }
+                            objectiveSignal = signal;
+                            closestObjectiveLocationDistance = distance;
 
-                }
+                        } else {
 
-                final Enumeration<CommunicationModuleSignal> enemyArchonCommunicationModuleSignals = communicationModule.enemyArchons.elements();
-                while (enemyArchonCommunicationModuleSignals.hasMoreElements()) {
+                            zombieDenCount --;
+                            i--;
 
-                    final CommunicationModuleSignal signal = enemyArchonCommunicationModuleSignals.nextElement();
-                    final int distance = signal.location.distanceSquaredTo(currentLocation) * 6; // multiplying by 6 to prioritize the dens
-                    if (distance < closestObjectiveLocationDistance) {
-
-                        objectiveSignal = signal;
-                        closestObjectiveLocationDistance = distance;
-
-                    }
-
-                }
-
-                final Enumeration<CommunicationModuleSignal> enemyTurretCommunicationModuleSignals = communicationModule.enemyTurrets.elements();
-                while (enemyTurretCommunicationModuleSignals.hasMoreElements()) {
-
-                    final CommunicationModuleSignal signal = enemyTurretCommunicationModuleSignals.nextElement();
-                    final int distance = signal.location.distanceSquaredTo(currentLocation) * 20;
-                    if (distance < closestObjectiveLocationDistance) {
-
-                        objectiveSignal = signal;
-                        closestObjectiveLocationDistance = distance;
+                        }
 
                     }
 
@@ -132,7 +115,7 @@ public class RobotTurret implements Robot {
                         int closestSignalDistance = Integer.MAX_VALUE;
                         MapLocation closestSignalLocation = null;
 
-                        final ArrayList<Signal> notifications = communicationModule.notifications;
+                        final ArrayList<Signal> notifications = politicalAgenda.notifications;
                         for (int i = 0; i < notifications.size(); i++) {
 
                             final Signal signal = notifications.get(i);
@@ -244,7 +227,7 @@ public class RobotTurret implements Robot {
                         robotController.attackLocation(bestEnemy.location);
                         if (bestEnemy.type != RobotType.ZOMBIEDEN) {
 
-                            communicationModule.broadcastSignal(robotController, CommunicationModule.maximumFreeBroadcastRangeForRobotType(robotController.getType()));
+                            politicalAgenda.broadcastSignal(robotController, politicalAgenda.maximumFreeBroadcastRangeForType(robotController.getType()));
 
                         }
 
@@ -262,6 +245,45 @@ public class RobotTurret implements Robot {
                     robotController.pack();
 
                 }
+
+            }
+
+            // finish up
+
+            // show what we know
+
+            for (int i = 0; i < politicalAgenda.archonLocations.size(); i++) {
+
+                final MapLocation archonLocation = politicalAgenda.archonLocations.get(i);
+                robotController.setIndicatorLine(currentLocation, archonLocation, 25, 25, 255);
+
+            }
+
+            for (int i = 0; i < politicalAgenda.enemies.size(); i++) {
+
+                final EnemyInfo enemy = politicalAgenda.enemies.get(i);
+                robotController.setIndicatorLine(currentLocation, enemy.location, 255, 0, 255);
+
+            }
+
+            for (int i = 0; i < politicalAgenda.zombieDens.size(); i++) {
+
+                final InformationSignal signal = politicalAgenda.zombieDens.get(i);
+                robotController.setIndicatorLine(currentLocation, signal.location, 0, 255, 0);
+
+            }
+
+            for (int i = 0; i < politicalAgenda.enemyClumps.size(); i++) {
+
+                final ClumpInfo clumpInfo = politicalAgenda.enemyClumps.get(i);
+                robotController.setIndicatorLine(currentLocation, clumpInfo.location, 120, 0, 0);
+
+            }
+
+            for (int i = 0; i < politicalAgenda.friendlyClumps.size(); i++) {
+
+                final ClumpInfo clumpInfo = politicalAgenda.friendlyClumps.get(i);
+                robotController.setIndicatorLine(currentLocation, clumpInfo.location, 0, 120, 0);
 
             }
 

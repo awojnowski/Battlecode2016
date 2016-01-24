@@ -1,27 +1,23 @@
 package team059;
 
-import team059.Combat.CombatModule;
-import team059.Map.*;
+import team059.Combat.*;
+import team059.Information.*;
 import team059.Movement.*;
-import team059.Rubble.RubbleModule;
-import team059.Signals.*;
-import team059.ZombieSpawns.ZombieSpawnsModule;
+import team059.Rubble.*;
+import team059.ZombieSpawns.*;
 import battlecode.common.*;
 import java.util.*;
 
 public class RobotArchon implements Robot {
 
-    private static int InitialMessageUpdateLength = 2;
+    private static int InitialMessageUpdateLength = 3;
 
     public void run(final RobotController robotController) throws GameActionException {
 
         // modules
 
-        final MapInfoModule mapInfoModule = new MapInfoModule();
-        mapInfoModule.detectWhetherToThrowGame(robotController);
-
-        final CommunicationModule communicationModule = new CommunicationModule(mapInfoModule);
         final MovementModule movementModule = new MovementModule();
+        final PoliticalAgenda politicalAgenda = new PoliticalAgenda();
         final Random random = new Random(robotController.getID());
         final RubbleModule rubbleModule = new RubbleModule();
 
@@ -30,7 +26,12 @@ public class RobotArchon implements Robot {
         int scoutsBuilt = 0;
         int soldiersBuilt = 0;
         RobotType buildingUnitType = null;
-        CommunicationModuleSignalCollection buildingUpdateSignalCollection = null;
+
+        boolean relayInformation = false;
+        int relayInformationDelay = 0;
+        ArrayList<InformationSignal> informationRelaySignals = null;
+
+        RobotInfo lastRepairedRobot = null;
 
         // general
 
@@ -42,87 +43,113 @@ public class RobotArchon implements Robot {
 
         while (true) {
 
-            communicationModule.processIncomingSignals(robotController);
+            robotController.setIndicatorString(1, "");
 
-            // firstly check if we are throwing this game or not
+            // update our signals
 
-            if (mapInfoModule.shouldThrowGame) {
+            politicalAgenda.processIncomingSignalsFromRobotController(robotController);
 
-                final int throwRound = robotController.getID() % 200;
-                if (robotController.getRoundNum() == throwRound) {
+            // check relay information
 
-                    robotController.senseRobotAtLocation(robotController.getLocation().add(Direction.NORTH, 10));
+            if (relayInformation) {
+
+                relayInformationDelay--;
+
+            }
+            if (!relayInformation) {
+
+                // we should try activate robots
+
+                if (robotController.isCoreReady()) {
+
+                    final RobotInfo[] neutrals = robotController.senseNearbyRobots(GameConstants.ARCHON_ACTIVATION_RANGE, Team.NEUTRAL);
+                    for (int i = 0; i < neutrals.length; i++) {
+
+                        robotController.activate(neutrals[i].location);
+                        relayInformation = true;
+                        relayInformationDelay = 2;
+                        break;
+
+                    }
+
+                }
+
+                // check if we are done building a unit
+
+                if (robotController.isCoreReady()) {
+
+                    if (buildingUnitType != null) {
+
+                        relayInformation = true;
+                        relayInformationDelay = 2;
+
+                    }
+                    buildingUnitType = null;
 
                 }
 
             }
+            if (relayInformationDelay > 0) {
 
-            // we should try activate robots
-
-            if (robotController.isCoreReady()) {
-
-                final RobotInfo[] neutrals = robotController.senseNearbyRobots(GameConstants.ARCHON_ACTIVATION_RANGE, Team.NEUTRAL);
-                for (int i = 0; i < neutrals.length; i++) {
-
-                    robotController.activate(neutrals[i].location);
-                    buildingUpdateSignalCollection = communicationModule.allCommunicationModuleSignals();
-                    break;
-
-                }
-
-            }
-
-            // check if we are done building a unit
-
-            if (robotController.isCoreReady()) {
-
-                if (buildingUnitType != null) {
-
-                    buildingUpdateSignalCollection = communicationModule.allCommunicationModuleSignals();
-
-                }
-                buildingUnitType = null;
+                Clock.yield();
+                continue;
 
             }
 
             // let's broadcast any remaining information that we have to the nearby, recently created units
 
-            if (buildingUpdateSignalCollection != null) {
+            if (relayInformation) {
 
-                boolean signalsSendingDone = true;
-                int totalSignalsSent = 0;
-                while (buildingUpdateSignalCollection.hasMoreElements()) {
+                informationRelaySignals = this.generateSignalRelayList(politicalAgenda);
+                relayInformation = false;
+                relayInformationDelay = 0;
 
-                    if (totalSignalsSent >= GameConstants.MESSAGE_SIGNALS_PER_TURN - 1) {
+            }
 
-                        signalsSendingDone = false;
-                        break;
+            if (informationRelaySignals != null) {
+
+                for (int i = 0; i < informationRelaySignals.size(); i++) {
+
+                    if (robotController.getMessageSignalCount() >= GameConstants.MESSAGE_SIGNALS_PER_TURN - 1) {
+
+                        Clock.yield();
 
                     }
 
-                    final CommunicationModuleSignal communicationModuleSignal = buildingUpdateSignalCollection.nextElement();
-                    if (!CommunicationRelayModule.shouldRelaySignalTypeToRobotType(communicationModuleSignal.type, buildingUnitType)) {
+                    final InformationSignal signal = informationRelaySignals.get(i);
+                    if (!politicalAgenda.shouldRobotTypeProcessSignalType(buildingUnitType, signal.type)) {
 
                         continue;
 
                     }
-
-                    communicationModule.broadcastSignal(communicationModuleSignal, robotController, RobotArchon.InitialMessageUpdateLength);
-                    totalSignalsSent ++;
-
-                }
-                if (signalsSendingDone) {
-
-                    final CommunicationModuleSignal signal = new CommunicationModuleSignal();
-                    signal.action = CommunicationModuleSignal.ACTION_INITIAL_UPDATE_COMPLETE;
-                    signal.location = robotController.getLocation();
-                    signal.data = robotController.getID();
-                    signal.type = CommunicationModuleSignal.TYPE_NONE;
-                    communicationModule.broadcastSignal(signal, robotController, RobotArchon.InitialMessageUpdateLength);
-
-                    buildingUpdateSignalCollection = null;
+                    signal.broadcastRange = RobotArchon.InitialMessageUpdateLength;
+                    politicalAgenda.broadcastSignal(signal, robotController);
 
                 }
+
+                final InformationSignal signal = new InformationSignal();
+                signal.action = PoliticalAgenda.SignalActionWrite;
+                signal.broadcastRange = RobotArchon.InitialMessageUpdateLength;
+                signal.type = PoliticalAgenda.SignalTypeInformationSynced;
+                politicalAgenda.broadcastSignal(signal, robotController);
+
+                informationRelaySignals = null;
+
+            }
+
+            // send an archon update if necessary
+
+            if (robotController.getRoundNum() > 0 && robotController.getRoundNum() % PoliticalAgenda.ArchonUpdateModulus == 0) {
+
+                final MapLocation currentLocation = robotController.getLocation();
+
+                final InformationSignal signal = new InformationSignal();
+                signal.action = PoliticalAgenda.SignalActionWrite;
+                signal.broadcastRange = politicalAgenda.maximumBroadcastRangeForLocation(currentLocation);
+                signal.location = currentLocation;
+                signal.type = PoliticalAgenda.SignalTypeArchonUpdate;
+                politicalAgenda.broadcastSignal(signal, robotController);
+
 
             }
 
@@ -158,27 +185,12 @@ public class RobotArchon implements Robot {
 
             }
 
-            // let's check up on existing communications to verify the information, if we can
-
-            final ArrayList<CommunicationModuleSignal> verifiedSignals = communicationModule.verifyCommunicationsInformation(robotController, enemies, true);
-            for (int i = 0; i < verifiedSignals.size(); i++) {
-
-                communicationModule.enqueueSignalForBroadcast(verifiedSignals.get(i));
-
-            }
-
-            if (communicationModule.hasEnqueuedSignalsForBroadcast()) {
-
-                communicationModule.broadcastEnqueuedSignals(robotController, CommunicationModule.maximumBroadcastRange(mapInfoModule, currentLocation));
-
-            }
-
             // attempt to build new units
 
             if (robotController.isCoreReady()) {
 
                 RobotType typeToBuild = RobotType.SOLDIER;
-                if (scoutsBuilt == 0 || (int)Math.pow(scoutsBuilt + 1, 3) < soldiersBuilt) {
+                if (scoutsBuilt == 0 || scoutsBuilt * 10 < soldiersBuilt) {
 
                     typeToBuild = RobotType.SCOUT;
 
@@ -375,6 +387,12 @@ public class RobotArchon implements Robot {
             for (int i = 0; i < friendlyRepairableUnits.length; i++) {
 
                 final RobotInfo friendly = friendlyRepairableUnits[i];
+                if (lastRepairedRobot != null && friendly.ID == lastRepairedRobot.ID && friendly.health < friendly.maxHealth) { // Prioritize last healed robot
+                    
+                    injuredUnit = friendly;
+                    break;
+                    
+                }
                 if (friendly.type == RobotType.ARCHON) {
 
                     continue;
@@ -389,43 +407,131 @@ public class RobotArchon implements Robot {
 
             }
             if (injuredUnit != null) {
-
+                
+                if (lastRepairedRobot == null || injuredUnit.ID != lastRepairedRobot.ID) { // remember last healed robot
+                    
+                    lastRepairedRobot = injuredUnit;
+                    
+                }
                 robotController.repair(injuredUnit.location);
 
             }
 
             // show what we know
 
-            final CommunicationModuleSignalCollection communicationModuleSignalCollection = communicationModule.allCommunicationModuleSignals();
-            final MapLocation location = robotController.getLocation();
-            while (communicationModuleSignalCollection.hasMoreElements()) {
+            for (int i = 0; i < politicalAgenda.archonLocations.size(); i++) {
 
-                final CommunicationModuleSignal communicationModuleSignal = communicationModuleSignalCollection.nextElement();
-                int[] color = new int[]{255, 255, 255};
-                if (communicationModuleSignal.type == CommunicationModuleSignal.TYPE_ZOMBIEDEN) {
+                final MapLocation archonLocation = politicalAgenda.archonLocations.get(i);
+                robotController.setIndicatorLine(currentLocation, archonLocation, 136, 125, 255);
 
-                    color = new int[]{50, 255, 50};
+            }
 
-                } else if (communicationModuleSignal.type == CommunicationModuleSignal.TYPE_ENEMY_ARCHON) {
+            for (int i = 0; i < politicalAgenda.enemies.size(); i++) {
 
-                    color = new int[]{255, 0, 0};
+                final EnemyInfo enemy = politicalAgenda.enemies.get(i);
+                robotController.setIndicatorLine(currentLocation, enemy.location, 255, 0, 208);
 
-                } else if (communicationModuleSignal.type == CommunicationModuleSignal.TYPE_ENEMY_TURRET) {
+            }
 
-                    color = new int[]{255, 50, 100};
+            for (int i = 0; i < politicalAgenda.enemyArchons.size(); i++) {
 
-                } else {
+                final InformationSignal signal = politicalAgenda.enemyArchons.get(i);
+                robotController.setIndicatorLine(currentLocation, signal.location, 174, 0, 255);
 
-                    continue;
+            }
 
-                }
-                robotController.setIndicatorLine(location, communicationModuleSignal.location, color[0], color[1], color[2]);
+            for (int i = 0; i < politicalAgenda.zombieDens.size(); i++) {
+
+                final InformationSignal signal = politicalAgenda.zombieDens.get(i);
+                robotController.setIndicatorLine(currentLocation, signal.location, 0, 255, 0);
+
+            }
+
+            for (int i = 0; i < politicalAgenda.enemyClumps.size(); i++) {
+
+                final ClumpInfo clumpInfo = politicalAgenda.enemyClumps.get(i);
+                robotController.setIndicatorLine(currentLocation, clumpInfo.location, 255, 186, 186);
+
+            }
+
+            for (int i = 0; i < politicalAgenda.friendlyClumps.size(); i++) {
+
+                final ClumpInfo clumpInfo = politicalAgenda.friendlyClumps.get(i);
+                robotController.setIndicatorLine(currentLocation, clumpInfo.location, 186, 207, 255);
 
             }
 
             Clock.yield();
 
         }
+
+    }
+
+    /*
+    SIGNAL RELAY
+     */
+
+    public ArrayList<InformationSignal> generateSignalRelayList(final PoliticalAgenda politicalAgenda) {
+
+        final ArrayList<InformationSignal> signalRelayList = new ArrayList<InformationSignal>();
+
+        // map info
+
+        if (politicalAgenda.hasAllMapBoundaries()) {
+
+            final InformationSignal signal = politicalAgenda.generateMapInfoInformationSignal();
+            signalRelayList.add(signal);
+
+        } else {
+
+            if (politicalAgenda.mapBoundaryNorth != PoliticalAgenda.UnknownValue) {
+
+                final InformationSignal signal = politicalAgenda.generateMapWallInformationSignal(PoliticalAgenda.SignalTypeMapWallNorth, politicalAgenda.mapBoundaryNorth);
+                signalRelayList.add(signal);
+
+            }
+            if (politicalAgenda.mapBoundaryEast != PoliticalAgenda.UnknownValue) {
+
+                final InformationSignal signal = politicalAgenda.generateMapWallInformationSignal(PoliticalAgenda.SignalTypeMapWallEast, politicalAgenda.mapBoundaryEast);
+                signalRelayList.add(signal);
+
+            }
+            if (politicalAgenda.mapBoundarySouth != PoliticalAgenda.UnknownValue) {
+
+                final InformationSignal signal = politicalAgenda.generateMapWallInformationSignal(PoliticalAgenda.SignalTypeMapWallSouth, politicalAgenda.mapBoundarySouth);
+                signalRelayList.add(signal);
+
+            }
+            if (politicalAgenda.mapBoundaryWest != PoliticalAgenda.UnknownValue) {
+
+                final InformationSignal signal = politicalAgenda.generateMapWallInformationSignal(PoliticalAgenda.SignalTypeMapWallWest, politicalAgenda.mapBoundaryWest);
+                signalRelayList.add(signal);
+
+            }
+
+        }
+
+        // enemy archons
+
+        final int enemyArchonCount = politicalAgenda.enemyArchons.size();
+        for (int i = 0; i < enemyArchonCount; i++) {
+
+            final InformationSignal signal = politicalAgenda.enemyArchons.get(i);
+            signalRelayList.add(signal);
+
+        }
+
+        // zombie dens
+
+        final int zombieDenCount = politicalAgenda.zombieDens.size();
+        for (int i = 0; i < zombieDenCount; i++) {
+
+            final InformationSignal signal = politicalAgenda.zombieDens.get(i);
+            signalRelayList.add(signal);
+
+        }
+
+        return signalRelayList;
 
     }
 

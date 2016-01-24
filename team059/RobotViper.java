@@ -1,11 +1,9 @@
 package team059;
 
-import team059.Combat.CombatModule;
-import team059.Map.MapInfoModule;
+import team059.Combat.*;
+import team059.Information.*;
 import team059.Movement.*;
-import team059.Rubble.RubbleModule;
-import team059.Signals.CommunicationModule;
-import team059.Signals.CommunicationModuleSignal;
+import team059.Rubble.*;
 import battlecode.common.*;
 import java.util.*;
 
@@ -13,11 +11,11 @@ public class RobotViper implements Robot {
 
     public void run(final RobotController robotController) throws GameActionException {
 
-        final MapInfoModule mapInfoModule = new MapInfoModule();
+        robotController.emptySignalQueue();
 
         final CombatModule combatModule = new CombatModule();
-        final CommunicationModule communicationModule = new CommunicationModule(mapInfoModule);
         final MovementModule movementModule = new MovementModule();
+        final PoliticalAgenda politicalAgenda = new PoliticalAgenda();
         final Random random = new Random(robotController.getID());
         final RubbleModule rubbleModule = new RubbleModule();
         final Team currentTeam = robotController.getTeam();
@@ -31,33 +29,46 @@ public class RobotViper implements Robot {
 
         while (true) {
 
+            // update communication
+
+            politicalAgenda.processIncomingSignalsFromRobotController(robotController);
+            if (!politicalAgenda.isInformationSynced) {
+
+                Clock.yield();
+                continue;
+
+            }
+
+            // begin
+
             boolean lostHealth = (lastHealth != robotController.getHealth());
             lastHealth = robotController.getHealth();
 
             MapLocation currentLocation = robotController.getLocation();
 
-            // update communication
-
-            communicationModule.processIncomingSignals(robotController);
-
-            // let's verify existing information
-
-            communicationModule.verifyCommunicationsInformation(robotController, null, false);
-
             // let's get the best assignment
 
-            CommunicationModuleSignal objectiveSignal = null;
+            InformationSignal objectiveSignal = null;
             int closestObjectiveLocationDistance = Integer.MAX_VALUE;
 
-            final Enumeration<CommunicationModuleSignal> enemyArchonCommunicationModuleSignals = communicationModule.enemyArchons.elements();
-            while (enemyArchonCommunicationModuleSignals.hasMoreElements()) {
+            int zombieDenCount = politicalAgenda.zombieDens.size();
+            for (int i = 0; i < zombieDenCount; i++) {
 
-                final CommunicationModuleSignal signal = enemyArchonCommunicationModuleSignals.nextElement();
-                final int distance = signal.location.distanceSquaredTo(currentLocation);
+                final InformationSignal signal = politicalAgenda.zombieDens.get(i);
+                final int distance = currentLocation.distanceSquaredTo(signal.location);
                 if (distance < closestObjectiveLocationDistance) {
 
-                    objectiveSignal = signal;
-                    closestObjectiveLocationDistance = distance;
+                    if (politicalAgenda.verifyZombieDenSignal(signal, robotController)) {
+
+                        objectiveSignal = signal;
+                        closestObjectiveLocationDistance = distance;
+
+                    } else {
+
+                        zombieDenCount --;
+                        i--;
+
+                    }
 
                 }
 
@@ -112,7 +123,7 @@ public class RobotViper implements Robot {
 
                     robotController.attackLocation(bestEnemy.location);
                     attacked = true;
-                    communicationModule.broadcastSignal(robotController, CommunicationModule.maximumFreeBroadcastRangeForRobotType(robotController.getType()));
+                    politicalAgenda.broadcastSignal(robotController,politicalAgenda.maximumFreeBroadcastRangeForType(robotController.getType()));
 
                 }
 
@@ -120,7 +131,7 @@ public class RobotViper implements Robot {
 
             // now let's try move toward an assignment
 
-            if (robotController.isCoreReady() && communicationModule.initialInformationReceived && ableToMove) {
+            if (robotController.isCoreReady() && politicalAgenda.isInformationSynced && ableToMove) {
 
                 final RobotInfo[] zombies = robotController.senseNearbyRobots(type.sensorRadiusSquared, Team.ZOMBIE);
 
@@ -222,7 +233,7 @@ public class RobotViper implements Robot {
 
             // we can try clear rubble if we didn't move
 
-            if (robotController.isCoreReady() && communicationModule.initialInformationReceived) {
+            if (robotController.isCoreReady() && politicalAgenda.isInformationSynced) {
 
                 if (targetRubbleClearanceDirection != null) {
 
@@ -239,14 +250,17 @@ public class RobotViper implements Robot {
 
                         // otherwise they didn't move or clear rubble, check if they're stuck
 
-                    } else if (communicationModule.notifications.size() == 0 && objectiveSignal != null) {
+                    } else if (politicalAgenda.notifications.size() == 0 && objectiveSignal != null) {
 
                         turnsStuck++;
 
                         if (turnsStuck > 5) {
 
-                            communicationModule.clearSignal(objectiveSignal, communicationModule.enemyArchons);
-                            communicationModule.clearSignal(objectiveSignal, communicationModule.zombieDens);
+                            if (objectiveSignal.type == PoliticalAgenda.SignalTypeZombieDen) {
+
+                                politicalAgenda.zombieDens.remove(politicalAgenda.getIndexIdentifierForZombieDen(objectiveSignal.location));
+
+                            }
                             turnsStuck = 0;
 
                         }
@@ -263,28 +277,44 @@ public class RobotViper implements Robot {
 
             // finish up
 
-//            final CommunicationModuleSignalCollection communicationModuleSignalCollection = communicationModule.allCommunicationModuleSignals();
-//            final MapLocation location = robotController.getLocation();
-//            while (communicationModuleSignalCollection.hasMoreElements()) {
-//
-//                final CommunicationModuleSignal communicationModuleSignal = communicationModuleSignalCollection.nextElement();
-//                int[] color = new int[]{255, 255, 255};
-//                if (communicationModuleSignal.type == CommunicationModuleSignal.TYPE_ZOMBIEDEN) {
-//
-//                    color = new int[]{50, 255, 50};
-//
-//                } else if (communicationModuleSignal.type == CommunicationModuleSignal.TYPE_ENEMY_ARCHON) {
-//
-//                    color = new int[]{255, 0, 0};
-//
-//                }
-//                robotController.setIndicatorLine(location, communicationModuleSignal.location, color[0], color[1], color[2]);
-//
-//            }
+            for (int i = 0; i < politicalAgenda.archonLocations.size(); i++) {
+
+                final MapLocation archonLocation = politicalAgenda.archonLocations.get(i);
+                robotController.setIndicatorLine(currentLocation, archonLocation, 25, 25, 255);
+
+            }
+
+            for (int i = 0; i < politicalAgenda.enemies.size(); i++) {
+
+                final EnemyInfo enemy = politicalAgenda.enemies.get(i);
+                robotController.setIndicatorLine(currentLocation, enemy.location, 255, 0, 255);
+
+            }
+
+            for (int i = 0; i < politicalAgenda.zombieDens.size(); i++) {
+
+                final InformationSignal signal = politicalAgenda.zombieDens.get(i);
+                robotController.setIndicatorLine(currentLocation, signal.location, 0, 255, 0);
+
+            }
+
+            for (int i = 0; i < politicalAgenda.enemyClumps.size(); i++) {
+
+                final ClumpInfo clumpInfo = politicalAgenda.enemyClumps.get(i);
+                robotController.setIndicatorLine(currentLocation, clumpInfo.location, 120, 0, 0);
+
+            }
+
+            for (int i = 0; i < politicalAgenda.friendlyClumps.size(); i++) {
+
+                final ClumpInfo clumpInfo = politicalAgenda.friendlyClumps.get(i);
+                robotController.setIndicatorLine(currentLocation, clumpInfo.location, 0, 120, 0);
+
+            }
 
             if (objectiveSignal != null) {
 
-                robotController.setIndicatorLine(objectiveSignal.location, robotController.getLocation(), 255, 0, 0);
+                robotController.setIndicatorLine(objectiveSignal.location, robotController.getLocation(), 0, 200, 200);
 
             }
 
