@@ -31,6 +31,8 @@ public class RobotArchon implements Robot {
         int relayInformationDelay = 0;
         ArrayList<InformationSignal> informationRelaySignals = null;
 
+        RobotInfo lastRepairedRobot = null;
+
         // general
 
         final Team currentTeam = robotController.getTeam();
@@ -385,6 +387,12 @@ public class RobotArchon implements Robot {
             for (int i = 0; i < friendlyRepairableUnits.length; i++) {
 
                 final RobotInfo friendly = friendlyRepairableUnits[i];
+                if (lastRepairedRobot != null && friendly.ID == lastRepairedRobot.ID) { // Prioritize last healed robot
+                    
+                    injuredUnit = friendly;
+                    break;
+                    
+                }
                 if (friendly.type == RobotType.ARCHON) {
 
                     continue;
@@ -399,7 +407,12 @@ public class RobotArchon implements Robot {
 
             }
             if (injuredUnit != null) {
-
+                
+                if (lastRepairedRobot == null || injuredUnit.ID != lastRepairedRobot.ID) { // remember last healed robot
+                    
+                    lastRepairedRobot = injuredUnit;
+                    
+                }
                 robotController.repair(injuredUnit.location);
 
             }
