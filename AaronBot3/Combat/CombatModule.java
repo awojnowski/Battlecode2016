@@ -4,6 +4,9 @@ import battlecode.common.*;
 
 public class CombatModule {
 
+    public MapLocation averageFriendlyArchonLocation = null;
+    public MapLocation averageEnemyArchonLocation = null;
+
     public RobotInfo lowestHealthEnemyFromEnemies(RobotInfo[] enemies) {
 
         RobotInfo bestEnemy = null;
@@ -107,27 +110,61 @@ public class CombatModule {
     LOCATIONS / SIDES
      */
 
-    public boolean isLocationOnOurSide(final RobotController robotController, final MapLocation denLocation) {
+    private MapLocation getAverageFriendlyArchonLocation(final RobotController robotController) {
 
-        int totalDistanceToUs = 0;
-        int totalDistanceToThem = 0;
+        if (averageFriendlyArchonLocation == null) {
 
-        MapLocation[] friendlyArchonLocations = robotController.getInitialArchonLocations(robotController.getTeam());
-        MapLocation[] enemyArchonLocations = robotController.getInitialArchonLocations(robotController.getTeam().opponent());
+            int totalX = 0;
+            int totalY = 0;
+            MapLocation[] friendlyArchonLocations = robotController.getInitialArchonLocations(robotController.getTeam());
 
-        for (int i = 0; i < friendlyArchonLocations.length; i++) {
+            for (int i = 0; i < friendlyArchonLocations.length; i++) {
 
-            totalDistanceToUs += friendlyArchonLocations[i].distanceSquaredTo(denLocation);
+                totalX += friendlyArchonLocations[i].x;
+                totalY += friendlyArchonLocations[i].y;
+
+            }
+
+            averageFriendlyArchonLocation = new MapLocation(totalX / friendlyArchonLocations.length, totalY / friendlyArchonLocations.length);
+            robotController.setIndicatorDot(averageFriendlyArchonLocation, 255, 255, 255);
 
         }
+        return averageFriendlyArchonLocation;
 
-        for (int i = 0; i < enemyArchonLocations.length; i++) {
+    }
 
-            totalDistanceToThem += enemyArchonLocations[i].distanceSquaredTo(denLocation);
+    private MapLocation getAverageEnemyArchonLocation(final RobotController robotController) {
+
+        if (averageEnemyArchonLocation == null) {
+
+            int totalX = 0;
+            int totalY = 0;
+            MapLocation[] enemyArchonLocations = robotController.getInitialArchonLocations(robotController.getTeam().opponent());
+
+            for (int i = 0; i < enemyArchonLocations.length; i++) {
+
+                totalX += enemyArchonLocations[i].x;
+                totalY += enemyArchonLocations[i].y;
+
+            }
+
+            averageEnemyArchonLocation = new MapLocation(totalX / enemyArchonLocations.length, totalY / enemyArchonLocations.length);
+            robotController.setIndicatorDot(averageEnemyArchonLocation, 255, 255, 255);
 
         }
+        return averageEnemyArchonLocation;
 
-        return totalDistanceToUs < totalDistanceToThem;
+    }
+
+    public boolean isLocationOnOurSide(final RobotController robotController, final MapLocation location) {
+
+        MapLocation averageFriendlyArchon = getAverageFriendlyArchonLocation(robotController);
+        MapLocation averageEnemyArchon = getAverageEnemyArchonLocation(robotController);
+
+        int distanceToUs = location.distanceSquaredTo(averageFriendlyArchon);
+        int distanceToThem = location.distanceSquaredTo(averageEnemyArchon);
+
+        return distanceToUs < distanceToThem;
 
     }
 
