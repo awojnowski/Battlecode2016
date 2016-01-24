@@ -250,6 +250,8 @@ public class RobotTurret implements Robot {
 
             // finish up
 
+            // show what we know
+
             for (int i = 0; i < politicalAgenda.archonLocations.size(); i++) {
 
                 final MapLocation archonLocation = politicalAgenda.archonLocations.get(i);
@@ -268,6 +270,20 @@ public class RobotTurret implements Robot {
 
                 final InformationSignal signal = politicalAgenda.zombieDens.get(i);
                 robotController.setIndicatorLine(currentLocation, signal.location, 0, 255, 0);
+
+            }
+
+            for (int i = 0; i < politicalAgenda.enemyClumps.size(); i++) {
+
+                final ClumpInfo clumpInfo = politicalAgenda.enemyClumps.get(i);
+                robotController.setIndicatorLine(currentLocation, clumpInfo.location, 120, 0, 0);
+
+            }
+
+            for (int i = 0; i < politicalAgenda.friendlyClumps.size(); i++) {
+
+                final ClumpInfo clumpInfo = politicalAgenda.friendlyClumps.get(i);
+                robotController.setIndicatorLine(currentLocation, clumpInfo.location, 0, 120, 0);
 
             }
 

@@ -24,6 +24,9 @@ public class RobotScout implements Robot {
 
         Direction movementDirection = null;
 
+        int turnsSinceLastEnemyClumpSignal = 0;
+        int turnsSinceLastFriendlyClumpSignal = 0;
+
         politicalAgenda.determineMapMirroring(robotController);
 
         while (true) {
@@ -39,6 +42,18 @@ public class RobotScout implements Robot {
             }
 
             // continue forward
+
+            if (turnsSinceLastEnemyClumpSignal > 0) {
+
+                turnsSinceLastEnemyClumpSignal --;
+
+            }
+
+            if (turnsSinceLastFriendlyClumpSignal > 0) {
+
+                turnsSinceLastFriendlyClumpSignal --;
+
+            }
 
             MapLocation currentLocation = robotController.getLocation();
             final RobotInfo[] enemies = robotController.senseHostileRobots(currentLocation, robotController.getType().sensorRadiusSquared);
@@ -69,7 +84,7 @@ public class RobotScout implements Robot {
 
                     signal.action = PoliticalAgenda.SignalActionErase;
                     signal.broadcastRange = politicalAgenda.maximumBroadcastRangeForLocation(currentLocation);
-                    politicalAgenda.enqueueSignalForBroadcast(signal);
+                    politicalAgenda.enqueueSignalForBroadcast(signal, robotController);
 
                     zombieDenCount --;
                     i--;
@@ -95,11 +110,11 @@ public class RobotScout implements Robot {
 
                     final InformationSignal signal = politicalAgenda.generateZombieDenInformationSignal(enemy.location);
                     signal.broadcastRange = maximumBroadcastRange;
-                    politicalAgenda.enqueueSignalForBroadcast(signal);
+                    politicalAgenda.enqueueSignalForBroadcast(signal, robotController);
 
                     final InformationSignal mirroredSignal = politicalAgenda.generateZombieDenInformationSignal(politicalAgenda.getMirroredLocationFromLocation(enemy.location));
                     mirroredSignal.broadcastRange = maximumBroadcastRange;
-                    politicalAgenda.enqueueSignalForBroadcast(mirroredSignal);
+                    politicalAgenda.enqueueSignalForBroadcast(mirroredSignal, robotController);
 
                 } else if (areFriendliesNearby) {
 
@@ -107,7 +122,57 @@ public class RobotScout implements Robot {
 
                     final InformationSignal signal = politicalAgenda.generateEnemyInformationSignal(enemy.location, enemy.type, (int)enemy.health, enemy.ID);
                     signal.broadcastRange = politicalAgenda.maximumFreeBroadcastRangeForType(robotController.getType());
-                    politicalAgenda.enqueueSignalForBroadcast(signal);
+                    politicalAgenda.enqueueSignalForBroadcast(signal, robotController);
+
+                }
+
+            }
+
+            if (turnsSinceLastEnemyClumpSignal == 0) {
+
+                if (enemies.length > 6) {
+
+                    int totalX = 0;
+                    int totalY = 0;
+                    for (int i = 0; i < enemies.length; i++) {
+
+                        totalX += enemies[i].location.x;
+                        totalY += enemies[i].location.y;
+
+                    }
+                    int locationX = totalX / enemies.length;
+                    int locationY = totalY / enemies.length;
+
+                    final InformationSignal signal = politicalAgenda.generateEnemyClumpInformationSignal(new MapLocation(locationX, locationY));
+                    signal.broadcastRange = maximumBroadcastRange;
+                    politicalAgenda.enqueueSignalForBroadcast(signal, robotController);
+
+                    turnsSinceLastEnemyClumpSignal = 20;
+
+                }
+
+            }
+
+            if (turnsSinceLastFriendlyClumpSignal == 0) {
+
+                if (friendlies.length > 15) {
+
+                    int totalX = 0;
+                    int totalY = 0;
+                    for (int i = 0; i < friendlies.length; i++) {
+
+                        totalX += friendlies[i].location.x;
+                        totalY += friendlies[i].location.y;
+
+                    }
+                    int locationX = totalX / friendlies.length;
+                    int locationY = totalY / friendlies.length;
+
+                    final InformationSignal signal = politicalAgenda.generateFriendlyClumpInformationSignal(new MapLocation(locationX, locationY));
+                    signal.broadcastRange = maximumBroadcastRange;
+                    politicalAgenda.enqueueSignalForBroadcast(signal, robotController);
+
+                    turnsSinceLastFriendlyClumpSignal = 20;
 
                 }
 
@@ -125,7 +190,7 @@ public class RobotScout implements Robot {
 
                     final InformationSignal signal = politicalAgenda.generateMapInfoInformationSignal();
                     signal.broadcastRange = maximumBroadcastRange;
-                    politicalAgenda.enqueueSignalForBroadcast(signal);
+                    politicalAgenda.enqueueSignalForBroadcast(signal, robotController);
 
                 } else {
 
@@ -133,7 +198,7 @@ public class RobotScout implements Robot {
 
                         final InformationSignal signal = politicalAgenda.generateMapWallInformationSignal(PoliticalAgenda.SignalTypeMapWallEast, politicalAgenda.mapBoundaryEast);
                         signal.broadcastRange = maximumBroadcastRange;
-                        politicalAgenda.enqueueSignalForBroadcast(signal);
+                        politicalAgenda.enqueueSignalForBroadcast(signal, robotController);
 
                         if (politicalAgenda.mapBoundaryWest == PoliticalAgenda.UnknownValue) {
 
@@ -142,7 +207,7 @@ public class RobotScout implements Robot {
 
                                 mirroredSignal.broadcastRange = maximumBroadcastRange;
                                 politicalAgenda.mapBoundaryWest = mirroredSignal.data;
-                                politicalAgenda.enqueueSignalForBroadcast(mirroredSignal);
+                                politicalAgenda.enqueueSignalForBroadcast(mirroredSignal, robotController);
                                 hasWest = true;
 
                             }
@@ -154,7 +219,7 @@ public class RobotScout implements Robot {
 
                         final InformationSignal signal = politicalAgenda.generateMapWallInformationSignal(PoliticalAgenda.SignalTypeMapWallNorth, politicalAgenda.mapBoundaryNorth);
                         signal.broadcastRange = maximumBroadcastRange;
-                        politicalAgenda.enqueueSignalForBroadcast(signal);
+                        politicalAgenda.enqueueSignalForBroadcast(signal, robotController);
 
                         if (politicalAgenda.mapBoundarySouth == PoliticalAgenda.UnknownValue) {
 
@@ -163,7 +228,7 @@ public class RobotScout implements Robot {
 
                                 mirroredSignal.broadcastRange = maximumBroadcastRange;
                                 politicalAgenda.mapBoundarySouth = mirroredSignal.data;
-                                politicalAgenda.enqueueSignalForBroadcast(mirroredSignal);
+                                politicalAgenda.enqueueSignalForBroadcast(mirroredSignal, robotController);
                                 hasSouth = true;
 
                             }
@@ -175,7 +240,7 @@ public class RobotScout implements Robot {
 
                         final InformationSignal signal = politicalAgenda.generateMapWallInformationSignal(PoliticalAgenda.SignalTypeMapWallWest, politicalAgenda.mapBoundaryWest);
                         signal.broadcastRange = maximumBroadcastRange;
-                        politicalAgenda.enqueueSignalForBroadcast(signal);
+                        politicalAgenda.enqueueSignalForBroadcast(signal, robotController);
 
                         if (politicalAgenda.mapBoundaryEast == PoliticalAgenda.UnknownValue) {
 
@@ -184,7 +249,7 @@ public class RobotScout implements Robot {
 
                                 mirroredSignal.broadcastRange = maximumBroadcastRange;
                                 politicalAgenda.mapBoundaryEast = mirroredSignal.data;
-                                politicalAgenda.enqueueSignalForBroadcast(mirroredSignal);
+                                politicalAgenda.enqueueSignalForBroadcast(mirroredSignal, robotController);
                                 hasEast = true;
 
                             }
@@ -196,7 +261,7 @@ public class RobotScout implements Robot {
 
                         final InformationSignal signal = politicalAgenda.generateMapWallInformationSignal(PoliticalAgenda.SignalTypeMapWallSouth, politicalAgenda.mapBoundarySouth);
                         signal.broadcastRange = maximumBroadcastRange;
-                        politicalAgenda.enqueueSignalForBroadcast(signal);
+                        politicalAgenda.enqueueSignalForBroadcast(signal, robotController);
 
                         if (politicalAgenda.mapBoundaryNorth == PoliticalAgenda.UnknownValue) {
 
@@ -205,7 +270,7 @@ public class RobotScout implements Robot {
 
                                 mirroredSignal.broadcastRange = maximumBroadcastRange;
                                 politicalAgenda.mapBoundaryNorth = mirroredSignal.data;
-                                politicalAgenda.enqueueSignalForBroadcast(mirroredSignal);
+                                politicalAgenda.enqueueSignalForBroadcast(mirroredSignal, robotController);
                                 hasNorth = true;
 
                             }
@@ -317,6 +382,20 @@ public class RobotScout implements Robot {
 
             // show what we know
 
+            for (int i = 0; i < politicalAgenda.archonLocations.size(); i++) {
+
+                final MapLocation archonLocation = politicalAgenda.archonLocations.get(i);
+                robotController.setIndicatorLine(currentLocation, archonLocation, 25, 25, 255);
+
+            }
+
+            for (int i = 0; i < politicalAgenda.enemies.size(); i++) {
+
+                final EnemyInfo enemy = politicalAgenda.enemies.get(i);
+                robotController.setIndicatorLine(currentLocation, enemy.location, 255, 0, 255);
+
+            }
+
             for (int i = 0; i < politicalAgenda.zombieDens.size(); i++) {
 
                 final InformationSignal signal = politicalAgenda.zombieDens.get(i);
@@ -324,24 +403,17 @@ public class RobotScout implements Robot {
 
             }
 
-            if (politicalAgenda.mapBoundaryEast != PoliticalAgenda.UnknownValue) {
+            for (int i = 0; i < politicalAgenda.enemyClumps.size(); i++) {
 
-                robotController.setIndicatorLine(currentLocation, new MapLocation(politicalAgenda.mapBoundaryEast - 1, currentLocation.y), 255, 125, 0);
-
-            }
-            if (politicalAgenda.mapBoundaryNorth != PoliticalAgenda.UnknownValue) {
-
-                robotController.setIndicatorLine(currentLocation, new MapLocation(currentLocation.x, politicalAgenda.mapBoundaryNorth + 1), 255, 125, 0);
+                final ClumpInfo clumpInfo = politicalAgenda.enemyClumps.get(i);
+                robotController.setIndicatorLine(currentLocation, clumpInfo.location, 120, 0, 0);
 
             }
-            if (politicalAgenda.mapBoundaryWest != PoliticalAgenda.UnknownValue) {
 
-                robotController.setIndicatorLine(currentLocation, new MapLocation(politicalAgenda.mapBoundaryWest + 1, currentLocation.y), 255, 125, 0);
+            for (int i = 0; i < politicalAgenda.friendlyClumps.size(); i++) {
 
-            }
-            if (politicalAgenda.mapBoundarySouth != PoliticalAgenda.UnknownValue) {
-
-                robotController.setIndicatorLine(currentLocation, new MapLocation(currentLocation.x, politicalAgenda.mapBoundarySouth - 1), 255, 125, 0);
+                final ClumpInfo clumpInfo = politicalAgenda.friendlyClumps.get(i);
+                robotController.setIndicatorLine(currentLocation, clumpInfo.location, 0, 120, 0);
 
             }
 
@@ -355,11 +427,11 @@ public class RobotScout implements Robot {
 
         if (robotController.getID() % 2 == 0) {
 
-            return direction.rotateLeft();
+            return direction.rotateLeft().rotateLeft().rotateLeft();
 
         } else {
 
-            return direction.rotateRight();
+            return direction.rotateRight().rotateRight().rotateRight();
 
         }
 

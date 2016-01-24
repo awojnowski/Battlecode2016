@@ -188,7 +188,7 @@ public class RobotArchon implements Robot {
             if (robotController.isCoreReady()) {
 
                 RobotType typeToBuild = RobotType.SOLDIER;
-                if (scoutsBuilt == 0 || (int)Math.pow(scoutsBuilt + 1, 3) < soldiersBuilt) {
+                if (scoutsBuilt == 0 || scoutsBuilt * 10 < soldiersBuilt) {
 
                     typeToBuild = RobotType.SCOUT;
 
@@ -406,10 +406,38 @@ public class RobotArchon implements Robot {
 
             // show what we know
 
+            for (int i = 0; i < politicalAgenda.archonLocations.size(); i++) {
+
+                final MapLocation archonLocation = politicalAgenda.archonLocations.get(i);
+                robotController.setIndicatorLine(currentLocation, archonLocation, 25, 25, 255);
+
+            }
+
+            for (int i = 0; i < politicalAgenda.enemies.size(); i++) {
+
+                final EnemyInfo enemy = politicalAgenda.enemies.get(i);
+                robotController.setIndicatorLine(currentLocation, enemy.location, 255, 0, 255);
+
+            }
+
             for (int i = 0; i < politicalAgenda.zombieDens.size(); i++) {
 
                 final InformationSignal signal = politicalAgenda.zombieDens.get(i);
                 robotController.setIndicatorLine(currentLocation, signal.location, 0, 255, 0);
+
+            }
+
+            for (int i = 0; i < politicalAgenda.enemyClumps.size(); i++) {
+
+                final ClumpInfo clumpInfo = politicalAgenda.enemyClumps.get(i);
+                robotController.setIndicatorLine(currentLocation, clumpInfo.location, 120, 0, 0);
+
+            }
+
+            for (int i = 0; i < politicalAgenda.friendlyClumps.size(); i++) {
+
+                final ClumpInfo clumpInfo = politicalAgenda.friendlyClumps.get(i);
+                robotController.setIndicatorLine(currentLocation, clumpInfo.location, 0, 120, 0);
 
             }
 

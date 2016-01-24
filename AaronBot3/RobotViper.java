@@ -298,9 +298,23 @@ public class RobotViper implements Robot {
 
             }
 
+            for (int i = 0; i < politicalAgenda.enemyClumps.size(); i++) {
+
+                final ClumpInfo clumpInfo = politicalAgenda.enemyClumps.get(i);
+                robotController.setIndicatorLine(currentLocation, clumpInfo.location, 120, 0, 0);
+
+            }
+
+            for (int i = 0; i < politicalAgenda.friendlyClumps.size(); i++) {
+
+                final ClumpInfo clumpInfo = politicalAgenda.friendlyClumps.get(i);
+                robotController.setIndicatorLine(currentLocation, clumpInfo.location, 0, 120, 0);
+
+            }
+
             if (objectiveSignal != null) {
 
-                robotController.setIndicatorLine(objectiveSignal.location, robotController.getLocation(), 125, 0, 0);
+                robotController.setIndicatorLine(objectiveSignal.location, robotController.getLocation(), 0, 200, 200);
 
             }
 

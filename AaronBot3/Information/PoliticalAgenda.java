@@ -20,6 +20,8 @@ public class PoliticalAgenda {
     public static int SignalTypeEnemy             = 6;
     public static int SignalTypeInformationSynced = 7;
     public static int SignalTypeArchonUpdate      = 8;
+    public static int SignalTypeFriendlyClump     = 9;
+    public static int SignalTypeEnemyClump        = 10;
 
     public static int UnknownValue = -186784223;
 
@@ -38,9 +40,12 @@ public class PoliticalAgenda {
     public int companionIdentifier = PoliticalAgenda.UnknownValue;
 
     public ArrayList<MapLocation> archonLocations = new ArrayList<MapLocation>();
+    public ArrayList<MapLocation> archonMaydayLocations = new ArrayList<MapLocation>();
     public ImmutableInformationCollection<EnemyInfo> enemies = null;
     public final ArrayList<Signal> notifications = new ArrayList<Signal>();
     public final MutableInformationCollection<InformationSignal> zombieDens = new MutableInformationCollection<InformationSignal>();
+    public final ArrayList<ClumpInfo> enemyClumps = new ArrayList<ClumpInfo>();
+    public final ArrayList<ClumpInfo> friendlyClumps = new ArrayList<ClumpInfo>();
 
     public final ArrayList<InformationSignal> informationSignalQueue = new ArrayList<InformationSignal>();
 
@@ -74,7 +79,7 @@ public class PoliticalAgenda {
 
         if (processSignal) {
 
-            this.processSignal(informationSignal);
+            this.processSignal(informationSignal, robotController);
 
         }
 
@@ -92,10 +97,10 @@ public class PoliticalAgenda {
 
     }
 
-    public void enqueueSignalForBroadcast(final InformationSignal informationSignal) {
+    public void enqueueSignalForBroadcast(final InformationSignal informationSignal, final RobotController robotController) {
 
         this.informationSignalQueue.add(informationSignal);
-        this.processSignal(informationSignal);
+        this.processSignal(informationSignal, robotController);
 
     }
 
@@ -326,10 +331,36 @@ public class PoliticalAgenda {
 
     public void processIncomingSignalsFromRobotController(final RobotController robotController) {
 
+        final int roundNumber = robotController.getRoundNum();
+
         // clean up
 
         this.enemies = new ImmutableInformationCollection<EnemyInfo>();
         this.notifications.clear();
+
+        for (int i = 0; i < this.enemyClumps.size(); i++) {
+
+            final ClumpInfo clumpInfo = this.enemyClumps.get(i);
+            if (clumpInfo.turn + 20 < roundNumber) {
+
+                this.enemyClumps.remove(i);
+                i--;
+
+            }
+
+        }
+
+        for (int i = 0; i < this.friendlyClumps.size(); i++) {
+
+            final ClumpInfo clumpInfo = this.friendlyClumps.get(i);
+            if (clumpInfo.turn + 20 < roundNumber) {
+
+                this.friendlyClumps.remove(i);
+                i--;
+
+            }
+
+        }
 
         if (robotController.getRoundNum() % PoliticalAgenda.ArchonUpdateModulus == 0) {
 
@@ -366,13 +397,13 @@ public class PoliticalAgenda {
                 continue;
 
             }
-            this.processSignal(informationSignal);
+            this.processSignal(informationSignal, robotController);
 
         }
 
     }
 
-    private void processSignal(final InformationSignal signal) {
+    private void processSignal(final InformationSignal signal, final RobotController robotController) {
 
         if (signal.type == PoliticalAgenda.SignalTypeZombieDen) {
 
@@ -431,6 +462,19 @@ public class PoliticalAgenda {
         } else if (signal.type == PoliticalAgenda.SignalTypeArchonUpdate) {
 
             this.archonLocations.add(signal.location);
+
+        } else if (signal.type == PoliticalAgenda.SignalTypeEnemyClump) {
+
+            final ClumpInfo clumpInfo = new ClumpInfo(signal);
+            clumpInfo.turn = robotController.getRoundNum();
+            this.enemyClumps.add(clumpInfo);
+
+        } else if (signal.type == PoliticalAgenda.SignalTypeFriendlyClump) {
+
+            final ClumpInfo clumpInfo = new ClumpInfo(signal);
+            clumpInfo.turn = robotController.getRoundNum();
+            this.friendlyClumps.add(clumpInfo);
+
 
         }
 
@@ -556,6 +600,26 @@ public class PoliticalAgenda {
         informationSignal.action = PoliticalAgenda.SignalActionWrite;
         informationSignal.type = PoliticalAgenda.SignalTypeEnemy;
         enemyInfo.fillSignalWithEnemyInfo(informationSignal);
+        return informationSignal;
+
+    }
+
+    public InformationSignal generateEnemyClumpInformationSignal(final MapLocation location) {
+
+        final InformationSignal informationSignal = new InformationSignal();
+        informationSignal.action = PoliticalAgenda.SignalActionWrite;
+        informationSignal.location = location;
+        informationSignal.type = PoliticalAgenda.SignalTypeEnemyClump;
+        return informationSignal;
+
+    }
+
+    public InformationSignal generateFriendlyClumpInformationSignal(final MapLocation location) {
+
+        final InformationSignal informationSignal = new InformationSignal();
+        informationSignal.action = PoliticalAgenda.SignalActionWrite;
+        informationSignal.location = location;
+        informationSignal.type = PoliticalAgenda.SignalTypeFriendlyClump;
         return informationSignal;
 
     }
