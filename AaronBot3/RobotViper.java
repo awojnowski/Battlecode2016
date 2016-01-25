@@ -79,8 +79,8 @@ public class RobotViper implements Robot {
                 directionController.enemyBufferDistance = 1;
 
                 final RobotInfo[] attackableEnemies = robotController.senseHostileRobots(currentLocation, robotController.getType().attackRadiusSquared);
-                final RobotInfo bestAttackableEnemy = this.getBestEnemyToAttackFromEnemies(attackableEnemies);
-                final RobotInfo bestFoundEnemy = this.getBestEnemyToAttackFromEnemies(enemies);
+                final RobotInfo bestAttackableEnemy = this.getBestEnemyToAttackFromEnemies(attackableEnemies, robotController, isAggressive);
+                final RobotInfo bestFoundEnemy = this.getBestEnemyToAttackFromEnemies(enemies, robotController, isAggressive);
 
                 if (robotController.isCoreReady()) {
 
@@ -693,27 +693,63 @@ public class RobotViper implements Robot {
     COMBAT
      */
 
-    private RobotInfo getBestEnemyToAttackFromEnemies(final RobotInfo[] enemies) {
+    private RobotInfo getBestEnemyToAttackFromEnemies(final RobotInfo[] enemies, final RobotController robotController, boolean isAggressive) {
 
         RobotInfo bestEnemy = null;
         for (int i = 0; i < enemies.length; i++) {
 
             final RobotInfo enemy = enemies[i];
-            if (enemy.viperInfectedTurns > 0) {
+            if (robotController.getRoundNum() > 2500 && isAggressive) {
 
-                continue;
+                // we don't want to attack others if we're aggressive and it's past a late round and we have a lot of friendlies around (too risky)
+                if (!enemy.type.isZombie) {
+
+                    continue;
+
+                }
 
             }
             if (bestEnemy == null) {
 
+                // no best enemy, so this is the best enemy
+
                 bestEnemy = enemy;
                 continue;
 
             }
-            if (bestEnemy.type.isZombie && !enemy.type.isZombie) {
+            if (enemy.type.isZombie) {
 
-                bestEnemy = enemy;
-                continue;
+                if (!bestEnemy.type.isZombie) {
+
+                    // we don't want to prioritize a zombie over the enemy team
+                    continue;
+
+                }
+
+                if (enemy.health < bestEnemy.health) {
+
+                    bestEnemy = enemy;
+                    continue;
+
+                }
+
+            } else {
+
+                if (enemy.viperInfectedTurns < bestEnemy.viperInfectedTurns) {
+
+                    bestEnemy = enemy;
+                    continue;
+
+                } else if (enemy.viperInfectedTurns == bestEnemy.viperInfectedTurns) {
+
+                    if (enemy.health < bestEnemy.health) {
+
+                        bestEnemy = enemy;
+                        continue;
+
+                    }
+
+                }
 
             }
 
