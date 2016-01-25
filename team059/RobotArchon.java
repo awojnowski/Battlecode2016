@@ -163,11 +163,13 @@ public class RobotArchon implements Robot {
             directionController.shouldAvoidEnemies = true;
 
             boolean inDanger = false;
+            robotController.setIndicatorString(2, "Not in danger");
             if (enemies.length > friendlies.length) {
 
                 // either we are outnumbered
 
                 inDanger = true;
+                robotController.setIndicatorString(2, "In danger (outnumbered)");
 
             } else {
 
@@ -179,6 +181,7 @@ public class RobotArchon implements Robot {
                     if (attackRadiusSquared >= currentLocation.distanceSquaredTo(enemies[i].location)) {
 
                         inDanger = true;
+                        robotController.setIndicatorString(2, "In danger (attack range)");
                         break;
 
                     }
@@ -211,6 +214,50 @@ public class RobotArchon implements Robot {
                 if (!robotController.isCoreReady()) {
 
                     break;
+
+                }
+
+                // see if we are safe
+
+                if (robotController.isCoreReady()) {
+
+                    if (inDanger) {
+
+                        final Direction enemiesDirection = directionController.getAverageDirectionTowardsEnemies(enemies, true, true);
+                        if (enemiesDirection != null) {
+
+                            directionController.shouldAvoidEnemies = false;
+                            final DirectionController.Result enemiesMovementResult = directionController.getDirectionResultFromDirection(enemiesDirection.opposite(), DirectionController.ADJUSTMENT_THRESHOLD_MEDIUM);
+                            directionController.shouldAvoidEnemies = true;
+
+                            if (enemiesMovementResult.direction != null) {
+
+                                robotController.move(enemiesMovementResult.direction);
+                                currentLocation = robotController.getLocation();
+                                robotController.setIndicatorString(0, "I'm fleeing " + enemiesMovementResult.direction + " to get away from enemies " + enemiesDirection);
+                                break;
+
+                            } else if (enemiesMovementResult.error == DirectionController.ErrorType.BLOCKED_RUBBLE) {
+
+                                final Direction rubbleClearanceDirection = rubbleModule.getRubbleClearanceDirectionFromDirection(enemiesDirection.opposite(), robotController, RubbleModule.ADJUSTMENT_THRESHOLD_MEDIUM);
+                                if (rubbleClearanceDirection != null) {
+
+                                    final double rubble = robotController.senseRubble(currentLocation.add(rubbleClearanceDirection));
+                                    if (rubble < 1000.0) {
+
+                                        robotController.clearRubble(rubbleClearanceDirection);
+                                        robotController.setIndicatorString(0, "I'm clearing rubble " + rubbleClearanceDirection + " to get away from enemies " + enemiesDirection);
+                                        break;
+
+                                    }
+
+                                }
+
+                            }
+
+                        }
+
+                    }
 
                 }
 
@@ -274,111 +321,71 @@ public class RobotArchon implements Robot {
 
                 }
 
-                // see if we are safe
-
-                if (robotController.isCoreReady()) {
-
-                    if (inDanger) {
-
-                        final Direction enemiesDirection = directionController.getAverageDirectionTowardsEnemies(enemies, true);
-                        if (enemiesDirection != null) {
-
-                            directionController.shouldAvoidEnemies = false;
-                            final DirectionController.Result enemiesMovementResult = directionController.getDirectionResultFromDirection(enemiesDirection.opposite(), DirectionController.ADJUSTMENT_THRESHOLD_MEDIUM);
-                            directionController.shouldAvoidEnemies = true;
-
-                            if (enemiesMovementResult.direction != null) {
-
-                                robotController.move(enemiesMovementResult.direction);
-                                currentLocation = robotController.getLocation();
-                                robotController.setIndicatorString(0, "I'm fleeing to get away from enemies " + enemiesDirection);
-                                break;
-
-                            } else if (enemiesMovementResult.error == DirectionController.ErrorType.BLOCKED_RUBBLE) {
-
-                                final Direction rubbleClearanceDirection = rubbleModule.getRubbleClearanceDirectionFromDirection(enemiesDirection.opposite(), robotController, RubbleModule.ADJUSTMENT_THRESHOLD_MEDIUM);
-                                if (rubbleClearanceDirection != null) {
-
-                                    final double rubble = robotController.senseRubble(currentLocation.add(rubbleClearanceDirection));
-                                    if (rubble < 1000.0) {
-
-                                        robotController.clearRubble(rubbleClearanceDirection);
-                                        robotController.setIndicatorString(0, "I'm clearing rubble " + rubbleClearanceDirection + " to get away from enemies " + enemiesDirection);
-                                        break;
-
-                                    }
-
-                                }
-
-                            }
-
-                        }
-
-                    }
-
-                }
-
                 // try and build new units
 
                 if (robotController.isCoreReady()) {
 
-                    RobotType typeToBuild = null;
-                    if (scoutsBuilt == 0 || scoutsBuilt * 15 < soldiersBuilt) {
+                    if (!inDanger) {
 
-                        typeToBuild = RobotType.SCOUT;
+                        RobotType typeToBuild = null;
+                        if (scoutsBuilt == 0 || scoutsBuilt * 15 < soldiersBuilt) {
 
-                    } else if (vipersBuilt * 20 < soldiersBuilt && soldiersBuilt > 5) {
+                            typeToBuild = RobotType.SCOUT;
 
-                        typeToBuild = RobotType.VIPER;
+                        } else if (vipersBuilt * 20 < soldiersBuilt && soldiersBuilt > 5) {
 
-                    } else if (turretsBuilt * 20 < soldiersBuilt && soldiersBuilt > 20 && false) {
+                            typeToBuild = RobotType.VIPER;
 
-                        typeToBuild = RobotType.TURRET;
+                        } else if (turretsBuilt * 20 < soldiersBuilt && soldiersBuilt > 10) {
 
-                    } else {
+                            typeToBuild = RobotType.TURRET;
 
-                        typeToBuild = RobotType.SOLDIER;
+                        } else {
 
-                    }
-                    if (robotController.getTeamParts() >= typeToBuild.partCost) {
+                            typeToBuild = RobotType.SOLDIER;
 
-                        boolean built = false;
-                        for (int i = 0; i < DirectionController.DIRECTIONS.length; i++) {
+                        }
+                        if (robotController.getTeamParts() >= typeToBuild.partCost) {
 
-                            if (robotController.canBuild(DirectionController.DIRECTIONS[i], typeToBuild)) {
+                            boolean built = false;
+                            for (int i = 0; i < DirectionController.DIRECTIONS.length; i++) {
 
-                                buildingUnitType = typeToBuild;
-                                if (typeToBuild == RobotType.SCOUT) {
+                                if (robotController.canBuild(DirectionController.DIRECTIONS[i], typeToBuild)) {
 
-                                    scoutsBuilt ++;
+                                    buildingUnitType = typeToBuild;
+                                    if (typeToBuild == RobotType.SCOUT) {
+
+                                        scoutsBuilt ++;
+
+                                    }
+                                    if (typeToBuild == RobotType.SOLDIER) {
+
+                                        soldiersBuilt ++;
+
+                                    }
+                                    if (typeToBuild == RobotType.VIPER) {
+
+                                        vipersBuilt ++;
+
+                                    }
+                                    if (typeToBuild == RobotType.TURRET) {
+
+                                        turretsBuilt ++;
+
+                                    }
+                                    robotController.build(DirectionController.DIRECTIONS[i], typeToBuild);
+                                    robotController.setIndicatorString(0, "I started to build " + typeToBuild + " in direction " + DirectionController.DIRECTIONS[i]);
+                                    built = true;
+                                    break;
 
                                 }
-                                if (typeToBuild == RobotType.SOLDIER) {
 
-                                    soldiersBuilt ++;
+                            }
+                            if (built) {
 
-                                }
-                                if (typeToBuild == RobotType.VIPER) {
-
-                                    vipersBuilt ++;
-
-                                }
-                                if (typeToBuild == RobotType.TURRET) {
-
-                                    turretsBuilt ++;
-
-                                }
-                                robotController.build(DirectionController.DIRECTIONS[i], typeToBuild);
-                                robotController.setIndicatorString(0, "I started to build " + typeToBuild + " in direction " + DirectionController.DIRECTIONS[i]);
-                                built = true;
                                 break;
 
                             }
-
-                        }
-                        if (built) {
-
-                            break;
 
                         }
 

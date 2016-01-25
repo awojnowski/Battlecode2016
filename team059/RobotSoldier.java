@@ -28,6 +28,9 @@ public class RobotSoldier implements Robot {
         boolean isAggressive = false;
         int aggressiveLock = 0;
 
+        InformationSignal lastObjectiveSignal = null;
+        int lastObjectiveSignalChaseTurns = 0;
+
         while (true) {
 
             // prep to run this turn
@@ -263,7 +266,7 @@ public class RobotSoldier implements Robot {
 
                     if (!isAggressive) {
 
-                        final Direction kiteDirection = directionController.getAverageDirectionTowardsEnemies(enemies, true);
+                        final Direction kiteDirection = directionController.getAverageDirectionTowardsEnemies(enemies, true, true);
                         if (kiteDirection != null) {
 
                             directionController.shouldAvoidEnemies = false;
@@ -374,6 +377,17 @@ public class RobotSoldier implements Robot {
 
                     if (objectiveSignal != null) {
 
+                        if (lastObjectiveSignal == objectiveSignal) {
+
+                            lastObjectiveSignalChaseTurns ++;
+
+                        } else {
+
+                            lastObjectiveSignal = objectiveSignal;
+                            lastObjectiveSignalChaseTurns = 0;
+
+                        }
+
                         boolean shouldMoveTowardsObjective = true;
                         if (objectiveSignal.type == PoliticalAgenda.SignalTypeZombieDen) {
 
@@ -388,7 +402,28 @@ public class RobotSoldier implements Robot {
 
                         if (shouldMoveTowardsObjective) {
 
-                            final Direction signalDirection = currentLocation.directionTo(objectiveSignal.location);
+                            Direction signalDirection = currentLocation.directionTo(objectiveSignal.location);
+                            if (objectiveSignal.type == PoliticalAgenda.SignalTypeEnemyClump) {
+
+                                if (lastObjectiveSignalChaseTurns < 10) {
+
+                                    final int identifier = robotController.getID();
+                                    if (identifier % 3 == 1) {
+
+                                        signalDirection = signalDirection.rotateLeft();
+
+                                    } else if (identifier % 3 == 2) {
+
+                                        signalDirection = signalDirection.rotateRight();
+
+                                    }
+
+                                }
+
+                            }
+
+                            robotController.setIndicatorLine(currentLocation, currentLocation.add(signalDirection, 1000), 255, 0, 0);
+
                             final DirectionController.Result signalResult = directionController.getDirectionResultFromDirection(signalDirection, DirectionController.ADJUSTMENT_THRESHOLD_LOW);
 
                             boolean clearRubble = false;

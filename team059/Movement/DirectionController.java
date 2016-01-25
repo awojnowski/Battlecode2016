@@ -143,19 +143,19 @@ public class DirectionController {
 
     }
 
-    public final Direction getAverageDirectionTowardsEnemies(final RobotInfo[] enemies, final boolean moveAwayFromWalls) throws GameActionException {
+    public final Direction getAverageDirectionTowardsEnemies(final RobotInfo[] enemies, final boolean moveAwayFromWalls, final boolean moveAwayFromRubble) throws GameActionException {
 
-        return this.getAverageDirectionTowardsRobots(enemies, true, moveAwayFromWalls);
-
-    }
-
-    public Direction getAverageDirectionTowardFriendlies(final RobotInfo[] friendlies, final boolean moveAwayFromWalls) throws GameActionException {
-
-        return this.getAverageDirectionTowardsRobots(friendlies, false, moveAwayFromWalls);
+        return this.getAverageDirectionTowardsRobots(enemies, true, moveAwayFromWalls, moveAwayFromRubble);
 
     }
 
-    private Direction getAverageDirectionTowardsRobots(final RobotInfo[] robots, final boolean onlyAllowDangerousRobots, final boolean moveAwayFromWalls) throws GameActionException {
+    public Direction getAverageDirectionTowardFriendlies(final RobotInfo[] friendlies, final boolean moveAwayFromWalls, final boolean moveAwayFromRubble) throws GameActionException {
+
+        return this.getAverageDirectionTowardsRobots(friendlies, false, moveAwayFromWalls, moveAwayFromRubble);
+
+    }
+
+    private Direction getAverageDirectionTowardsRobots(final RobotInfo[] robots, final boolean onlyAllowDangerousRobots, final boolean moveAwayFromWalls, final boolean moveAwayFromRubble) throws GameActionException {
 
         if (robots == null || robots.length == 0) {
 
@@ -192,9 +192,9 @@ public class DirectionController {
 
             }
 
-            totalRobotX += location.x;
-            totalRobotY += location.y;
-            totalLocationsSampled ++;
+            totalRobotX += location.x * 3; // enemies weighted 3x as much as walls
+            totalRobotY += location.y * 3;
+            totalLocationsSampled += 3;
 
         }
 
@@ -204,20 +204,23 @@ public class DirectionController {
 
         }
 
-        if (moveAwayFromWalls) {
+        if (moveAwayFromWalls || moveAwayFromRubble) {
 
             final int sightDistance = (int)Math.floor(Math.sqrt((double)robotController.getType().sensorRadiusSquared));
             Direction probeDirection = Direction.EAST;
             for (int i = 0; i < 4; i++) {
 
+                boolean directionIsBlocked = false;
+
                 for (int j = 1; j <= sightDistance; j++) {
 
                     final MapLocation location = this.currentLocation.add(probeDirection, j);
-                    if (!this.robotController.onTheMap(location)) {
+                    if (directionIsBlocked || (moveAwayFromWalls && !this.robotController.onTheMap(location)) || (moveAwayFromRubble && this.robotController.senseRubble(location) >= 100)) {
 
                         totalRobotX += location.x;
                         totalRobotY += location.y;
                         totalLocationsSampled ++;
+                        directionIsBlocked = true;
 
                     }
 

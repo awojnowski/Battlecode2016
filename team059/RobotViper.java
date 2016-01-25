@@ -236,7 +236,7 @@ public class RobotViper implements Robot {
 
                     if (!isAggressive) {
 
-                        final Direction kiteDirection = directionController.getAverageDirectionTowardsEnemies(enemies, true);
+                        final Direction kiteDirection = directionController.getAverageDirectionTowardsEnemies(enemies, true, true);
                         if (kiteDirection != null) {
 
                             directionController.shouldAvoidEnemies = false;
@@ -641,7 +641,7 @@ public class RobotViper implements Robot {
 
             // finish up
 
-            for (int i = 0; i < politicalAgenda.archonLocations.size(); i++) {
+            /*for (int i = 0; i < politicalAgenda.archonLocations.size(); i++) {
 
                 final MapLocation archonLocation = politicalAgenda.archonLocations.get(i);
                 robotController.setIndicatorLine(currentLocation, archonLocation, 136, 125, 255);
@@ -655,12 +655,12 @@ public class RobotViper implements Robot {
 
             }
 
-            for (int i = 0; i < politicalAgenda.enemyArchons.size(); i++) {
+            */for (int i = 0; i < politicalAgenda.enemyArchons.size(); i++) {
 
                 final InformationSignal signal = politicalAgenda.enemyArchons.get(i);
                 robotController.setIndicatorLine(currentLocation, signal.location, 174, 0, 255);
 
-            }
+            }/*
 
             for (int i = 0; i < politicalAgenda.zombieDens.size(); i++) {
 
@@ -681,7 +681,7 @@ public class RobotViper implements Robot {
                 final ClumpInfo clumpInfo = politicalAgenda.friendlyClumps.get(i);
                 robotController.setIndicatorLine(currentLocation, clumpInfo.location, 186, 207, 255);
 
-            }
+            }*/
 
             Clock.yield();
 

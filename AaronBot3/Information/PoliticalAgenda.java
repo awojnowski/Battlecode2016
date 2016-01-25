@@ -150,6 +150,27 @@ public class PoliticalAgenda {
     }
 
     /*
+    MAP CENTERING
+     */
+
+    public boolean hasMapCenterLocation() {
+
+        return this.hasMapWidth() && this.hasMapHeight();
+
+    }
+
+    public MapLocation mapCenterLocation() {
+
+        if (!this.hasMapWidth() || !this.hasMapHeight()) {
+
+            return null;
+
+        }
+        return new MapLocation(this.mapWidth() / 2, this.mapHeight() / 2);
+
+    }
+
+    /*
     MAP MIRRORING
      */
 
