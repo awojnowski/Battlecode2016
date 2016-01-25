@@ -52,7 +52,7 @@ public class RobotScout implements Robot {
             }
             if (currentMode == Mode.UKNNOWN) {
 
-                if (politicalAgenda.companionIdentifier > 0) {
+                if (politicalAgenda.startupData > 0) {
 
                     currentMode = Mode.TURRET_ACQUIRE;
 
