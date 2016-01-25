@@ -415,7 +415,8 @@ public class RobotTurret implements Robot {
             } else if (robotController.getType() == RobotType.TURRET) {
 
                 final RobotInfo[] attackableEnemies = robotController.senseHostileRobots(currentLocation, robotController.getType().attackRadiusSquared);
-                if (attackableEnemies.length == 0) {
+                final MapLocation bestAttackableEnemyLocation = this.getBestEnemyLocationToAttackFromEnemies(attackableEnemies, politicalAgenda.enemies, currentLocation);
+                if (bestAttackableEnemyLocation == null) {
 
                     turnsWithoutEnemy++;
 
@@ -439,7 +440,6 @@ public class RobotTurret implements Robot {
 
                     if (robotController.isWeaponReady()) {
 
-                        final MapLocation bestAttackableEnemyLocation = this.getBestEnemyLocationToAttackFromEnemies(attackableEnemies, politicalAgenda.enemies, currentLocation);
                         if (bestAttackableEnemyLocation != null) {
 
                             robotController.attackLocation(bestAttackableEnemyLocation);

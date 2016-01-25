@@ -10,6 +10,7 @@ import java.util.*;
 public class RobotScout implements Robot {
 
     enum Mode {
+        UKNNOWN,
         SCOUT,
         TURRET_ACQUIRE,
         TURRET_COMPANION
@@ -31,12 +32,7 @@ public class RobotScout implements Robot {
         Direction movementDirection = null;
 
         int currentCompanionIdentifier = PoliticalAgenda.UnknownValue;
-        Mode currentMode = Mode.SCOUT;
-        if (robotController.getRoundNum() > 200) {
-
-            currentMode = Mode.TURRET_ACQUIRE;
-
-        }
+        Mode currentMode = Mode.UKNNOWN;
 
         int turnsSinceLastEnemyClumpSignal = 0;
         int turnsSinceLastFriendlyClumpSignal = 0;
@@ -52,6 +48,19 @@ public class RobotScout implements Robot {
 
                 Clock.yield();
                 continue;
+
+            }
+            if (currentMode == Mode.UKNNOWN) {
+
+                if (politicalAgenda.companionIdentifier > 0) {
+
+                    currentMode = Mode.TURRET_ACQUIRE;
+
+                } else {
+
+                    currentMode = Mode.SCOUT;
+
+                }
 
             }
 
@@ -495,7 +504,7 @@ public class RobotScout implements Robot {
 
             // show what we know
 
-            /*for (int i = 0; i < politicalAgenda.archonLocations.size(); i++) {
+            for (int i = 0; i < politicalAgenda.archonLocations.size(); i++) {
 
                 final MapLocation archonLocation = politicalAgenda.archonLocations.get(i);
                 robotController.setIndicatorLine(currentLocation, archonLocation, 136, 125, 255);
@@ -509,12 +518,12 @@ public class RobotScout implements Robot {
 
             }
 
-            */for (int i = 0; i < politicalAgenda.enemyArchons.size(); i++) {
+            for (int i = 0; i < politicalAgenda.enemyArchons.size(); i++) {
 
                 final InformationSignal signal = politicalAgenda.enemyArchons.get(i);
                 robotController.setIndicatorLine(currentLocation, signal.location, 174, 0, 255);
 
-            }/*
+            }
 
             for (int i = 0; i < politicalAgenda.zombieDens.size(); i++) {
 
@@ -535,7 +544,7 @@ public class RobotScout implements Robot {
                 final ClumpInfo clumpInfo = politicalAgenda.friendlyClumps.get(i);
                 robotController.setIndicatorLine(currentLocation, clumpInfo.location, 186, 207, 255);
 
-            }*/
+            }
 
             Clock.yield();
 
