@@ -347,7 +347,7 @@ public class RobotArchon implements Robot {
 
                             typeToBuild = RobotType.VIPER;
 
-                        } else if (turretsBuilt * 20 < soldiersBuilt && soldiersBuilt > 10) {
+                        } else if (!inDanger && turretsBuilt * 20 < soldiersBuilt && soldiersBuilt > 10) {
 
                             typeToBuild = RobotType.TURRET;
 
