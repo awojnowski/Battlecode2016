@@ -66,17 +66,8 @@ public class RobotScout implements Robot {
 
             // continue forward
 
-            if (turnsSinceLastEnemyClumpSignal > 0) {
-
-                turnsSinceLastEnemyClumpSignal --;
-
-            }
-
-            if (turnsSinceLastFriendlyClumpSignal > 0) {
-
-                turnsSinceLastFriendlyClumpSignal --;
-
-            }
+            turnsSinceLastEnemyClumpSignal ++;
+            turnsSinceLastFriendlyClumpSignal ++;
 
             MapLocation currentLocation = robotController.getLocation();
             final RobotInfo[] enemies = robotController.senseHostileRobots(currentLocation, robotController.getType().sensorRadiusSquared);
@@ -198,6 +189,10 @@ public class RobotScout implements Robot {
 
                     if (enemy.type == RobotType.ARCHON) {
 
+                        final InformationSignal nearbySignal = politicalAgenda.generateEnemyArchonInformationSignal(enemy.location, enemy.ID);
+                        nearbySignal.broadcastRange = 750;
+                        politicalAgenda.enqueueSignalForBroadcast(nearbySignal, robotController);
+
                         if (politicalAgenda.enemyArchons.contains(enemy.ID)) {
 
                             continue;
@@ -214,9 +209,10 @@ public class RobotScout implements Robot {
 
             }
 
-            if (turnsSinceLastEnemyClumpSignal == 0) {
+            if (turnsSinceLastEnemyClumpSignal > 20) {
 
-                if (enemies.length > 6) {
+                final int requiredEnemies = Math.max(1, 6 - (int)Math.floor(((turnsSinceLastEnemyClumpSignal - 20) / 30)));
+                if (enemies.length > requiredEnemies) {
 
                     int totalX = 0;
                     int totalY = 0;
@@ -233,13 +229,13 @@ public class RobotScout implements Robot {
                     signal.broadcastRange = maximumBroadcastRange;
                     politicalAgenda.enqueueSignalForBroadcast(signal, robotController);
 
-                    turnsSinceLastEnemyClumpSignal = 20;
+                    turnsSinceLastEnemyClumpSignal = 0;
 
                 }
 
             }
 
-            if (turnsSinceLastFriendlyClumpSignal == 0) {
+            if (turnsSinceLastFriendlyClumpSignal > 20) {
 
                 if (friendlies.length > 15) {
 
@@ -258,7 +254,7 @@ public class RobotScout implements Robot {
                     signal.broadcastRange = maximumBroadcastRange;
                     politicalAgenda.enqueueSignalForBroadcast(signal, robotController);
 
-                    turnsSinceLastFriendlyClumpSignal = 20;
+                    turnsSinceLastFriendlyClumpSignal = 0;
 
                 }
 
@@ -449,38 +445,74 @@ public class RobotScout implements Robot {
 
                 if (robotController.isCoreReady()) {
 
-                    if (movementDirection == null) {
+                    int nearestEnemyArchonDistance = 0;
+                    MapLocation nearestEnemyArchonLocation = null;
 
-                        movementDirection = directionController.getRandomDirection();
+                    for (int i = 0; i < enemies.length; i++) {
 
-                    }
+                        final RobotInfo enemy = enemies[i];
+                        if (enemy.type != RobotType.ARCHON) {
 
-                    final MapLocation movementLocation = currentLocation.add(movementDirection);
+                            continue;
 
-                    // let's see if we have a movement direction before moving (if not, create one)
-                    if (movementDirection == null) {
+                        }
+                        final int distance = currentLocation.distanceSquaredTo(enemy.location);
+                        if (distance < nearestEnemyArchonDistance) {
 
-                        movementDirection = directionController.getRandomDirection();
+                            nearestEnemyArchonDistance = distance;
+                            nearestEnemyArchonLocation = enemy.location;
 
-                    } else if (!robotController.onTheMap(movementLocation)) {
-
-                        movementDirection = RobotScout.rotateDirection(movementDirection, currentLocation, robotController);
-
-                    } else if (robotController.getRoundNum() < 300 && combatModule.isLocationOnOurSide(robotController, currentLocation) && !combatModule.isLocationOnOurSide(robotController, movementLocation)) {
-
-                        movementDirection = RobotScout.rotateDirection(movementDirection, currentLocation, robotController);
+                        }
 
                     }
 
-                    final DirectionController.Result movementResult = directionController.getDirectionResultFromDirection(movementDirection, DirectionController.ADJUSTMENT_THRESHOLD_MEDIUM);
-                    if (movementResult.direction != null) {
+                    if (nearestEnemyArchonLocation != null && robotController.getRoundNum() > 1000) {
 
-                        robotController.move(movementResult.direction);
-                        currentLocation = robotController.getLocation();
+                        final Direction nearestEnemyArchonDirection = currentLocation.directionTo(nearestEnemyArchonLocation);
+                        final DirectionController.Result movementResult = directionController.getDirectionResultFromDirection(nearestEnemyArchonDirection, DirectionController.ADJUSTMENT_THRESHOLD_MEDIUM);
+                        if (movementResult.direction != null) {
+
+                            robotController.move(movementResult.direction);
+                            currentLocation = robotController.getLocation();
+
+                        }
 
                     } else {
 
-                        movementDirection = RobotScout.rotateDirection(movementDirection, currentLocation, robotController);
+                        if (movementDirection == null) {
+
+                            movementDirection = directionController.getRandomDirection();
+
+                        }
+
+                        final MapLocation movementLocation = currentLocation.add(movementDirection);
+
+                        // let's see if we have a movement direction before moving (if not, create one)
+                        if (movementDirection == null) {
+
+                            movementDirection = directionController.getRandomDirection();
+
+                        } else if (!robotController.onTheMap(movementLocation)) {
+
+                            movementDirection = RobotScout.rotateDirection(movementDirection, currentLocation, robotController);
+
+                        } else if (robotController.getRoundNum() < 300 && combatModule.isLocationOnOurSide(robotController, currentLocation) && !combatModule.isLocationOnOurSide(robotController, movementLocation)) {
+
+                            movementDirection = RobotScout.rotateDirection(movementDirection, currentLocation, robotController);
+
+                        }
+
+                        final DirectionController.Result movementResult = directionController.getDirectionResultFromDirection(movementDirection, DirectionController.ADJUSTMENT_THRESHOLD_MEDIUM);
+                        if (movementResult.direction != null) {
+
+                            robotController.move(movementResult.direction);
+                            currentLocation = robotController.getLocation();
+
+                        } else {
+
+                            movementDirection = RobotScout.rotateDirection(movementDirection, currentLocation, robotController);
+
+                        }
 
                     }
 
