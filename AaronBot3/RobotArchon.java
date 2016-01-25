@@ -354,6 +354,8 @@ public class RobotArchon implements Robot {
 
                 // move toward visible neutral robots
 
+                MapLocation lootLocation = null;
+
                 if (!inDanger && robotController.isCoreReady()) {
 
                     MapLocation nearestNeutralLocation = null;
@@ -383,6 +385,7 @@ public class RobotArchon implements Robot {
                     }
                     if (nearestNeutralLocation != null) {
 
+                        lootLocation = nearestNeutralLocation;
                         final Direction nearestNeutralDirection = currentLocation.directionTo(nearestNeutralLocation);
                         final DirectionController.Result nearestNeutralMovementResult = directionController.getDirectionResultFromDirection(nearestNeutralDirection, DirectionController.ADJUSTMENT_THRESHOLD_MEDIUM);
                         if (nearestNeutralMovementResult.direction != null && !movementModule.isMovementLocationRepetitive(currentLocation.add(nearestNeutralMovementResult.direction), robotController)) {
@@ -413,7 +416,7 @@ public class RobotArchon implements Robot {
 
                 // move toward spare parts
 
-                if (!inDanger && robotController.isCoreReady()) {
+                if (!inDanger && lootLocation == null && robotController.isCoreReady()) {
 
                     MapLocation nearestPartsLocation = null;
 
@@ -442,6 +445,7 @@ public class RobotArchon implements Robot {
                     }
                     if (nearestPartsLocation != null) {
 
+                        lootLocation = nearestPartsLocation;
                         final Direction nearestPartsDirection = currentLocation.directionTo(nearestPartsLocation);
                         final DirectionController.Result nearestPartsMovementResult = directionController.getDirectionResultFromDirection(nearestPartsDirection, DirectionController.ADJUSTMENT_THRESHOLD_MEDIUM);
                         if (nearestPartsMovementResult.direction != null && !movementModule.isMovementLocationRepetitive(currentLocation.add(nearestPartsMovementResult.direction), robotController)) {
@@ -474,7 +478,7 @@ public class RobotArchon implements Robot {
 
                 if (robotController.isCoreReady()) {
 
-                    if (friendlies.length < 8) {
+                    if (lootLocation == null && friendlies.length < 8) {
 
                         robotController.setIndicatorString(1, "I need to try and find some friendlies...");
 
@@ -545,7 +549,8 @@ public class RobotArchon implements Robot {
 
                 if (robotController.isCoreReady()) {
 
-                    final Direction rubbleClearanceDirection = rubbleModule.getRubbleClearanceDirectionFromDirection(directionController.getRandomDirection(), robotController, RubbleModule.ADJUSTMENT_THRESHOLD_ALL);
+                    final Direction goalDirection = lootLocation != null ? currentLocation.directionTo(lootLocation) : directionController.getRandomDirection();
+                    final Direction rubbleClearanceDirection = rubbleModule.getRubbleClearanceDirectionFromDirection(goalDirection, robotController, RubbleModule.ADJUSTMENT_THRESHOLD_ALL);
                     if (rubbleClearanceDirection != null) {
 
                         robotController.clearRubble(rubbleClearanceDirection);
