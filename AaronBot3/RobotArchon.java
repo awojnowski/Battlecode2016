@@ -164,6 +164,7 @@ public class RobotArchon implements Robot {
             MapLocation currentLocation = robotController.getLocation();
             final RobotInfo[] enemies = robotController.senseHostileRobots(currentLocation, robotController.getType().sensorRadiusSquared);
             final RobotInfo[] friendlies = robotController.senseNearbyRobots(robotController.getType().sensorRadiusSquared, robotController.getTeam());
+            final RobotInfo[] dangerousEnemies = CombatModule.robotsExcludingTypesFromRobots(enemies, new RobotType[] {RobotType.ZOMBIEDEN, RobotType.ARCHON, RobotType.SCOUT});
 
             final DirectionController directionController = new DirectionController(robotController);
             directionController.currentLocation = currentLocation;
@@ -174,7 +175,7 @@ public class RobotArchon implements Robot {
 
             boolean inDanger = false;
             robotController.setIndicatorString(2, "Not in danger");
-            if (enemies.length > friendlies.length) {
+            if (dangerousEnemies.length > friendlies.length) {
 
                 // either we are outnumbered
 
@@ -185,10 +186,10 @@ public class RobotArchon implements Robot {
 
                 // or we are in attack range
 
-                for (int i = 0; i < enemies.length; i++) {
+                for (int i = 0; i < dangerousEnemies.length; i++) {
 
-                    final int attackRadiusSquared = directionController.attackRadiusSquaredWithBuffer(enemies[i].type.attackRadiusSquared, 2);
-                    if (attackRadiusSquared >= currentLocation.distanceSquaredTo(enemies[i].location)) {
+                    final int attackRadiusSquared = directionController.attackRadiusSquaredWithBuffer(dangerousEnemies[i].type.attackRadiusSquared, 2);
+                    if (attackRadiusSquared >= currentLocation.distanceSquaredTo(dangerousEnemies[i].location)) {
 
                         inDanger = true;
                         robotController.setIndicatorString(2, "In danger (attack range)");
