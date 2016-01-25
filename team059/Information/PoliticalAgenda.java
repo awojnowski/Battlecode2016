@@ -37,7 +37,7 @@ public class PoliticalAgenda {
     public double mapSecondMirrorX = PoliticalAgenda.UnknownValue;
     public double mapSecondMirrorY = PoliticalAgenda.UnknownValue;
 
-    public int companionIdentifier = PoliticalAgenda.UnknownValue;
+    public int startupData = PoliticalAgenda.UnknownValue;
 
     public ArrayList<MapLocation> archonLocations = new ArrayList<MapLocation>();
     public ImmutableInformationCollection<EnemyInfo> enemies = null;
@@ -476,7 +476,7 @@ public class PoliticalAgenda {
             this.isInformationSynced = true;
             if (signal.data != 0) {
 
-                this.companionIdentifier = signal.data;
+                this.startupData = signal.data;
 
             }
 
