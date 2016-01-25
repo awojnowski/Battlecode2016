@@ -311,7 +311,7 @@ public class RobotArchon implements Robot {
                                 if (robotController.canBuild(DirectionController.DIRECTIONS[i], typeToBuild)) {
 
                                     buildingUnitType = typeToBuild;
-                                    if (typeToBuild == RobotType.SCOUT) {
+                                    if (typeToBuild == RobotType.SCOUT && !isNextUnitACompanion) {
 
                                         scoutsBuilt ++;
 
