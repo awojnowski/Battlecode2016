@@ -58,6 +58,7 @@ public class CombatModule {
                 if (robots[i].type == types[j]) {
 
                     filteredRobotCount++;
+                    break;
 
                 }
 
@@ -75,8 +76,63 @@ public class CombatModule {
                 if (robots[i].type == types[j]) {
 
                     filteredRobots[robotIndex++] = robots[i];
+                    break;
 
                 }
+
+            }
+
+        }
+
+        return filteredRobots;
+
+    }
+
+    // Looks lengthy but a lot more efficient than using ArrayLists
+    public static RobotInfo[] robotsExcludingTypesFromRobots(RobotInfo[] robots, RobotType[] types) {
+
+        int filteredRobotCount = 0;
+
+        for (int i = 0; i < robots.length; i++) {
+
+            boolean isExcludedType = false;
+
+            for (int j = 0; j < types.length && !isExcludedType; j++) {
+
+                if (robots[i].type == types[j]) {
+
+                    isExcludedType = true;
+
+                }
+
+            }
+            if (!isExcludedType) {
+
+                filteredRobotCount++;
+
+            }
+
+        }
+
+        RobotInfo[] filteredRobots = new RobotInfo[filteredRobotCount];
+        int robotIndex = 0;
+
+        for (int i = 0; i < robots.length; i++) {
+
+            boolean isExcludedType = false;
+
+            for (int j = 0; j < types.length && !isExcludedType; j++) {
+
+                if (robots[i].type == types[j]) {
+
+                    isExcludedType = true;
+
+                }
+
+            }
+            if (!isExcludedType) {
+
+                filteredRobots[robotIndex++] = robots[i];
 
             }
 

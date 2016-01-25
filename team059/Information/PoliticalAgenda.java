@@ -166,7 +166,7 @@ public class PoliticalAgenda {
             return null;
 
         }
-        return new MapLocation(this.mapWidth() / 2, this.mapHeight() / 2);
+        return new MapLocation(this.mapBoundaryWest + this.mapWidth() / 2, this.mapBoundaryNorth + this.mapHeight() / 2);
 
     }
 
