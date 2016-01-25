@@ -271,77 +271,6 @@ public class RobotArchon implements Robot {
 
                 }
 
-                // get to our friendlies if need be
-
-                if (robotController.isCoreReady()) {
-
-                    if (friendlies.length < 8) {
-
-                        robotController.setIndicatorString(1, "I need to try and find some friendlies...");
-
-                        int closestFriendlyDistance = Integer.MAX_VALUE;
-                        MapLocation closestLocation = null;
-
-                        final ArrayList<ClumpInfo> friendlyClumps = politicalAgenda.friendlyClumps;
-                        for (int i = 0; i < friendlyClumps.size(); i++) {
-
-                            final ClumpInfo enemyInfo = friendlyClumps.get(i);
-                            final int distance = currentLocation.distanceSquaredTo(enemyInfo.location);
-                            if (distance < closestFriendlyDistance) {
-
-                                closestFriendlyDistance = distance;
-                                closestLocation = enemyInfo.location;
-
-                            }
-
-                        }
-                        if (closestLocation == null) { // move towards nearby robots
-
-                            RobotInfo[] friendlyFighters = CombatModule.robotsOfTypesFromRobots(friendlies, new RobotType[] {RobotType.SOLDIER, RobotType.GUARD, RobotType.TURRET, RobotType.VIPER});
-                            Direction directionToFriendlies = directionController.getAverageDirectionTowardFriendlies(friendlyFighters, false, false);
-                            if (directionToFriendlies != null) {
-
-                                closestLocation = currentLocation.add(directionToFriendlies);
-
-                            }
-
-                        }
-                        if (closestLocation != null) {
-
-                            if (closestFriendlyDistance > 64) {
-
-                                final Direction closestSignalDirection = currentLocation.directionTo(closestLocation);
-                                final DirectionController.Result closestSignalResult = directionController.getDirectionResultFromDirection(closestSignalDirection, DirectionController.ADJUSTMENT_THRESHOLD_LOW);
-                                if (closestSignalResult.direction != null && !movementModule.isMovementLocationRepetitive(currentLocation.add(closestSignalResult.direction), robotController)) {
-
-                                    robotController.move(closestSignalResult.direction);
-                                    currentLocation = robotController.getLocation();
-                                    movementModule.addMovementLocation(currentLocation, robotController);
-                                    robotController.setIndicatorString(0, "I am moving to a friendly clump at " + closestLocation);
-                                    break;
-
-                                } else if (closestSignalResult.error == DirectionController.ErrorType.BLOCKED_RUBBLE) {
-
-                                    final Direction rubbleClearanceDirection = rubbleModule.getRubbleClearanceDirectionFromDirection(closestSignalDirection, robotController, RubbleModule.ADJUSTMENT_THRESHOLD_MEDIUM);
-                                    if (rubbleClearanceDirection != null) {
-
-                                        robotController.clearRubble(rubbleClearanceDirection);
-                                        movementModule.extendLocationInvalidationTurn(robotController);
-                                        robotController.setIndicatorString(0, "I cleared rubble to get to a friendly clump at " + closestLocation);
-                                        break;
-
-                                    }
-
-                                }
-
-                            }
-
-                        }
-
-                    }
-
-                }
-
                 // try and build new units
 
                 if (robotController.isCoreReady()) {
@@ -424,7 +353,7 @@ public class RobotArchon implements Robot {
 
                 // move toward visible neutral robots
 
-                if (robotController.isCoreReady()) {
+                if (!inDanger && robotController.isCoreReady()) {
 
                     MapLocation nearestNeutralLocation = null;
 
@@ -483,7 +412,7 @@ public class RobotArchon implements Robot {
 
                 // move toward spare parts
 
-                if (robotController.isCoreReady()) {
+                if (!inDanger && robotController.isCoreReady()) {
 
                     MapLocation nearestPartsLocation = null;
 
@@ -531,6 +460,77 @@ public class RobotArchon implements Robot {
                                 movementModule.extendLocationInvalidationTurn(robotController);
                                 robotController.setIndicatorString(0, "I cleared rubble " + rubbleClearanceDirection + " to get to spare parts at " + nearestPartsLocation);
                                 break;
+
+                            }
+
+                        }
+
+                    }
+
+                }
+
+                // get to our friendlies if need be
+
+                if (robotController.isCoreReady()) {
+
+                    if (friendlies.length < 8) {
+
+                        robotController.setIndicatorString(1, "I need to try and find some friendlies...");
+
+                        int closestFriendlyDistance = Integer.MAX_VALUE;
+                        MapLocation closestLocation = null;
+
+                        final ArrayList<ClumpInfo> friendlyClumps = politicalAgenda.friendlyClumps;
+                        for (int i = 0; i < friendlyClumps.size(); i++) {
+
+                            final ClumpInfo enemyInfo = friendlyClumps.get(i);
+                            final int distance = currentLocation.distanceSquaredTo(enemyInfo.location);
+                            if (distance < closestFriendlyDistance) {
+
+                                closestFriendlyDistance = distance;
+                                closestLocation = enemyInfo.location;
+
+                            }
+
+                        }
+                        if (closestLocation == null) { // move towards nearby robots
+
+                            RobotInfo[] friendlyFighters = CombatModule.robotsOfTypesFromRobots(friendlies, new RobotType[] {RobotType.SOLDIER, RobotType.GUARD, RobotType.TURRET, RobotType.VIPER});
+                            Direction directionToFriendlies = directionController.getAverageDirectionTowardFriendlies(friendlyFighters, false, false);
+                            if (directionToFriendlies != null) {
+
+                                closestLocation = currentLocation.add(directionToFriendlies);
+
+                            }
+
+                        }
+                        if (closestLocation != null) {
+
+                            if (closestFriendlyDistance > 64) {
+
+                                final Direction closestSignalDirection = currentLocation.directionTo(closestLocation);
+                                final DirectionController.Result closestSignalResult = directionController.getDirectionResultFromDirection(closestSignalDirection, DirectionController.ADJUSTMENT_THRESHOLD_LOW);
+                                if (closestSignalResult.direction != null && !movementModule.isMovementLocationRepetitive(currentLocation.add(closestSignalResult.direction), robotController)) {
+
+                                    robotController.move(closestSignalResult.direction);
+                                    currentLocation = robotController.getLocation();
+                                    movementModule.addMovementLocation(currentLocation, robotController);
+                                    robotController.setIndicatorString(0, "I am moving to a friendly clump at " + closestLocation);
+                                    break;
+
+                                } else if (closestSignalResult.error == DirectionController.ErrorType.BLOCKED_RUBBLE) {
+
+                                    final Direction rubbleClearanceDirection = rubbleModule.getRubbleClearanceDirectionFromDirection(closestSignalDirection, robotController, RubbleModule.ADJUSTMENT_THRESHOLD_MEDIUM);
+                                    if (rubbleClearanceDirection != null) {
+
+                                        robotController.clearRubble(rubbleClearanceDirection);
+                                        movementModule.extendLocationInvalidationTurn(robotController);
+                                        robotController.setIndicatorString(0, "I cleared rubble to get to a friendly clump at " + closestLocation);
+                                        break;
+
+                                    }
+
+                                }
 
                             }
 
