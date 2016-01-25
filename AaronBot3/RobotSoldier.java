@@ -258,6 +258,12 @@ public class RobotSoldier implements Robot {
 
                     }
 
+                    if (bestFoundEnemy != null && bestFoundEnemy.type == RobotType.ZOMBIEDEN) {
+
+                        isAggressive = true;
+
+                    }
+
                     if (isDoomed) {
 
                         isAggressive = true;
@@ -289,7 +295,8 @@ public class RobotSoldier implements Robot {
                         if (bestFoundEnemy != null) {
 
                             final int distance = currentLocation.distanceSquaredTo(bestFoundEnemy.location);
-                            if (distance > 8) {
+                            final int maxDistance = type == RobotType.SOLDIER ? 8 : 3;
+                            if (distance > maxDistance) {
 
                                 final Direction pushDirection = currentLocation.directionTo(bestFoundEnemy.location);
 
