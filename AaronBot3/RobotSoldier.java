@@ -644,17 +644,17 @@ public class RobotSoldier implements Robot {
 
                 }
 
-                // move to an archon
+                // move to or away from an archon
 
                 if (robotController.isCoreReady()) {
 
                     int closestSignalDistance = Integer.MAX_VALUE;
                     MapLocation closestLocation = null;
+                    RobotInfo[] nearbyArchons = CombatModule.robotsOfTypesFromRobots(friendlies, new RobotType[] {RobotType.ARCHON});
 
-                    final ArrayList<MapLocation> archonLocations = politicalAgenda.archonLocations;
-                    for (int i = 0; i < archonLocations.size(); i++) {
+                    for (int i = 0; i < nearbyArchons.length; i++) {
 
-                        final MapLocation location = archonLocations.get(i);
+                        final MapLocation location = nearbyArchons[i].location;
                         final int distance = currentLocation.distanceSquaredTo(location);
                         if (distance < closestSignalDistance) {
 
@@ -664,9 +664,27 @@ public class RobotSoldier implements Robot {
                         }
 
                     }
+                    if (closestLocation == null) { // check agenda if none within sight range
+
+                        final ArrayList<MapLocation> archonLocations = politicalAgenda.archonLocations;
+                        for (int i = 0; i < archonLocations.size(); i++) {
+
+                            final MapLocation location = archonLocations.get(i);
+                            final int distance = currentLocation.distanceSquaredTo(location);
+                            if (distance < closestSignalDistance) {
+
+                                closestSignalDistance = distance;
+                                closestLocation = location;
+
+                            }
+
+                        }
+
+                    }
+                    robotController.setIndicatorString(2, "I am moving to a friendly archon at " + closestLocation);
                     if (closestLocation != null) {
 
-                        final Direction closestSignalDirection = currentLocation.directionTo(closestLocation);
+                        final Direction closestSignalDirection = closestSignalDistance < 9 ? currentLocation.directionTo(closestLocation).opposite() : currentLocation.directionTo(closestLocation);
                         final DirectionController.Result closestSignalResult = directionController.getDirectionResultFromDirection(closestSignalDirection, DirectionController.ADJUSTMENT_THRESHOLD_LOW);
                         if (closestSignalResult.direction != null && !movementModule.isMovementLocationRepetitive(currentLocation.add(closestSignalResult.direction), robotController)) {
 
