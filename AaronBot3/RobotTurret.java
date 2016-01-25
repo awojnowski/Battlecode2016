@@ -439,7 +439,7 @@ public class RobotTurret implements Robot {
 
                     if (robotController.isWeaponReady()) {
 
-                        final RobotInfo bestAttackableEnemy = this.getBestEnemyToAttackFromEnemies(robotController, attackableEnemies);
+                        final RobotInfo bestAttackableEnemy = this.getBestEnemyToAttackFromEnemies(attackableEnemies);
                         if (bestAttackableEnemy != null) {
 
                             robotController.attackLocation(bestAttackableEnemy.location);
@@ -511,18 +511,12 @@ public class RobotTurret implements Robot {
     COMBAT
      */
 
-    private RobotInfo getBestEnemyToAttackFromEnemies(final RobotController robotController, final RobotInfo[] enemies) {
+    private RobotInfo getBestEnemyToAttackFromEnemies(final RobotInfo[] enemies) {
 
-        MapLocation currentLocaiton = robotController.getLocation();
         RobotInfo bestEnemy = null;
         for (int i = 0; i < enemies.length; i++) {
 
             final RobotInfo enemy = enemies[i];
-            if (currentLocaiton.distanceSquaredTo(enemy.location) < GameConstants.TURRET_MINIMUM_RANGE) {
-
-                continue;
-
-            }
             if (bestEnemy == null) {
 
                 bestEnemy = enemy;
