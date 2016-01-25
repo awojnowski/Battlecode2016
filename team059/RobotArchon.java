@@ -28,6 +28,8 @@ public class RobotArchon implements Robot {
         int turretsBuilt = 0;
         int vipersBuilt = 0;
         RobotType buildingUnitType = null;
+        RobotType lastBuiltUnitType = null;
+        boolean isNextUnitACompanion = false;
 
         boolean relayInformation = false;
         boolean sendArchonUpdate = false;
@@ -69,7 +71,10 @@ public class RobotArchon implements Robot {
                     final RobotInfo[] neutrals = robotController.senseNearbyRobots(GameConstants.ARCHON_ACTIVATION_RANGE, Team.NEUTRAL);
                     for (int i = 0; i < neutrals.length; i++) {
 
-                        robotController.activate(neutrals[i].location);
+                        final RobotInfo neutral = neutrals[i];
+
+                        lastBuiltUnitType = neutral.type;
+                        robotController.activate(neutral.location);
                         relayInformation = true;
                         relayInformationDelay = 2;
                         break;
@@ -135,6 +140,11 @@ public class RobotArchon implements Robot {
                 signal.action = PoliticalAgenda.SignalActionWrite;
                 signal.broadcastRange = RobotArchon.InitialMessageUpdateLength;
                 signal.type = PoliticalAgenda.SignalTypeInformationSynced;
+                if (isNextUnitACompanion) {
+
+                    signal.data = 420;
+
+                }
                 politicalAgenda.broadcastSignal(signal, robotController);
 
                 informationRelaySignals = null;
@@ -285,6 +295,17 @@ public class RobotArchon implements Robot {
                             }
 
                         }
+                        if (closestLocation == null) { // move towards nearby robots
+
+                            RobotInfo[] friendlyFighters = CombatModule.robotsOfTypesFromRobots(friendlies, new RobotType[] {RobotType.SOLDIER, RobotType.GUARD, RobotType.TURRET, RobotType.VIPER});
+                            Direction directionToFriendlies = directionController.getAverageDirectionTowardFriendlies(friendlyFighters, false, false);
+                            if (directionToFriendlies != null) {
+
+                                closestLocation = currentLocation.add(directionToFriendlies);
+
+                            }
+
+                        }
                         if (closestLocation != null) {
 
                             if (closestFriendlyDistance > 64) {
@@ -327,6 +348,7 @@ public class RobotArchon implements Robot {
 
                     if (!inDanger) {
 
+                        isNextUnitACompanion = false;
                         RobotType typeToBuild = null;
                         if (scoutsBuilt == 0 || scoutsBuilt * 15 < soldiersBuilt) {
 
@@ -336,13 +358,19 @@ public class RobotArchon implements Robot {
 
                             typeToBuild = RobotType.VIPER;
 
-                        } else if (turretsBuilt * 20 < soldiersBuilt && soldiersBuilt > 10) {
+                        } else if (!inDanger && turretsBuilt * 20 < soldiersBuilt && soldiersBuilt > 10) {
 
                             typeToBuild = RobotType.TURRET;
 
                         } else {
 
                             typeToBuild = RobotType.SOLDIER;
+
+                        }
+                        if (lastBuiltUnitType == RobotType.TURRET) {
+
+                            typeToBuild = RobotType.SCOUT;
+                            isNextUnitACompanion = true;
 
                         }
                         if (robotController.getTeamParts() >= typeToBuild.partCost) {
@@ -374,8 +402,9 @@ public class RobotArchon implements Robot {
 
                                     }
                                     robotController.build(DirectionController.DIRECTIONS[i], typeToBuild);
-                                    robotController.setIndicatorString(0, "I started to build " + typeToBuild + " in direction " + DirectionController.DIRECTIONS[i]);
+                                    robotController.setIndicatorString(0, "I started to build " + typeToBuild + " " + (isNextUnitACompanion ? " as a companion " : "") + "in direction " + DirectionController.DIRECTIONS[i]);
                                     built = true;
+                                    lastBuiltUnitType = typeToBuild;
                                     break;
 
                                 }

@@ -150,6 +150,27 @@ public class PoliticalAgenda {
     }
 
     /*
+    MAP CENTERING
+     */
+
+    public boolean hasMapCenterLocation() {
+
+        return this.hasMapWidth() && this.hasMapHeight();
+
+    }
+
+    public MapLocation mapCenterLocation() {
+
+        if (!this.hasMapWidth() || !this.hasMapHeight()) {
+
+            return null;
+
+        }
+        return new MapLocation(this.mapWidth() / 2, this.mapHeight() / 2);
+
+    }
+
+    /*
     MAP MIRRORING
      */
 
@@ -490,6 +511,15 @@ public class PoliticalAgenda {
 
     public boolean shouldRobotTypeProcessSignalType(final RobotType robotType, final int signalType) {
 
+        if (signalType == PoliticalAgenda.SignalTypeEnemy) {
+
+            if (robotType != RobotType.TTM && robotType != RobotType.TURRET) {
+
+                return false;
+
+            }
+
+        }
         return true;
 
     }

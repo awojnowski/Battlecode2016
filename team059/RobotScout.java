@@ -9,6 +9,13 @@ import java.util.*;
 
 public class RobotScout implements Robot {
 
+    enum Mode {
+        UKNNOWN,
+        SCOUT,
+        TURRET_ACQUIRE,
+        TURRET_COMPANION
+    }
+
     public void run(final RobotController robotController) throws GameActionException {
 
         robotController.emptySignalQueue();
@@ -24,6 +31,9 @@ public class RobotScout implements Robot {
 
         Direction movementDirection = null;
 
+        int currentCompanionIdentifier = PoliticalAgenda.UnknownValue;
+        Mode currentMode = Mode.UKNNOWN;
+
         int turnsSinceLastEnemyClumpSignal = 0;
         int turnsSinceLastFriendlyClumpSignal = 0;
 
@@ -38,6 +48,19 @@ public class RobotScout implements Robot {
 
                 Clock.yield();
                 continue;
+
+            }
+            if (currentMode == Mode.UKNNOWN) {
+
+                if (politicalAgenda.companionIdentifier > 0) {
+
+                    currentMode = Mode.TURRET_ACQUIRE;
+
+                } else {
+
+                    currentMode = Mode.SCOUT;
+
+                }
 
             }
 
@@ -58,20 +81,51 @@ public class RobotScout implements Robot {
             MapLocation currentLocation = robotController.getLocation();
             final RobotInfo[] enemies = robotController.senseHostileRobots(currentLocation, robotController.getType().sensorRadiusSquared);
             final RobotInfo[] friendlies = robotController.senseNearbyRobots(-1, robotController.getTeam());
+
             boolean areFriendliesNearby = false;
+            boolean foundTurretCompanion = false;
             for (int i = 0; i < friendlies.length; i++) {
 
-                if (friendlies[i].type != RobotType.SCOUT) {
+                final RobotInfo friendly = friendlies[i];
+                if (friendly.type != RobotType.SCOUT) {
 
                     areFriendliesNearby = true;
-                    break;
+
+                }
+                if (currentMode == Mode.TURRET_ACQUIRE) {
+
+                    if (friendly.type == RobotType.TURRET || friendly.type == RobotType.TTM) {
+
+                        if (!this.checkRobotForExistingCompanion(friendly, robotController)) {
+
+                            currentCompanionIdentifier = friendly.ID;
+                            currentMode = Mode.TURRET_COMPANION;
+                            foundTurretCompanion = true;
+
+                        }
+
+                    }
+
+                } else if (currentMode == Mode.TURRET_COMPANION) {
+
+                    if (friendly.ID == currentCompanionIdentifier) {
+
+                        foundTurretCompanion = true;
+
+                    }
 
                 }
 
             }
+            if (currentMode == Mode.TURRET_COMPANION && !foundTurretCompanion) {
 
-            robotController.setIndicatorString(0, "Map information: N: " + politicalAgenda.mapBoundaryNorth + " E: " + politicalAgenda.mapBoundaryEast + " S: " + politicalAgenda.mapBoundarySouth + " W: " + politicalAgenda.mapBoundaryWest);
-            robotController.setIndicatorString(1, "Signal distance: " + politicalAgenda.maximumBroadcastRangeForLocation(currentLocation));
+                currentCompanionIdentifier = PoliticalAgenda.UnknownValue;
+                currentMode = Mode.TURRET_ACQUIRE;
+
+            }
+
+            robotController.setIndicatorString(0, "Map information: N: " + politicalAgenda.mapBoundaryNorth + " E: " + politicalAgenda.mapBoundaryEast + " S: " + politicalAgenda.mapBoundarySouth + " W: " + politicalAgenda.mapBoundaryWest + " SD: " + politicalAgenda.maximumBroadcastRangeForLocation(currentLocation));
+            robotController.setIndicatorString(1, "Companion ID: " + currentCompanionIdentifier + " Mode: " + currentMode);
 
             // let's verify information
 
@@ -132,15 +186,15 @@ public class RobotScout implements Robot {
 
                 } else {
 
-                    /*if (areFriendliesNearby) {
+                    if (currentMode == Mode.TURRET_COMPANION) {
 
                         // broadcast seen enemy information to friendlies
 
                         final InformationSignal signal = politicalAgenda.generateEnemyInformationSignal(enemy.location, enemy.type, (int)enemy.health, enemy.ID);
-                        signal.broadcastRange = politicalAgenda.maximumFreeBroadcastRangeForType(robotController.getType());
+                        signal.broadcastRange = 3;
                         politicalAgenda.enqueueSignalForBroadcast(signal, robotController);
 
-                    }*/
+                    }
 
                     if (enemy.type == RobotType.ARCHON) {
 
@@ -315,43 +369,126 @@ public class RobotScout implements Robot {
 
             }
 
-            // let's try to flee if we aren't safe
+            if (currentMode == Mode.TURRET_COMPANION) {
 
-            final DirectionController directionController = new DirectionController(robotController);
-            directionController.currentLocation = currentLocation;
-            directionController.enemyBufferDistance = 2;
-            directionController.nearbyEnemies = enemies;
-            directionController.random = random;
-            directionController.shouldAvoidEnemies = true;
+                if (robotController.isCoreReady()) {
 
-            final Direction enemiesDirectionOutput = directionController.getAverageDirectionTowardsEnemies(enemies, true, false);
-            if (enemiesDirectionOutput != null) {
+                    final RobotInfo companion = robotController.senseRobot(currentCompanionIdentifier);
+                    if (companion != null) {
 
-                robotController.setIndicatorLine(currentLocation, currentLocation.add(enemiesDirectionOutput, 1000), 50, 25, 25);
+                        final int distance = currentLocation.distanceSquaredTo(companion.location);
+                        if (distance > 2) {
 
-            }
+                            final DirectionController directionController = new DirectionController(robotController);
+                            directionController.currentLocation = currentLocation;
+                            directionController.random = random;
 
-            if (robotController.isCoreReady() && enemies.length > 0) {
+                            final Direction companionDirection = currentLocation.directionTo(companion.location);
+                            if (companionDirection != null) {
 
-                final Direction enemiesDirection = directionController.getAverageDirectionTowardsEnemies(enemies, true, false);
-                if (enemiesDirection != null) {
+                                final DirectionController.Result companionDirectionResult = directionController.getDirectionResultFromDirection(companionDirection, DirectionController.ADJUSTMENT_THRESHOLD_MEDIUM);
+                                if (companionDirectionResult.direction != null) {
 
-                    directionController.shouldAvoidEnemies = false;
-                    final DirectionController.Result enemiesMovementResult = directionController.getDirectionResultFromDirection(enemiesDirection.opposite(), DirectionController.ADJUSTMENT_THRESHOLD_MEDIUM);
-                    directionController.shouldAvoidEnemies = true;
+                                    robotController.move(companionDirectionResult.direction);
 
-                    if (enemiesMovementResult.direction != null) {
+                                }
 
-                        robotController.move(enemiesMovementResult.direction);
-                        currentLocation = robotController.getLocation();
-
-                        if (movementDirection != null) {
-
-                            movementDirection = RobotScout.rotateDirection(movementDirection, currentLocation, robotController);
+                            }
 
                         }
 
                     }
+
+                }
+
+            } else {
+
+                // let's try to flee if we aren't safe
+
+                final DirectionController directionController = new DirectionController(robotController);
+                directionController.currentLocation = currentLocation;
+                directionController.enemyBufferDistance = 2;
+                directionController.nearbyEnemies = enemies;
+                directionController.random = random;
+                directionController.shouldAvoidEnemies = true;
+
+                final Direction enemiesDirectionOutput = directionController.getAverageDirectionTowardsEnemies(enemies, true, false);
+                if (enemiesDirectionOutput != null) {
+
+                    robotController.setIndicatorLine(currentLocation, currentLocation.add(enemiesDirectionOutput, 1000), 50, 25, 25);
+
+                }
+
+                if (robotController.isCoreReady() && enemies.length > 0) {
+
+                    final Direction enemiesDirection = directionController.getAverageDirectionTowardsEnemies(enemies, true, false);
+                    if (enemiesDirection != null) {
+
+                        directionController.shouldAvoidEnemies = false;
+                        final DirectionController.Result enemiesMovementResult = directionController.getDirectionResultFromDirection(enemiesDirection.opposite(), DirectionController.ADJUSTMENT_THRESHOLD_MEDIUM);
+                        directionController.shouldAvoidEnemies = true;
+
+                        if (enemiesMovementResult.direction != null) {
+
+                            robotController.move(enemiesMovementResult.direction);
+                            currentLocation = robotController.getLocation();
+
+                            if (movementDirection != null) {
+
+                                movementDirection = RobotScout.rotateDirection(movementDirection, currentLocation, robotController);
+
+                            }
+
+                        }
+
+                    }
+
+                }
+
+                // now let's try move to see more
+
+                if (robotController.isCoreReady()) {
+
+                    if (movementDirection == null) {
+
+                        movementDirection = directionController.getRandomDirection();
+
+                    }
+
+                    final MapLocation movementLocation = currentLocation.add(movementDirection);
+
+                    // let's see if we have a movement direction before moving (if not, create one)
+                    if (movementDirection == null) {
+
+                        movementDirection = directionController.getRandomDirection();
+
+                    } else if (!robotController.onTheMap(movementLocation)) {
+
+                        movementDirection = RobotScout.rotateDirection(movementDirection, currentLocation, robotController);
+
+                    } else if (robotController.getRoundNum() < 300 && combatModule.isLocationOnOurSide(robotController, currentLocation) && !combatModule.isLocationOnOurSide(robotController, movementLocation)) {
+
+                        movementDirection = RobotScout.rotateDirection(movementDirection, currentLocation, robotController);
+
+                    }
+
+                    final DirectionController.Result movementResult = directionController.getDirectionResultFromDirection(movementDirection, DirectionController.ADJUSTMENT_THRESHOLD_MEDIUM);
+                    if (movementResult.direction != null) {
+
+                        robotController.move(movementResult.direction);
+                        currentLocation = robotController.getLocation();
+
+                    } else {
+
+                        movementDirection = RobotScout.rotateDirection(movementDirection, currentLocation, robotController);
+
+                    }
+
+                }
+
+                if (movementDirection != null) {
+
+                    robotController.setIndicatorLine(currentLocation, currentLocation.add(movementDirection, 10000), 255, 255, 255);
 
                 }
 
@@ -365,56 +502,9 @@ public class RobotScout implements Robot {
 
             }
 
-            // now let's try move to see more
-
-            if (robotController.isCoreReady()) {
-
-                if (movementDirection == null) {
-
-                    movementDirection = directionController.getRandomDirection();
-
-                }
-
-                final MapLocation movementLocation = currentLocation.add(movementDirection);
-
-                // let's see if we have a movement direction before moving (if not, create one)
-                if (movementDirection == null) {
-
-                    movementDirection = directionController.getRandomDirection();
-
-                } else if (!robotController.onTheMap(movementLocation)) {
-
-                    movementDirection = RobotScout.rotateDirection(movementDirection, currentLocation, robotController);
-
-                } else if (robotController.getRoundNum() < 300 && combatModule.isLocationOnOurSide(robotController, currentLocation) && !combatModule.isLocationOnOurSide(robotController, movementLocation)) {
-
-                    movementDirection = RobotScout.rotateDirection(movementDirection, currentLocation, robotController);
-
-                }
-
-                final DirectionController.Result movementResult = directionController.getDirectionResultFromDirection(movementDirection, DirectionController.ADJUSTMENT_THRESHOLD_MEDIUM);
-                if (movementResult.direction != null) {
-
-                    robotController.move(movementResult.direction);
-                    currentLocation = robotController.getLocation();
-
-                } else {
-
-                    movementDirection = RobotScout.rotateDirection(movementDirection, currentLocation, robotController);
-
-                }
-
-            }
-
-            if (movementDirection != null) {
-
-                robotController.setIndicatorLine(currentLocation, currentLocation.add(movementDirection, 10000), 255, 255, 255);
-
-            }
-
             // show what we know
 
-            /*for (int i = 0; i < politicalAgenda.archonLocations.size(); i++) {
+            for (int i = 0; i < politicalAgenda.archonLocations.size(); i++) {
 
                 final MapLocation archonLocation = politicalAgenda.archonLocations.get(i);
                 robotController.setIndicatorLine(currentLocation, archonLocation, 136, 125, 255);
@@ -428,12 +518,12 @@ public class RobotScout implements Robot {
 
             }
 
-            */for (int i = 0; i < politicalAgenda.enemyArchons.size(); i++) {
+            for (int i = 0; i < politicalAgenda.enemyArchons.size(); i++) {
 
                 final InformationSignal signal = politicalAgenda.enemyArchons.get(i);
                 robotController.setIndicatorLine(currentLocation, signal.location, 174, 0, 255);
 
-            }/*
+            }
 
             for (int i = 0; i < politicalAgenda.zombieDens.size(); i++) {
 
@@ -454,7 +544,7 @@ public class RobotScout implements Robot {
                 final ClumpInfo clumpInfo = politicalAgenda.friendlyClumps.get(i);
                 robotController.setIndicatorLine(currentLocation, clumpInfo.location, 186, 207, 255);
 
-            }*/
+            }
 
             Clock.yield();
 
@@ -473,6 +563,51 @@ public class RobotScout implements Robot {
             return direction.rotateRight().rotateRight().rotateRight();
 
         }
+
+    }
+
+    /*
+    COMPANION
+     */
+
+    private boolean checkRobotForExistingCompanion(final RobotInfo robot, final RobotController robotController) throws GameActionException {
+
+        final MapLocation turretLocation = robot.location;
+        for (int i = -1; i <= 1; i++) {
+
+            for (int j = -1; j <= 1; j++) {
+
+                if (i == 0 && j == 0) {
+
+                    continue;
+
+                }
+                final MapLocation turretCheckLocation = new MapLocation(turretLocation.x + i, turretLocation.y + j);
+                if (!robotController.canSenseLocation(turretCheckLocation)) {
+
+                    continue;
+
+                }
+                if (!robotController.onTheMap(turretCheckLocation)) {
+
+                    continue;
+
+                }
+                final RobotInfo possibleOtherTurretCompanion = robotController.senseRobotAtLocation(turretCheckLocation);
+                if (possibleOtherTurretCompanion != null) {
+
+                    if (possibleOtherTurretCompanion.type == RobotType.SCOUT) {
+
+                        return true;
+
+                    }
+
+                }
+
+            }
+
+        }
+        return false;
 
     }
 
