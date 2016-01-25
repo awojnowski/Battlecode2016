@@ -429,6 +429,21 @@ public class RobotSoldier implements Robot {
 
                             }
 
+                            if (objectiveSignal.type == PoliticalAgenda.SignalTypeEnemyArchon && robotController.getRoundNum() > 1000 && politicalAgenda.enemyClumps.size() == 0) {
+
+                                final int identifier = robotController.getID();
+                                if (identifier % 3 == 1) {
+
+                                    signalDirection = signalDirection.rotateLeft();
+
+                                } else if (identifier % 3 == 2) {
+
+                                    signalDirection = signalDirection.rotateRight();
+
+                                }
+
+                            }
+
                             robotController.setIndicatorLine(currentLocation, currentLocation.add(signalDirection, 1000), 255, 0, 0);
 
                             final DirectionController.Result signalResult = directionController.getDirectionResultFromDirection(signalDirection, DirectionController.ADJUSTMENT_THRESHOLD_LOW);
