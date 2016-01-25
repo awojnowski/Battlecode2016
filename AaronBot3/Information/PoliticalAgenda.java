@@ -511,6 +511,15 @@ public class PoliticalAgenda {
 
     public boolean shouldRobotTypeProcessSignalType(final RobotType robotType, final int signalType) {
 
+        if (signalType == PoliticalAgenda.SignalTypeEnemy) {
+
+            if (robotType != RobotType.TTM && robotType != RobotType.TURRET) {
+
+                return false;
+
+            }
+
+        }
         return true;
 
     }

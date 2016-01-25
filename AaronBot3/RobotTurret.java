@@ -63,7 +63,7 @@ public class RobotTurret implements Robot {
 
             if (robotController.getType() == RobotType.TTM) {
 
-                if (enemies.length > 0) {
+                if (enemies.length > 0 || this.isEnemySignalInTurretRange(politicalAgenda.enemies, currentLocation)) {
 
                     robotController.unpack();
                     Clock.yield();
@@ -439,10 +439,10 @@ public class RobotTurret implements Robot {
 
                     if (robotController.isWeaponReady()) {
 
-                        final RobotInfo bestAttackableEnemy = this.getBestEnemyToAttackFromEnemies(attackableEnemies);
-                        if (bestAttackableEnemy != null) {
+                        final MapLocation bestAttackableEnemyLocation = this.getBestEnemyLocationToAttackFromEnemies(attackableEnemies, politicalAgenda.enemies, currentLocation);
+                        if (bestAttackableEnemyLocation != null) {
 
-                            robotController.attackLocation(bestAttackableEnemy.location);
+                            robotController.attackLocation(bestAttackableEnemyLocation);
                             break;
 
                         }
@@ -511,38 +511,109 @@ public class RobotTurret implements Robot {
     COMBAT
      */
 
-    private RobotInfo getBestEnemyToAttackFromEnemies(final RobotInfo[] enemies) {
+    private boolean isEnemySignalInTurretRange(final ImmutableInformationCollection<EnemyInfo> enemySignals, final MapLocation currentLocation) {
 
-        RobotInfo bestEnemy = null;
+        for (int i = 0; i < enemySignals.size(); i++) {
+
+            final EnemyInfo enemy = enemySignals.get(i);
+            final int distance = currentLocation.distanceSquaredTo(enemy.location);
+            if (distance < GameConstants.TURRET_MINIMUM_RANGE || distance > RobotType.TURRET.attackRadiusSquared) {
+
+                return true;
+
+            }
+
+        }
+        return false;
+
+    }
+
+    private MapLocation getBestEnemyLocationToAttackFromEnemies(final RobotInfo[] enemies, final ImmutableInformationCollection<EnemyInfo> enemySignals, final MapLocation currentLocation) {
+
+        double bestEnemyHealth = Double.MAX_VALUE;
+        MapLocation bestEnemyLocation = null;
+        RobotType bestEnemyType = null;
         for (int i = 0; i < enemies.length; i++) {
 
             final RobotInfo enemy = enemies[i];
-            if (bestEnemy == null) {
-
-                bestEnemy = enemy;
-                continue;
-
-            }
-            if (enemy.type != RobotType.ZOMBIEDEN && bestEnemy.type == RobotType.ZOMBIEDEN) {
-
-                bestEnemy = enemy;
-                continue;
-
-            }
-            if (enemy.type == RobotType.ZOMBIEDEN && bestEnemy.type != RobotType.ZOMBIEDEN) {
+            final int distance = currentLocation.distanceSquaredTo(enemy.location);
+            if (distance < GameConstants.TURRET_MINIMUM_RANGE || distance > RobotType.TURRET.attackRadiusSquared) {
 
                 continue;
 
             }
-            if (enemy.health < bestEnemy.health) {
+            if (bestEnemyLocation == null) {
 
-                bestEnemy = enemy;
+                bestEnemyHealth = enemy.health;
+                bestEnemyLocation = enemy.location;
+                bestEnemyType = enemy.type;
+                continue;
+
+            }
+            if (enemy.type != RobotType.ZOMBIEDEN && bestEnemyType == RobotType.ZOMBIEDEN) {
+
+                bestEnemyHealth = enemy.health;
+                bestEnemyLocation = enemy.location;
+                bestEnemyType = enemy.type;
+                continue;
+
+            }
+            if (enemy.type == RobotType.ZOMBIEDEN && bestEnemyType != RobotType.ZOMBIEDEN) {
+
+                continue;
+
+            }
+            if (enemy.health < bestEnemyHealth) {
+
+                bestEnemyHealth = enemy.health;
+                bestEnemyLocation = enemy.location;
+                bestEnemyType = enemy.type;
                 continue;
 
             }
 
         }
-        return bestEnemy;
+        for (int i = 0; i < enemySignals.size(); i++) {
+
+            final EnemyInfo enemy = enemySignals.get(i);
+            final int distance = currentLocation.distanceSquaredTo(enemy.location);
+            if (distance < GameConstants.TURRET_MINIMUM_RANGE || distance > RobotType.TURRET.attackRadiusSquared) {
+
+                continue;
+
+            }
+            if (bestEnemyLocation == null) {
+
+                bestEnemyHealth = enemy.health;
+                bestEnemyLocation = enemy.location;
+                bestEnemyType = enemy.type;
+                continue;
+
+            }
+            if (enemy.type != RobotType.ZOMBIEDEN && bestEnemyType == RobotType.ZOMBIEDEN) {
+
+                bestEnemyHealth = enemy.health;
+                bestEnemyLocation = enemy.location;
+                bestEnemyType = enemy.type;
+                continue;
+
+            }
+            if (enemy.type == RobotType.ZOMBIEDEN && bestEnemyType != RobotType.ZOMBIEDEN) {
+
+                continue;
+
+            }
+            if (enemy.health < bestEnemyHealth) {
+
+                bestEnemyHealth = enemy.health;
+                bestEnemyLocation = enemy.location;
+                bestEnemyType = enemy.type;
+                continue;
+
+            }
+
+        }
+        return bestEnemyLocation;
 
     }
 

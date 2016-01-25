@@ -28,6 +28,7 @@ public class RobotArchon implements Robot {
         int turretsBuilt = 0;
         int vipersBuilt = 0;
         RobotType buildingUnitType = null;
+        RobotType lastBuiltUnitType = null;
 
         boolean relayInformation = false;
         boolean sendArchonUpdate = false;
@@ -356,6 +357,15 @@ public class RobotArchon implements Robot {
                             typeToBuild = RobotType.SOLDIER;
 
                         }
+                        if (robotController.getRoundNum() > 200) {
+
+                            if (lastBuiltUnitType == RobotType.TURRET) {
+
+                                typeToBuild = RobotType.SCOUT;
+
+                            }
+
+                        }
                         if (robotController.getTeamParts() >= typeToBuild.partCost) {
 
                             boolean built = false;
@@ -387,6 +397,7 @@ public class RobotArchon implements Robot {
                                     robotController.build(DirectionController.DIRECTIONS[i], typeToBuild);
                                     robotController.setIndicatorString(0, "I started to build " + typeToBuild + " in direction " + DirectionController.DIRECTIONS[i]);
                                     built = true;
+                                    lastBuiltUnitType = typeToBuild;
                                     break;
 
                                 }
