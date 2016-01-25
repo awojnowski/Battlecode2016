@@ -717,6 +717,15 @@ public class RobotViper implements Robot {
                 continue;
 
             }
+            if (enemy.type == RobotType.ZOMBIEDEN) {
+
+                if (bestEnemy.type != RobotType.ZOMBIEDEN) {
+
+                    continue;
+
+                }
+
+            }
             if (enemy.type.isZombie) {
 
                 if (!bestEnemy.type.isZombie) {
