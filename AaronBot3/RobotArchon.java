@@ -360,13 +360,9 @@ public class RobotArchon implements Robot {
                             typeToBuild = RobotType.SOLDIER;
 
                         }
-                        if (robotController.getRoundNum() > 200) {
+                        if (lastBuiltUnitType == RobotType.TURRET) {
 
-                            if (lastBuiltUnitType == RobotType.TURRET) {
-
-                                typeToBuild = RobotType.SCOUT;
-
-                            }
+                            typeToBuild = RobotType.SCOUT;
 
                         }
                         if (robotController.getTeamParts() >= typeToBuild.partCost) {
