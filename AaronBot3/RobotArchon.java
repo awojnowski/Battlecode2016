@@ -285,6 +285,17 @@ public class RobotArchon implements Robot {
                             }
 
                         }
+                        if (closestLocation == null) { // move towards nearby robots
+
+                            RobotInfo[] friendlyFighters = CombatModule.robotsOfTypesFromRobots(friendlies, new RobotType[] {RobotType.SOLDIER, RobotType.GUARD, RobotType.TURRET, RobotType.VIPER});
+                            Direction directionToFriendlies = directionController.getAverageDirectionTowardFriendlies(friendlyFighters, false, false);
+                            if (directionToFriendlies != null) {
+
+                                closestLocation = currentLocation.add(directionToFriendlies);
+
+                            }
+
+                        }
                         if (closestLocation != null) {
 
                             if (closestFriendlyDistance > 64) {
