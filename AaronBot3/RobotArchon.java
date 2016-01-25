@@ -70,7 +70,10 @@ public class RobotArchon implements Robot {
                     final RobotInfo[] neutrals = robotController.senseNearbyRobots(GameConstants.ARCHON_ACTIVATION_RANGE, Team.NEUTRAL);
                     for (int i = 0; i < neutrals.length; i++) {
 
-                        robotController.activate(neutrals[i].location);
+                        final RobotInfo neutral = neutrals[i];
+
+                        lastBuiltUnitType = neutral.type;
+                        robotController.activate(neutral.location);
                         relayInformation = true;
                         relayInformationDelay = 2;
                         break;
