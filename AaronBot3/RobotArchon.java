@@ -163,11 +163,13 @@ public class RobotArchon implements Robot {
             directionController.shouldAvoidEnemies = true;
 
             boolean inDanger = false;
+            robotController.setIndicatorString(2, "Not in danger");
             if (enemies.length > friendlies.length) {
 
                 // either we are outnumbered
 
                 inDanger = true;
+                robotController.setIndicatorString(2, "In danger (outnumbered)");
 
             } else {
 
@@ -179,6 +181,7 @@ public class RobotArchon implements Robot {
                     if (attackRadiusSquared >= currentLocation.distanceSquaredTo(enemies[i].location)) {
 
                         inDanger = true;
+                        robotController.setIndicatorString(2, "In danger (attack range)");
                         break;
 
                     }
@@ -211,6 +214,50 @@ public class RobotArchon implements Robot {
                 if (!robotController.isCoreReady()) {
 
                     break;
+
+                }
+
+                // see if we are safe
+
+                if (robotController.isCoreReady()) {
+
+                    if (inDanger) {
+
+                        final Direction enemiesDirection = directionController.getAverageDirectionTowardsEnemies(enemies, true, true);
+                        if (enemiesDirection != null) {
+
+                            directionController.shouldAvoidEnemies = false;
+                            final DirectionController.Result enemiesMovementResult = directionController.getDirectionResultFromDirection(enemiesDirection.opposite(), DirectionController.ADJUSTMENT_THRESHOLD_MEDIUM);
+                            directionController.shouldAvoidEnemies = true;
+
+                            if (enemiesMovementResult.direction != null) {
+
+                                robotController.move(enemiesMovementResult.direction);
+                                currentLocation = robotController.getLocation();
+                                robotController.setIndicatorString(0, "I'm fleeing " + enemiesMovementResult.direction + " to get away from enemies " + enemiesDirection);
+                                break;
+
+                            } else if (enemiesMovementResult.error == DirectionController.ErrorType.BLOCKED_RUBBLE) {
+
+                                final Direction rubbleClearanceDirection = rubbleModule.getRubbleClearanceDirectionFromDirection(enemiesDirection.opposite(), robotController, RubbleModule.ADJUSTMENT_THRESHOLD_MEDIUM);
+                                if (rubbleClearanceDirection != null) {
+
+                                    final double rubble = robotController.senseRubble(currentLocation.add(rubbleClearanceDirection));
+                                    if (rubble < 1000.0) {
+
+                                        robotController.clearRubble(rubbleClearanceDirection);
+                                        robotController.setIndicatorString(0, "I'm clearing rubble " + rubbleClearanceDirection + " to get away from enemies " + enemiesDirection);
+                                        break;
+
+                                    }
+
+                                }
+
+                            }
+
+                        }
+
+                    }
 
                 }
 
@@ -260,50 +307,6 @@ public class RobotArchon implements Robot {
                                         robotController.clearRubble(rubbleClearanceDirection);
                                         movementModule.extendLocationInvalidationTurn(robotController);
                                         robotController.setIndicatorString(0, "I cleared rubble to get to a friendly clump at " + closestLocation);
-                                        break;
-
-                                    }
-
-                                }
-
-                            }
-
-                        }
-
-                    }
-
-                }
-
-                // see if we are safe
-
-                if (robotController.isCoreReady()) {
-
-                    if (inDanger) {
-
-                        final Direction enemiesDirection = directionController.getAverageDirectionTowardsEnemies(enemies, true);
-                        if (enemiesDirection != null) {
-
-                            directionController.shouldAvoidEnemies = false;
-                            final DirectionController.Result enemiesMovementResult = directionController.getDirectionResultFromDirection(enemiesDirection.opposite(), DirectionController.ADJUSTMENT_THRESHOLD_MEDIUM);
-                            directionController.shouldAvoidEnemies = true;
-
-                            if (enemiesMovementResult.direction != null) {
-
-                                robotController.move(enemiesMovementResult.direction);
-                                currentLocation = robotController.getLocation();
-                                robotController.setIndicatorString(0, "I'm fleeing to get away from enemies " + enemiesDirection);
-                                break;
-
-                            } else if (enemiesMovementResult.error == DirectionController.ErrorType.BLOCKED_RUBBLE) {
-
-                                final Direction rubbleClearanceDirection = rubbleModule.getRubbleClearanceDirectionFromDirection(enemiesDirection.opposite(), robotController, RubbleModule.ADJUSTMENT_THRESHOLD_MEDIUM);
-                                if (rubbleClearanceDirection != null) {
-
-                                    final double rubble = robotController.senseRubble(currentLocation.add(rubbleClearanceDirection));
-                                    if (rubble < 1000.0) {
-
-                                        robotController.clearRubble(rubbleClearanceDirection);
-                                        robotController.setIndicatorString(0, "I'm clearing rubble " + rubbleClearanceDirection + " to get away from enemies " + enemiesDirection);
                                         break;
 
                                     }
