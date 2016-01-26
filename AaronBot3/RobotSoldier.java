@@ -781,6 +781,7 @@ public class RobotSoldier implements Robot {
                 final ClumpInfo clumpInfo = politicalAgenda.enemyClumps.get(i);
                 robotController.setIndicatorLine(currentLocation, clumpInfo.location, 255, 186, 186);
 
+
             }
 
             for (int i = 0; i < politicalAgenda.friendlyClumps.size(); i++) {
@@ -808,25 +809,45 @@ public class RobotSoldier implements Robot {
             final RobotInfo enemy = enemies[i];
             if (bestEnemy == null) {
 
-                bestEnemy = enemy;
-                continue;
-
-            }
-            if (enemy.type != RobotType.ZOMBIEDEN && bestEnemy.type == RobotType.ZOMBIEDEN) {
+                // no best enemy, so this is the best enemy
 
                 bestEnemy = enemy;
                 continue;
 
             }
-            if (enemy.type == RobotType.ZOMBIEDEN && bestEnemy.type != RobotType.ZOMBIEDEN) {
+            if (enemy.type == RobotType.ZOMBIEDEN) {
 
-                continue;
+                if (bestEnemy.type != RobotType.ZOMBIEDEN) {
+
+                    continue;
+
+                }
 
             }
-            if (enemy.health < bestEnemy.health) {
+            if (enemy.type.isZombie) {
 
-                bestEnemy = enemy;
-                continue;
+                if (!bestEnemy.type.isZombie) {
+
+                    // we don't want to prioritize a zombie over the enemy team
+                    continue;
+
+                }
+
+                if (enemy.health < bestEnemy.health) {
+
+                    bestEnemy = enemy;
+                    continue;
+
+                }
+
+            } else {
+
+                if (enemy.health < bestEnemy.health) {
+
+                    bestEnemy = enemy;
+                    continue;
+
+                }
 
             }
 
