@@ -135,6 +135,52 @@ public class RobotSoldier implements Robot {
 
                 }
 
+                if (robotController.isCoreReady()) {
+
+                    if (isDoomed) {
+
+                        int nearestEnemyDistance = Integer.MAX_VALUE;
+                        RobotInfo nearestEnemy = null;
+                        for (int i = 0; i < enemies.length; i++) {
+
+                            final RobotInfo enemy = enemies[i];
+                            if (enemy.type.isZombie) {
+
+                                continue;
+
+                            }
+                            final int distance = currentLocation.distanceSquaredTo(enemy.location);
+                            if (distance < nearestEnemyDistance) {
+
+                                nearestEnemyDistance = distance;
+                                nearestEnemy = enemy;
+
+                            }
+
+                        }
+                        if (nearestEnemy != null && nearestEnemyDistance > 3) {
+
+                            final Direction nearestEnemyDirection = currentLocation.directionTo(nearestEnemy.location);
+
+                            directionController.shouldAvoidEnemies = false;
+                            final DirectionController.Result nearestEnemyDirectionResult = directionController.getDirectionResultFromDirection(nearestEnemyDirection, DirectionController.ADJUSTMENT_THRESHOLD_MEDIUM);
+                            directionController.shouldAvoidEnemies = true;
+
+                            if (nearestEnemyDirectionResult.direction != null) {
+
+                                robotController.move(nearestEnemyDirectionResult.direction);
+                                currentLocation = robotController.getLocation();
+                                robotController.setIndicatorString(1, "I suicided toward an enemy at " + nearestEnemy.location);
+                                break;
+
+                            }
+
+                        }
+
+                    }
+
+                }
+
                 if (robotController.isWeaponReady()) {
 
                     if (bestAttackableEnemy != null) {
@@ -295,8 +341,17 @@ public class RobotSoldier implements Robot {
                         if (bestFoundEnemy != null) {
 
                             final int distance = currentLocation.distanceSquaredTo(bestFoundEnemy.location);
-                            final int maxDistance = type == RobotType.SOLDIER ? 8 : 3;
-                            if (distance > maxDistance) {
+                            int aggressiveRushMaxDistance = 0;
+                            if (type == RobotType.SOLDIER) {
+
+                                aggressiveRushMaxDistance = 8;
+
+                            } else {
+
+                                aggressiveRushMaxDistance = 3;
+
+                            }
+                            if (distance > aggressiveRushMaxDistance) {
 
                                 final Direction pushDirection = currentLocation.directionTo(bestFoundEnemy.location);
 
