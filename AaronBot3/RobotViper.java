@@ -28,7 +28,7 @@ public class RobotViper implements Robot {
 
         while (true) {
 
-            robotController.setIndicatorString(0, "When the zombie dens send us their people, they arne't sending the best. Let me tell you.");
+            robotController.setIndicatorString(0, "When the zombie dens send us their people, they aren't sending the best. Let me tell you.");
 
             // update communication
 
