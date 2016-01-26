@@ -48,8 +48,7 @@ public class RobotArchon implements Robot {
 
         while (true) {
 
-            robotController.setIndicatorString(0, "");
-            robotController.setIndicatorString(1, "");
+            robotController.setIndicatorString(0, "I hate Jeb Bush.");
 
             // update our signals
 
@@ -174,13 +173,11 @@ public class RobotArchon implements Robot {
             directionController.shouldAvoidEnemies = true;
 
             boolean inDanger = false;
-            robotController.setIndicatorString(2, "Not in danger");
             if (dangerousEnemies.length > friendlies.length) {
 
                 // either we are outnumbered
 
                 inDanger = true;
-                robotController.setIndicatorString(2, "In danger (outnumbered)");
 
             } else {
 
@@ -192,7 +189,6 @@ public class RobotArchon implements Robot {
                     if (attackRadiusSquared >= currentLocation.distanceSquaredTo(dangerousEnemies[i].location)) {
 
                         inDanger = true;
-                        robotController.setIndicatorString(2, "In danger (attack range)");
                         break;
 
                     }
@@ -204,8 +200,6 @@ public class RobotArchon implements Robot {
             // check if we need to send an archon update
 
             if (sendArchonUpdate && !inDanger) {
-
-                robotController.setIndicatorString(1, "Sending archon update with enemies " + enemies.length);
 
                 final InformationSignal signal = new InformationSignal();
                 signal.action = PoliticalAgenda.SignalActionWrite;
@@ -245,7 +239,6 @@ public class RobotArchon implements Robot {
 
                                 robotController.move(enemiesMovementResult.direction);
                                 currentLocation = robotController.getLocation();
-                                robotController.setIndicatorString(0, "I'm fleeing " + enemiesMovementResult.direction + " to get away from enemies " + enemiesDirection);
                                 break;
 
                             } else if (enemiesMovementResult.error == DirectionController.ErrorType.BLOCKED_RUBBLE) {
@@ -257,7 +250,6 @@ public class RobotArchon implements Robot {
                                     if (rubble < 1000.0) {
 
                                         robotController.clearRubble(rubbleClearanceDirection);
-                                        robotController.setIndicatorString(0, "I'm clearing rubble " + rubbleClearanceDirection + " to get away from enemies " + enemiesDirection);
                                         break;
 
                                     }
@@ -332,7 +324,6 @@ public class RobotArchon implements Robot {
 
                                     }
                                     robotController.build(DirectionController.DIRECTIONS[i], typeToBuild);
-                                    robotController.setIndicatorString(0, "I started to build " + typeToBuild + " " + (isNextUnitACompanion ? " as a companion " : "") + "in direction " + DirectionController.DIRECTIONS[i]);
                                     built = true;
                                     lastBuiltUnitType = typeToBuild;
                                     break;
@@ -393,7 +384,6 @@ public class RobotArchon implements Robot {
                             robotController.move(nearestNeutralMovementResult.direction);
                             currentLocation = robotController.getLocation();
                             movementModule.addMovementLocation(currentLocation, robotController);
-                            robotController.setIndicatorString(0, "I moved " + nearestNeutralMovementResult.direction + " to get to a neutral at " + nearestNeutralLocation);
                             break;
 
                         } else if (nearestNeutralMovementResult.error == DirectionController.ErrorType.BLOCKED_RUBBLE) {
@@ -403,7 +393,6 @@ public class RobotArchon implements Robot {
 
                                 robotController.clearRubble(rubbleClearanceDirection);
                                 movementModule.extendLocationInvalidationTurn(robotController);
-                                robotController.setIndicatorString(0, "I cleared rubble " + rubbleClearanceDirection + " to get to a neutral at " + nearestNeutralLocation);
                                 break;
 
                             }
@@ -453,7 +442,6 @@ public class RobotArchon implements Robot {
                             robotController.move(nearestPartsMovementResult.direction);
                             currentLocation = robotController.getLocation();
                             movementModule.addMovementLocation(currentLocation, robotController);
-                            robotController.setIndicatorString(0, "I moved " + nearestPartsMovementResult.direction + " to get to spare parts at " + nearestPartsLocation);
                             break;
 
                         } else if (nearestPartsMovementResult.error == DirectionController.ErrorType.BLOCKED_RUBBLE) {
@@ -463,7 +451,6 @@ public class RobotArchon implements Robot {
 
                                 robotController.clearRubble(rubbleClearanceDirection);
                                 movementModule.extendLocationInvalidationTurn(robotController);
-                                robotController.setIndicatorString(0, "I cleared rubble " + rubbleClearanceDirection + " to get to spare parts at " + nearestPartsLocation);
                                 break;
 
                             }
@@ -479,8 +466,6 @@ public class RobotArchon implements Robot {
                 if (robotController.isCoreReady()) {
 
                     if (lootLocation == null && friendlies.length < 8) {
-
-                        robotController.setIndicatorString(1, "I need to try and find some friendlies...");
 
                         int closestFriendlyDistance = Integer.MAX_VALUE;
                         MapLocation closestLocation = null;
@@ -520,7 +505,6 @@ public class RobotArchon implements Robot {
                                     robotController.move(closestSignalResult.direction);
                                     currentLocation = robotController.getLocation();
                                     movementModule.addMovementLocation(currentLocation, robotController);
-                                    robotController.setIndicatorString(0, "I am moving to a friendly clump at " + closestLocation);
                                     break;
 
                                 } else if (closestSignalResult.error == DirectionController.ErrorType.BLOCKED_RUBBLE) {
@@ -530,7 +514,6 @@ public class RobotArchon implements Robot {
 
                                         robotController.clearRubble(rubbleClearanceDirection);
                                         movementModule.extendLocationInvalidationTurn(robotController);
-                                        robotController.setIndicatorString(0, "I cleared rubble to get to a friendly clump at " + closestLocation);
                                         break;
 
                                     }
@@ -554,7 +537,6 @@ public class RobotArchon implements Robot {
                     if (rubbleClearanceDirection != null) {
 
                         robotController.clearRubble(rubbleClearanceDirection);
-                        robotController.setIndicatorString(0, "I cleared rubble " + rubbleClearanceDirection + " because I have nothing else to do.");
                         break;
 
                     }
@@ -602,50 +584,6 @@ public class RobotArchon implements Robot {
                 robotController.repair(injuredUnit.location);
 
             }
-
-            // show what we know
-
-            /*for (int i = 0; i < politicalAgenda.archonLocations.size(); i++) {
-
-                final MapLocation archonLocation = politicalAgenda.archonLocations.get(i);
-                robotController.setIndicatorLine(currentLocation, archonLocation, 136, 125, 255);
-
-            }
-
-            for (int i = 0; i < politicalAgenda.enemies.size(); i++) {
-
-                final EnemyInfo enemy = politicalAgenda.enemies.get(i);
-                robotController.setIndicatorLine(currentLocation, enemy.location, 255, 0, 208);
-
-            }
-
-            */for (int i = 0; i < politicalAgenda.enemyArchons.size(); i++) {
-
-                final InformationSignal signal = politicalAgenda.enemyArchons.get(i);
-                robotController.setIndicatorLine(currentLocation, signal.location, 174, 0, 255);
-
-            }/*
-
-            for (int i = 0; i < politicalAgenda.zombieDens.size(); i++) {
-
-                final InformationSignal signal = politicalAgenda.zombieDens.get(i);
-                robotController.setIndicatorLine(currentLocation, signal.location, 0, 255, 0);
-
-            }
-
-            for (int i = 0; i < politicalAgenda.enemyClumps.size(); i++) {
-
-                final ClumpInfo clumpInfo = politicalAgenda.enemyClumps.get(i);
-                robotController.setIndicatorLine(currentLocation, clumpInfo.location, 255, 186, 186);
-
-            }
-
-            for (int i = 0; i < politicalAgenda.friendlyClumps.size(); i++) {
-
-                final ClumpInfo clumpInfo = politicalAgenda.friendlyClumps.get(i);
-                robotController.setIndicatorLine(currentLocation, clumpInfo.location, 186, 207, 255);
-
-            }*/
 
             Clock.yield();
 

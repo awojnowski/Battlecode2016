@@ -35,8 +35,7 @@ public class RobotSoldier implements Robot {
 
             // prep to run this turn
 
-            robotController.setIndicatorString(0, "");
-            robotController.setIndicatorString(1, "");
+            robotController.setIndicatorString(0, "I'm going to make Battlecode great again.");
 
             if (aggressiveLock > 0) {
 
@@ -120,7 +119,6 @@ public class RobotSoldier implements Robot {
 
                                         robotController.move(kiteDirectionResult.direction);
                                         currentLocation = robotController.getLocation();
-                                        robotController.setIndicatorString(1, "I moved away from a zombie at " + kiteDirection);
                                         break;
 
                                     }
@@ -170,7 +168,6 @@ public class RobotSoldier implements Robot {
 
                                 robotController.move(nearestEnemyDirectionResult.direction);
                                 currentLocation = robotController.getLocation();
-                                robotController.setIndicatorString(1, "I suicided toward an enemy at " + nearestEnemy.location);
                                 break;
 
                             }
@@ -186,7 +183,6 @@ public class RobotSoldier implements Robot {
                     if (bestAttackableEnemy != null) {
 
                         robotController.attackLocation(bestAttackableEnemy.location);
-                        robotController.setIndicatorString(1, "I attacked enemy at " + bestAttackableEnemy.location);
                         break;
 
                     }
@@ -249,7 +245,6 @@ public class RobotSoldier implements Robot {
 
                                 robotController.move(nearestArchonResult.direction);
                                 currentLocation = robotController.getLocation();
-                                robotController.setIndicatorString(0, "I am moving to an archon to heal at, at " + nearestArchonLocation);
                                 break;
 
                             } else if (nearestArchonResult.error == DirectionController.ErrorType.BLOCKED_RUBBLE) {
@@ -258,7 +253,6 @@ public class RobotSoldier implements Robot {
                                 if (rubbleClearanceDirection != null) {
 
                                     robotController.clearRubble(rubbleClearanceDirection);
-                                    robotController.setIndicatorString(0, "I cleared rubble to get to an archon to heal at, at " + nearestArchonLocation);
                                     break;
 
                                 }
@@ -329,7 +323,6 @@ public class RobotSoldier implements Robot {
 
                                 robotController.move(kiteDirectionResult.direction);
                                 currentLocation = robotController.getLocation();
-                                robotController.setIndicatorString(1, "I passively moved away from " + kiteDirection);
                                 break;
 
                             }
@@ -363,7 +356,6 @@ public class RobotSoldier implements Robot {
 
                                     robotController.move(pushDirectionResult.direction);
                                     currentLocation = robotController.getLocation();
-                                    robotController.setIndicatorString(1, "I aggressively moved toward " + pushDirection);
                                     break;
 
                                 }
@@ -511,7 +503,6 @@ public class RobotSoldier implements Robot {
                                     robotController.move(signalResult.direction);
                                     currentLocation = robotController.getLocation();
                                     movementModule.addMovementLocation(currentLocation, robotController);
-                                    robotController.setIndicatorString(1, "I moved toward the objective at " + objectiveSignal.location);
                                     break;
 
                                 } else {
@@ -534,7 +525,6 @@ public class RobotSoldier implements Robot {
                                         robotController.move(signalResultExtended.direction);
                                         currentLocation = robotController.getLocation();
                                         movementModule.addMovementLocation(currentLocation, robotController);
-                                        robotController.setIndicatorString(1, "I moved toward the objective at " + objectiveSignal.location);
                                         break;
 
                                     }
@@ -550,7 +540,6 @@ public class RobotSoldier implements Robot {
 
                                     robotController.clearRubble(rubbleClearanceDirection);
                                     movementModule.extendLocationInvalidationTurn(robotController);
-                                    robotController.setIndicatorString(1, "I cleared rubble " + rubbleClearanceDirection + " to get to an objective at " + objectiveSignal.location);
                                     break;
 
                                 }
@@ -592,7 +581,6 @@ public class RobotSoldier implements Robot {
                             robotController.move(closestSignalResult.direction);
                             currentLocation = robotController.getLocation();
                             movementModule.addMovementLocation(currentLocation, robotController);
-                            robotController.setIndicatorString(0, "I am moving to an enemy " + closestLocation);
                             break;
 
                         } else if (closestSignalResult.error == DirectionController.ErrorType.BLOCKED_RUBBLE) {
@@ -602,7 +590,6 @@ public class RobotSoldier implements Robot {
 
                                 robotController.clearRubble(rubbleClearanceDirection);
                                 movementModule.extendLocationInvalidationTurn(robotController);
-                                robotController.setIndicatorString(0, "I cleared rubble to get to an enemy at " + closestLocation);
                                 break;
 
                             }
@@ -642,7 +629,6 @@ public class RobotSoldier implements Robot {
                             robotController.move(closestSignalResult.direction);
                             currentLocation = robotController.getLocation();
                             movementModule.addMovementLocation(currentLocation, robotController);
-                            robotController.setIndicatorString(0, "I am moving to an enemy clump at " + closestLocation);
                             break;
 
                         } else if (closestSignalResult.error == DirectionController.ErrorType.BLOCKED_RUBBLE) {
@@ -652,8 +638,6 @@ public class RobotSoldier implements Robot {
 
                                 robotController.clearRubble(rubbleClearanceDirection);
                                 movementModule.extendLocationInvalidationTurn(robotController);
-                                robotController.setIndicatorString(0, "I cleared rubble" +
-                                        " to get to an enemy clump at " + closestLocation);
                                 break;
 
                             }
@@ -693,7 +677,6 @@ public class RobotSoldier implements Robot {
                             robotController.move(closestSignalResult.direction);
                             currentLocation = robotController.getLocation();
                             movementModule.addMovementLocation(currentLocation, robotController);
-                            robotController.setIndicatorString(0, "I am moving to a friendly clump at " + closestLocation);
                             break;
 
                         } else if (closestSignalResult.error == DirectionController.ErrorType.BLOCKED_RUBBLE) {
@@ -703,7 +686,6 @@ public class RobotSoldier implements Robot {
 
                                 robotController.clearRubble(rubbleClearanceDirection);
                                 movementModule.extendLocationInvalidationTurn(robotController);
-                                robotController.setIndicatorString(0, "I cleared rubble to get to a friendly clump at " + closestLocation);
                                 break;
 
                             }
@@ -751,7 +733,6 @@ public class RobotSoldier implements Robot {
                         }
 
                     }
-                    robotController.setIndicatorString(2, "I am moving to a friendly archon at " + closestLocation);
                     if (closestLocation != null) {
 
                         final Direction closestSignalDirection = closestSignalDistance < 9 ? currentLocation.directionTo(closestLocation).opposite() : currentLocation.directionTo(closestLocation);
@@ -761,7 +742,6 @@ public class RobotSoldier implements Robot {
                             robotController.move(closestSignalResult.direction);
                             currentLocation = robotController.getLocation();
                             movementModule.addMovementLocation(currentLocation, robotController);
-                            robotController.setIndicatorString(0, "I am moving to a friendly archon at " + closestLocation);
                             break;
 
                         } else if (closestSignalResult.error == DirectionController.ErrorType.BLOCKED_RUBBLE) {
@@ -771,7 +751,6 @@ public class RobotSoldier implements Robot {
 
                                 robotController.clearRubble(rubbleClearanceDirection);
                                 movementModule.extendLocationInvalidationTurn(robotController);
-                                robotController.setIndicatorString(0, "I cleared rubble to get to a friendly archon at " + closestLocation);
                                 break;
 
                             }
@@ -790,7 +769,6 @@ public class RobotSoldier implements Robot {
                     if (rubbleClearanceDirection != null) {
 
                         robotController.clearRubble(rubbleClearanceDirection);
-                        robotController.setIndicatorString(0, "I cleared rubble " + rubbleClearanceDirection + " because I have nothing else to do.");
                         break;
 
                     }
@@ -802,49 +780,6 @@ public class RobotSoldier implements Robot {
             }
 
             // finish up
-
-            /*for (int i = 0; i < politicalAgenda.archonLocations.size(); i++) {
-
-                final MapLocation archonLocation = politicalAgenda.archonLocations.get(i);
-                robotController.setIndicatorLine(currentLocation, archonLocation, 136, 125, 255);
-
-            }
-
-            for (int i = 0; i < politicalAgenda.enemies.size(); i++) {
-
-                final EnemyInfo enemy = politicalAgenda.enemies.get(i);
-                robotController.setIndicatorLine(currentLocation, enemy.location, 255, 0, 208);
-
-            }
-
-            */for (int i = 0; i < politicalAgenda.enemyArchons.size(); i++) {
-
-                final InformationSignal signal = politicalAgenda.enemyArchons.get(i);
-                robotController.setIndicatorLine(currentLocation, signal.location, 174, 0, 255);
-
-            }/*
-
-            for (int i = 0; i < politicalAgenda.zombieDens.size(); i++) {
-
-                final InformationSignal signal = politicalAgenda.zombieDens.get(i);
-                robotController.setIndicatorLine(currentLocation, signal.location, 0, 255, 0);
-
-            }
-
-            for (int i = 0; i < politicalAgenda.enemyClumps.size(); i++) {
-
-                final ClumpInfo clumpInfo = politicalAgenda.enemyClumps.get(i);
-                robotController.setIndicatorLine(currentLocation, clumpInfo.location, 255, 186, 186);
-
-
-            }
-
-            for (int i = 0; i < politicalAgenda.friendlyClumps.size(); i++) {
-
-                final ClumpInfo clumpInfo = politicalAgenda.friendlyClumps.get(i);
-                robotController.setIndicatorLine(currentLocation, clumpInfo.location, 186, 207, 255);
-
-            }*/
 
             Clock.yield();
 

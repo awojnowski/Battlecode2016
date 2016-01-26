@@ -115,8 +115,7 @@ public class RobotScout implements Robot {
 
             }
 
-            robotController.setIndicatorString(0, "Map information: N: " + politicalAgenda.mapBoundaryNorth + " E: " + politicalAgenda.mapBoundaryEast + " S: " + politicalAgenda.mapBoundarySouth + " W: " + politicalAgenda.mapBoundaryWest + " SD: " + politicalAgenda.maximumBroadcastRangeForLocation(currentLocation));
-            robotController.setIndicatorString(1, "Companion ID: " + currentCompanionIdentifier + " Mode: " + currentMode);
+            robotController.setIndicatorString(0, "Searching for Hillary Clinton.");
 
             // let's verify information
 
@@ -409,12 +408,6 @@ public class RobotScout implements Robot {
                 directionController.shouldAvoidEnemies = true;
 
                 final Direction enemiesDirectionOutput = directionController.getAverageDirectionTowardsEnemies(enemies, true, false, false);
-                if (enemiesDirectionOutput != null) {
-
-                    robotController.setIndicatorLine(currentLocation, currentLocation.add(enemiesDirectionOutput, 1000), 50, 25, 25);
-
-                }
-
                 if (robotController.isCoreReady() && enemies.length > 0) {
 
                     final Direction enemiesDirection = directionController.getAverageDirectionTowardsEnemies(enemies, true, false, false);
@@ -518,12 +511,6 @@ public class RobotScout implements Robot {
 
                 }
 
-                if (movementDirection != null) {
-
-                    robotController.setIndicatorLine(currentLocation, currentLocation.add(movementDirection, 10000), 255, 255, 255);
-
-                }
-
             }
 
             // now let's see if we should send our signals
@@ -531,50 +518,6 @@ public class RobotScout implements Robot {
             if (politicalAgenda.hasEnqueuedSignalsForBroadcast()) {
 
                 politicalAgenda.broadcastEnqueuedSignals(robotController);
-
-            }
-
-            // show what we know
-
-            for (int i = 0; i < politicalAgenda.archonLocations.size(); i++) {
-
-                final MapLocation archonLocation = politicalAgenda.archonLocations.get(i);
-                robotController.setIndicatorLine(currentLocation, archonLocation, 136, 125, 255);
-
-            }
-
-            for (int i = 0; i < politicalAgenda.enemies.size(); i++) {
-
-                final EnemyInfo enemy = politicalAgenda.enemies.get(i);
-                robotController.setIndicatorLine(currentLocation, enemy.location, 255, 0, 208);
-
-            }
-
-            for (int i = 0; i < politicalAgenda.enemyArchons.size(); i++) {
-
-                final InformationSignal signal = politicalAgenda.enemyArchons.get(i);
-                robotController.setIndicatorLine(currentLocation, signal.location, 174, 0, 255);
-
-            }
-
-            for (int i = 0; i < politicalAgenda.zombieDens.size(); i++) {
-
-                final InformationSignal signal = politicalAgenda.zombieDens.get(i);
-                robotController.setIndicatorLine(currentLocation, signal.location, 0, 255, 0);
-
-            }
-
-            for (int i = 0; i < politicalAgenda.enemyClumps.size(); i++) {
-
-                final ClumpInfo clumpInfo = politicalAgenda.enemyClumps.get(i);
-                robotController.setIndicatorLine(currentLocation, clumpInfo.location, 255, 186, 186);
-
-            }
-
-            for (int i = 0; i < politicalAgenda.friendlyClumps.size(); i++) {
-
-                final ClumpInfo clumpInfo = politicalAgenda.friendlyClumps.get(i);
-                robotController.setIndicatorLine(currentLocation, clumpInfo.location, 186, 207, 255);
 
             }
 
