@@ -143,19 +143,19 @@ public class DirectionController {
 
     }
 
-    public final Direction getAverageDirectionTowardsEnemies(final RobotInfo[] enemies, final boolean moveAwayFromWalls, final boolean moveAwayFromRubble) throws GameActionException {
+    public final Direction getAverageDirectionTowardsEnemies(final RobotInfo[] enemies, final boolean moveAwayFromWalls, final boolean moveAwayFromRubble, final boolean useBetterRubbleDetection) throws GameActionException {
 
-        return this.getAverageDirectionTowardsRobots(enemies, true, moveAwayFromWalls, moveAwayFromRubble);
-
-    }
-
-    public Direction getAverageDirectionTowardFriendlies(final RobotInfo[] friendlies, final boolean moveAwayFromWalls, final boolean moveAwayFromRubble) throws GameActionException {
-
-        return this.getAverageDirectionTowardsRobots(friendlies, false, moveAwayFromWalls, moveAwayFromRubble);
+        return this.getAverageDirectionTowardsRobots(enemies, true, moveAwayFromWalls, moveAwayFromRubble, useBetterRubbleDetection);
 
     }
 
-    private Direction getAverageDirectionTowardsRobots(final RobotInfo[] robots, final boolean onlyAllowDangerousRobots, final boolean moveAwayFromWalls, final boolean moveAwayFromRubble) throws GameActionException {
+    public Direction getAverageDirectionTowardFriendlies(final RobotInfo[] friendlies, final boolean moveAwayFromWalls, final boolean moveAwayFromRubble, final boolean useBetterRubbleDetection) throws GameActionException {
+
+        return this.getAverageDirectionTowardsRobots(friendlies, false, moveAwayFromWalls, moveAwayFromRubble, useBetterRubbleDetection);
+
+    }
+
+    private Direction getAverageDirectionTowardsRobots(final RobotInfo[] robots, final boolean onlyAllowDangerousRobots, final boolean moveAwayFromWalls, final boolean moveAwayFromRubble, final boolean useBetterRubbleDetection) throws GameActionException {
 
         if (robots == null || robots.length == 0) {
 
@@ -215,12 +215,26 @@ public class DirectionController {
                 for (int j = 1; j <= sightDistance; j++) {
 
                     final MapLocation location = this.currentLocation.add(probeDirection, j);
-                    if (directionIsBlocked || (moveAwayFromWalls && !this.robotController.onTheMap(location)) || (moveAwayFromRubble && this.robotController.senseRubble(location) >= 100)) {
+                    if (directionIsBlocked || (moveAwayFromWalls && !this.robotController.onTheMap(location)) || (moveAwayFromRubble && !useBetterRubbleDetection && this.robotController.senseRubble(location) >= 100)) {
 
                         totalRobotX += location.x;
                         totalRobotY += location.y;
                         totalLocationsSampled ++;
                         directionIsBlocked = true;
+
+                    } else if (moveAwayFromRubble && useBetterRubbleDetection && this.robotController.senseRubble(location) >= 100) {
+
+                        MapLocation beside1 = location.add(probeDirection.rotateLeft().rotateLeft());
+                        MapLocation beside2 = location.add(probeDirection.rotateRight().rotateRight());
+
+                        if (this.robotController.senseRubble(beside1) >= 100 && this.robotController.senseRubble(beside2) >= 100) {
+
+                            totalRobotX += location.x;
+                            totalRobotY += location.y;
+                            totalLocationsSampled ++;
+                            directionIsBlocked = true;
+
+                        }
 
                     }
 

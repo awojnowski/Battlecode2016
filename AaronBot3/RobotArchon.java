@@ -234,7 +234,7 @@ public class RobotArchon implements Robot {
 
                     if (inDanger) {
 
-                        final Direction enemiesDirection = directionController.getAverageDirectionTowardsEnemies(enemies, true, true);
+                        final Direction enemiesDirection = directionController.getAverageDirectionTowardsEnemies(enemies, true, true, true);
                         if (enemiesDirection != null) {
 
                             directionController.shouldAvoidEnemies = false;
@@ -501,7 +501,7 @@ public class RobotArchon implements Robot {
                         if (closestLocation == null) { // move towards nearby robots
 
                             RobotInfo[] friendlyFighters = CombatModule.robotsOfTypesFromRobots(friendlies, new RobotType[] {RobotType.SOLDIER, RobotType.GUARD, RobotType.TURRET, RobotType.VIPER});
-                            Direction directionToFriendlies = directionController.getAverageDirectionTowardFriendlies(friendlyFighters, false, false);
+                            Direction directionToFriendlies = directionController.getAverageDirectionTowardFriendlies(friendlyFighters, false, false, false);
                             if (directionToFriendlies != null) {
 
                                 closestLocation = currentLocation.add(directionToFriendlies);
