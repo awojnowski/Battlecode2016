@@ -236,7 +236,7 @@ public class RobotViper implements Robot {
 
                     if (!isAggressive) {
 
-                        final Direction kiteDirection = directionController.getAverageDirectionTowardsEnemies(enemies, true, true);
+                        final Direction kiteDirection = directionController.getAverageDirectionTowardsEnemies(enemies, true, true, false);
                         if (kiteDirection != null) {
 
                             directionController.shouldAvoidEnemies = false;

@@ -408,7 +408,7 @@ public class RobotScout implements Robot {
                 directionController.random = random;
                 directionController.shouldAvoidEnemies = true;
 
-                final Direction enemiesDirectionOutput = directionController.getAverageDirectionTowardsEnemies(enemies, true, false);
+                final Direction enemiesDirectionOutput = directionController.getAverageDirectionTowardsEnemies(enemies, true, false, false);
                 if (enemiesDirectionOutput != null) {
 
                     robotController.setIndicatorLine(currentLocation, currentLocation.add(enemiesDirectionOutput, 1000), 50, 25, 25);
@@ -417,7 +417,7 @@ public class RobotScout implements Robot {
 
                 if (robotController.isCoreReady() && enemies.length > 0) {
 
-                    final Direction enemiesDirection = directionController.getAverageDirectionTowardsEnemies(enemies, true, false);
+                    final Direction enemiesDirection = directionController.getAverageDirectionTowardsEnemies(enemies, true, false, false);
                     if (enemiesDirection != null) {
 
                         directionController.shouldAvoidEnemies = false;
