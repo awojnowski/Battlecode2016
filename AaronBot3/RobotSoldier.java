@@ -429,7 +429,7 @@ public class RobotSoldier implements Robot {
 
                             }
 
-                            if (objectiveSignal.type == PoliticalAgenda.SignalTypeEnemyArchon && robotController.getRoundNum() > 1000 && politicalAgenda.enemyClumps.size() == 0) {
+                            if (objectiveSignal.type == PoliticalAgenda.SignalTypeEnemyArchon && robotController.getRoundNum() > 1000 && politicalAgenda.friendlyClumps.size() > 0) {
 
                                 final int identifier = robotController.getID();
                                 if (identifier % 3 == 1) {
